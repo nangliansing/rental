@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -22,15 +23,19 @@ export function StandalonePageBackProvider({
 }: {
   children: ReactNode
 }) {
-  const [backHandler, setBackHandler] =
+  const [backHandler, setBackHandlerState] =
     useState<StandalonePageBackHandler>(null)
+
+  const setBackHandler = useCallback((handler: StandalonePageBackHandler) => {
+    setBackHandlerState(() => handler)
+  }, [])
 
   const value = useMemo(
     () => ({
       backHandler,
       setBackHandler,
     }),
-    [backHandler],
+    [backHandler, setBackHandler],
   )
 
   return (
