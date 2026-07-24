@@ -1,0 +1,2 @@
+export const MIN_SEARCH_QUERY_LENGTH = 2
+export const TYPEAHEAD_DEBOUNCE_MS = 300

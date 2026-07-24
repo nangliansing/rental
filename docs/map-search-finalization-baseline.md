@@ -119,13 +119,14 @@ The next step should optimize state and render isolation only:
 
 ### Step 2 progress (2026-07-25)
 
-- `buildLineCoveragePolygon` is already memoized in `LineSearchOverlays` via
-  `useMemo` — baseline item #1 in "Confirmed avoidable work" is addressed.
-- `getMapSearchAnnouncement` already uses per-source scope phrases including
-  line mode — the recorded correctness gap appears resolved; keep covered by
-  `map-search-announcement.test.ts`.
-- **Next actionable item:** split `MapSearchSessionContext` to reduce render
-  fan-out (baseline primary concern).
+Steps 2–12 are **complete** in the current codebase. See result sections below for
+canvas/controls/place/results slice split, derived-work isolation, query ownership,
+command consolidation, presentation/a11y, and marker-highlight isolation.
+
+Verification: `npm test -- src/features/map-search` → **176/176 passed**.
+
+Remaining optional work is listed under **Remaining optional work** at the end of
+this document.
 
 Geometry optimization, component file reorganization, and query-hook
 consolidation should wait until render isolation is measured after Step 2.

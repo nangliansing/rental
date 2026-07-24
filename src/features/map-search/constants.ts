@@ -1,0 +1,4 @@
+export const MAP_SEARCH_PURPOSE_PARAM = "purpose"
+export const MAP_SEARCH_LIST_PURPOSE = "list"
+export const MAP_SEARCH_LIST_ROOM_PATH = `/?${MAP_SEARCH_PURPOSE_PARAM}=${MAP_SEARCH_LIST_PURPOSE}`
+export const MAX_LINE_SEARCH_POINTS = 24
