@@ -18,6 +18,15 @@ Monorepo for the rental marketplace application: a React frontend and a Node.js 
 
 ## Local development
 
+From the repository root you can use:
+
+```bash
+npm run dev:fe   # frontend → http://127.0.0.1:5173
+npm run dev:be   # backend → http://127.0.0.1:3000
+```
+
+Or run each package directly:
+
 ### Backend
 
 ```bash

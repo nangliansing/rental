@@ -1,0 +1,13 @@
+{
+  "name": "rental",
+  "private": true,
+  "description": "Rental marketplace monorepo",
+  "scripts": {
+    "dev:fe": "npm --prefix rental-fe run dev",
+    "dev:be": "npm --prefix rental-be run dev",
+    "test:fe": "npm --prefix rental-fe test",
+    "test:be": "npm --prefix rental-be test",
+    "build:fe": "npm --prefix rental-fe run build",
+    "test:e2e": "npm --prefix rental-fe run test:e2e"
+  }
+}
