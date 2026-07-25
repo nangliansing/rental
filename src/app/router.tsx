@@ -2,6 +2,7 @@
 import type { ComponentType } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
+import { RouteErrorPage } from "./RouteErrorPage";
 import { RootLayout } from "./RootLayout";
 import { RouteLoadingFallback } from "./RouteLoadingFallback";
 import { StandalonePageLayout } from "./StandalonePageLayout";
@@ -17,6 +18,7 @@ function lazyStandaloneRoute(load: () => Promise<ComponentType>) {
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
+    errorElement: <RouteErrorPage />,
     HydrateFallback: RouteLoadingFallback,
     children: [
       {
@@ -42,6 +44,7 @@ export const router = createBrowserRouter([
   },
   {
     element: <StandalonePageLayout />,
+    errorElement: <RouteErrorPage />,
     HydrateFallback: RouteLoadingFallback,
     children: [
       {

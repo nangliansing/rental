@@ -252,6 +252,48 @@
     animation-play-state: paused;
   }
 
+  @keyframes error-page-aurora-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+      transform: translate3d(2%, -2%, 0) scale(1.05);
+    }
+  }
+
+  @keyframes error-page-aurora-drift-alt {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+      transform: translate3d(-2%, 2%, 0) scale(1.04);
+    }
+  }
+
+  .error-page-aurora {
+    will-change: transform;
+    animation: error-page-aurora-drift 22s ease-in-out infinite;
+  }
+
+  .error-page-aurora--one {
+    animation-duration: 26s;
+  }
+
+  .error-page-aurora--two {
+    animation-delay: -6s;
+    animation-name: error-page-aurora-drift-alt;
+    animation-duration: 24s;
+  }
+
+  .error-page-aurora--three {
+    animation-delay: -12s;
+    animation-duration: 28s;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -270,6 +312,11 @@
     }
 
     .review-tag-float {
+      animation: none;
+      will-change: auto;
+    }
+
+    .error-page-aurora {
       animation: none;
       will-change: auto;
     }
