@@ -1,5 +1,7 @@
 import type { Page, Route } from "@playwright/test"
 
+import { smokeListingBuilding } from "./lister-onboarding"
+
 export const smokeAccessToken = "smoke-access-token"
 
 export const smokeAuthUser = {
@@ -184,12 +186,94 @@ function buildCreatedAgentProfile(
   }
 }
 
+type SmokePendingPost = {
+  _id: string
+  status: "PENDING"
+  submittedBy: string
+  existingBuildingId: string | null
+  existingBuilding?: typeof smokeListingBuilding & {
+    isActive: boolean
+    minRent: number | null
+    maxRent: number | null
+  }
+  building: Record<string, unknown> | null
+  listing: Record<string, unknown>
+  reviewNote: null
+  reviewedBy: null
+  reviewedAt: null
+  approvedBuildingId: null
+  approvedListingId: null
+  isDeleted: false
+  createdAt: string
+  updatedAt: string
+}
+
+function buildPendingPostFromRequest(
+  body: Record<string, unknown>,
+  pendingPostId: string,
+): SmokePendingPost {
+  const now = "2026-07-25T08:00:00.000Z"
+  const listing =
+    typeof body.listing === "object" && body.listing !== null
+      ? (body.listing as Record<string, unknown>)
+      : {}
+
+  if (typeof body.existingBuildingId === "string") {
+    return {
+      _id: pendingPostId,
+      status: "PENDING",
+      submittedBy: smokeAuthUser._id,
+      existingBuildingId: body.existingBuildingId,
+      existingBuilding: {
+        ...smokeListingBuilding,
+        isActive: true,
+        minRent: smokeListingBuilding.minRent,
+        maxRent: smokeListingBuilding.maxRent,
+      },
+      building: null,
+      listing,
+      reviewNote: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      approvedBuildingId: null,
+      approvedListingId: null,
+      isDeleted: false,
+      createdAt: now,
+      updatedAt: now,
+    }
+  }
+
+  const building =
+    typeof body.building === "object" && body.building !== null
+      ? (body.building as Record<string, unknown>)
+      : null
+
+  return {
+    _id: pendingPostId,
+    status: "PENDING",
+    submittedBy: smokeAuthUser._id,
+    existingBuildingId: null,
+    building,
+    listing,
+    reviewNote: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    approvedBuildingId: null,
+    approvedListingId: null,
+    isDeleted: false,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export async function installAuthenticatedSessionMocks(
   page: Page,
   options: AuthenticatedSessionMockOptions = {},
 ) {
   let hasAgentProfile = options.hasAgentProfile ?? true
   let createdAgentProfile = buildCreatedAgentProfile()
+  let ownerPendingPosts: SmokePendingPost[] = []
+  let nextPendingPostId = 1
   await page.route("**/api/v1/users/token/refresh", async (route) => {
     await route.fulfill(
       jsonRoute({
@@ -333,22 +417,94 @@ export async function installAuthenticatedSessionMocks(
     )
   })
 
-  await page.route("**/api/v1/pending-posts?**", async (route) => {
+  await page.route("**/api/v1/pending-posts**", async (route) => {
     if (!isAuthorized(route)) {
       await route.fulfill(jsonRoute({ success: false }, 401))
+      return
+    }
+
+    if (route.request().method() === "POST") {
+      const requestBody = route.request().postDataJSON() as Record<string, unknown>
+      const pendingPost = buildPendingPostFromRequest(
+        requestBody,
+        `pending-smoke-${nextPendingPostId++}`,
+      )
+
+      ownerPendingPosts = [pendingPost, ...ownerPendingPosts]
+      createdAgentProfile = {
+        ...createdAgentProfile,
+        listingSummary: {
+          ...createdAgentProfile.listingSummary,
+          pendingCount: ownerPendingPosts.length,
+        },
+      }
+
+      await route.fulfill(
+        jsonRoute({
+          success: true,
+          data: pendingPost,
+        }),
+      )
+      return
+    }
+
+    if (route.request().method() === "GET") {
+      const url = new URL(route.request().url())
+      const status = url.searchParams.get("status")
+      const filteredPosts =
+        status && status !== "all"
+          ? ownerPendingPosts.filter((post) => post.status === status)
+          : ownerPendingPosts
+
+      await route.fulfill(
+        jsonRoute({
+          success: true,
+          data: filteredPosts,
+          pagination: {
+            page: 1,
+            limit: 12,
+            total: filteredPosts.length,
+            totalPages: filteredPosts.length > 0 ? 1 : 0,
+          },
+        }),
+      )
+      return
+    }
+
+    await route.continue()
+  })
+
+  await page.route("**/api/v1/buildings/*", async (route) => {
+    if (!isAuthorized(route)) {
+      await route.fulfill(jsonRoute({ success: false }, 401))
+      return
+    }
+
+    if (route.request().method() !== "GET") {
+      await route.continue()
+      return
+    }
+
+    const buildingId = route.request().url().split("/buildings/")[1]?.split("?")[0]
+
+    if (buildingId !== smokeListingBuilding._id) {
+      await route.fulfill(
+        jsonRoute(
+          {
+            success: false,
+            code: "BUILDING_NOT_FOUND",
+            message: "Building not found",
+          },
+          404,
+        ),
+      )
       return
     }
 
     await route.fulfill(
       jsonRoute({
         success: true,
-        data: { pendingPosts: [] },
-        pagination: {
-          page: 1,
-          limit: 12,
-          total: 0,
-          totalPages: 0,
-        },
+        data: smokeListingBuilding,
       }),
     )
   })

@@ -31,7 +31,33 @@ vi.mock("@/features/profile/api/useMyAgentProfile", () => ({
   })),
 }))
 vi.mock("../components/ListingForm", () => ({
-  ListingForm: () => <div>Listing form</div>,
+  ListingForm: ({
+    onSubmit,
+  }: {
+    onSubmit: (values: Record<string, unknown>) => void | Promise<void>
+  }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onSubmit({
+          visibility: "PUBLIC",
+          rent: 14000,
+          deposit: 28000,
+          moveInCost: 42000,
+          bedroomCount: 1,
+          bathroomCount: 1,
+          kitchenType: "Kitchen",
+          contractMonths: 12,
+          occupancy: 1,
+          facilities: [],
+          media: [],
+          description: "Smoke listing",
+        })
+      }
+    >
+      Submit listing form
+    </button>
+  ),
 }))
 vi.mock("../components/BuildingForm", () => ({
   BuildingForm: ({
@@ -108,7 +134,7 @@ describe("ListingCreatePage", () => {
     )
 
     expect(screen.getByRole("heading", { name: "Log in to list a room" })).toBeInTheDocument()
-    expect(screen.queryByText("Listing form")).not.toBeInTheDocument()
+    expect(screen.queryByText("Submit listing form")).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
       "href",
       "/login?redirect=%2Flistings%2Fnew%3FbuildingId%3Dbuilding-1",
@@ -130,7 +156,44 @@ describe("ListingCreatePage", () => {
     expect(
       screen.getByRole("heading", { name: "Create your contact profile first" }),
     ).toBeInTheDocument()
-    expect(screen.queryByText("Listing form")).not.toBeInTheDocument()
+    expect(screen.queryByText("Submit listing form")).not.toBeInTheDocument()
+  })
+
+  it("shows a success screen after submitting a pending post", async () => {
+    const user = userEvent.setup()
+    const mutateAsync = vi.fn().mockResolvedValue({
+      _id: "pending-smoke-1",
+      status: "PENDING",
+      submittedBy: "user-1",
+    })
+
+    vi.mocked(useCreatePendingPost).mockReturnValue({
+      mutateAsync,
+    } as never)
+
+    render(
+      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
+        <ListingCreatePage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Submit listing form" }))
+
+    expect(mutateAsync).toHaveBeenCalledWith({
+      existingBuildingId: "building-1",
+      listing: expect.objectContaining({
+        rent: 14000,
+        description: "Smoke listing",
+      }),
+    })
+    expect(
+      await screen.findByRole("heading", { name: "Submitted for review" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Go to profile" })).toHaveAttribute(
+      "href",
+      "/profile",
+    )
+    expect(screen.getByText("Reference: pending-smoke-1")).toBeInTheDocument()
   })
 
   it("loads and displays the selected existing building instead of its raw id", () => {
