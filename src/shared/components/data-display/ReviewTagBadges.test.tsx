@@ -23,10 +23,10 @@ describe("ReviewTagBadges", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Helpful, mentioned in 5 reviews" }),
-    ).toBeInTheDocument()
+    ).toHaveTextContent("Helpful: 5")
     expect(
       screen.getByRole("button", { name: "Responsive, mentioned in 4 reviews" }),
-    ).toBeInTheDocument()
+    ).toHaveTextContent("Responsive: 4")
     expect(screen.queryByText("Friendly")).not.toBeInTheDocument()
     expect(screen.queryByText("Accurate information")).not.toBeInTheDocument()
   })
@@ -149,6 +149,16 @@ describe("ReviewTagBadges", () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it("shows tag counts inline for mobile-friendly reading", () => {
+    render(
+      <ReviewTagBadges tagCounts={[{ tag: "FAST_FOLLOW_UP", count: 3 }]} />,
+    )
+
+    expect(screen.getByRole("button", { name: /Fast follow-up/ })).toHaveTextContent(
+      "Fast follow-up: 3",
+    )
+  })
+
   it("uses the two-tag default when maxTags is not finite", () => {
     render(
       <ReviewTagBadges
@@ -161,8 +171,8 @@ describe("ReviewTagBadges", () => {
       />,
     )
 
-    expect(screen.getByText("Helpful")).toBeInTheDocument()
-    expect(screen.getByText("Responsive")).toBeInTheDocument()
+    expect(screen.getByText("Helpful: 3")).toBeInTheDocument()
+    expect(screen.getByText("Responsive: 2")).toBeInTheDocument()
     expect(screen.queryByText("Friendly")).not.toBeInTheDocument()
   })
 })

@@ -35,6 +35,20 @@ const REVIEW_BADGE_STAGGER_SECONDS = 1.3
 const REVIEW_BADGE_CLASS_NAME =
   "review-tag-float rounded-full border border-white/15 bg-black/65 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90"
 
+export function formatReviewTagBadgeLabel(label: string, count: number) {
+  return `${label}: ${count}`
+}
+
+function getReviewTagAriaLabel(
+  tag: RankedReviewTag,
+  onReviewsClick?: () => void,
+) {
+  const reviewLabel = tag.count === 1 ? "review" : "reviews"
+  const suffix = onReviewsClick ? ". Open lister reviews" : ""
+
+  return `${tag.label}, mentioned in ${tag.count} ${reviewLabel}${suffix}`
+}
+
 function getTopReviewTags(
   tagCounts: ReviewTagBadgesProps["tagCounts"],
   maxTags: number,
@@ -115,6 +129,7 @@ function ReviewTagBadge({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const reviewLabel = tag.count === 1 ? "review" : "reviews"
+  const badgeLabel = formatReviewTagBadgeLabel(tag.label, tag.count)
 
   return (
     <Tooltip open={isOpen} onOpenChange={setIsOpen}>
@@ -128,7 +143,7 @@ function ReviewTagBadge({
           style={{
             animationDelay: `${index * -REVIEW_BADGE_STAGGER_SECONDS}s`,
           }}
-          aria-label={`${tag.label}, mentioned in ${tag.count} ${reviewLabel}${onReviewsClick ? ". Open lister reviews" : ""}`}
+          aria-label={getReviewTagAriaLabel(tag, onReviewsClick)}
           onClick={() => {
             if (!onReviewsClick) return
 
@@ -141,7 +156,7 @@ function ReviewTagBadge({
             }
           }}
         >
-          {tag.label}
+          {badgeLabel}
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" align="start">
