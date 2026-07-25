@@ -677,15 +677,49 @@ export async function installAuthenticatedSessionMocks(
       return
     }
 
+    if (route.request().method() === "PATCH") {
+      await route.fulfill(
+        jsonRoute({
+          success: true,
+          data: {
+            matchedCount: 1,
+            modifiedCount: 1,
+          },
+        }),
+      )
+      return
+    }
+
+    const url = new URL(route.request().url())
+    const pageNumber = Number(url.searchParams.get("page") ?? "1")
+    const limit = Number(url.searchParams.get("limit") ?? "20")
+
     await route.fulfill(
       jsonRoute({
         success: true,
-        data: { notifications: [] },
+        data: [],
+        unreadCount: 0,
         pagination: {
-          page: 1,
-          limit: 20,
+          page: pageNumber,
+          limit,
           total: 0,
-          totalPages: 0,
+        },
+      }),
+    )
+  })
+
+  await page.route("**/api/v1/notifications/me/read-all", async (route) => {
+    if (!isAuthorized(route)) {
+      await route.fulfill(jsonRoute({ success: false }, 401))
+      return
+    }
+
+    await route.fulfill(
+      jsonRoute({
+        success: true,
+        data: {
+          matchedCount: 1,
+          modifiedCount: 1,
         },
       }),
     )
