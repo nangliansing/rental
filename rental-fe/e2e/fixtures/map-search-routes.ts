@@ -17,8 +17,13 @@ function jsonRoute(body: unknown, status = 200) {
   }
 }
 
-// React Query defaults to 3 retries (4 total attempts) before surfacing an error.
-const INITIAL_AREA_SEARCH_ATTEMPTS = 4
+const areaSearchResponseGate = {
+  blocked: false,
+}
+
+export function allowAreaSearchResponses() {
+  areaSearchResponseGate.blocked = false
+}
 
 export type MapSearchMockOptions = {
   failAreaSearchOnce?: boolean
@@ -48,9 +53,7 @@ export async function installMapSearchApiMocks(
   page: Page,
   options: MapSearchMockOptions = {},
 ) {
-  let areaSearchFailuresRemaining = options.failAreaSearchOnce
-    ? INITIAL_AREA_SEARCH_ATTEMPTS
-    : 0
+  areaSearchResponseGate.blocked = Boolean(options.failAreaSearchOnce)
 
   await page.route("**/api/v1/users/me", async (route: Route) => {
     await route.fulfill(
@@ -71,8 +74,7 @@ export async function installMapSearchApiMocks(
   })
 
   await page.route("**/api/v1/search/buildings/map", async (route: Route) => {
-    if (areaSearchFailuresRemaining > 0) {
-      areaSearchFailuresRemaining -= 1
+    if (areaSearchResponseGate.blocked) {
       await route.abort("failed")
       return
     }

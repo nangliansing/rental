@@ -23,6 +23,9 @@ export async function waitForAreaSearchResults(
 export async function waitForAreaSearchError(page: Page) {
   const mobilePanel = getMobileResultsPanel(page)
   await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
+  await expect(mobilePanel.getByText("Search failed")).toBeVisible({
+    timeout: 20_000,
+  })
   await expect(mobilePanel.getByRole("alert")).toContainText(
     "Could not search this area",
     { timeout: 20_000 },

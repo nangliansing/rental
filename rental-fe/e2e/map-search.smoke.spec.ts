@@ -17,6 +17,7 @@ import {
   waitForAreaSearchResults,
 } from "./fixtures/map-search-helpers"
 import {
+  allowAreaSearchResponses,
   installMapSearchApiMocks,
   waitForMapReady,
 } from "./fixtures/map-search-routes"
@@ -247,6 +248,8 @@ test.describe("Map search smoke", () => {
 
     await waitForMapReady(page)
     await waitForAreaSearchError(page)
+
+    allowAreaSearchResponses()
 
     const mobilePanel = getMobileResultsPanel(page)
     await mobilePanel.getByRole("button", { name: "Retry search" }).click()
