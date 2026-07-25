@@ -6,6 +6,7 @@ import {
   ProfileDetails,
   ProfileIdentity,
   ProfileStatList,
+  formatProfileMetaText,
 } from "./ProfileOverviewPrimitives"
 
 describe("ProfileAvatar", () => {
@@ -77,6 +78,28 @@ describe("ProfileIdentity", () => {
     expect(screen.queryByLabelText("Verified profile")).not.toBeInTheDocument()
     expect(screen.queryByRole("paragraph")).not.toBeInTheDocument()
   })
+
+  it("renders inline profile meta beside the identity row", () => {
+    render(
+      <ProfileIdentity
+        displayName="Nang Rentals"
+        inlineMeta="Since Jul 2026 · English · Thai"
+      />,
+    )
+
+    expect(screen.getByText("Since Jul 2026 · English · Thai")).toBeInTheDocument()
+  })
+})
+
+describe("formatProfileMetaText", () => {
+  it("combines created date and languages", () => {
+    expect(
+      formatProfileMetaText({
+        createdAt: "2026-07-21T00:00:00.000Z",
+        languages: ["English", "Thai"],
+      }),
+    ).toBe("Since Jul 2026 · English · Thai")
+  })
 })
 
 describe("ProfileDetails", () => {
@@ -104,6 +127,20 @@ describe("ProfileDetails", () => {
 
     expect(screen.queryByText(/^Since /)).not.toBeInTheDocument()
     expect(screen.getByText("No bio added yet.")).toBeInTheDocument()
+  })
+
+  it("can hide metadata when it is rendered elsewhere", () => {
+    render(
+      <ProfileDetails
+        createdAt="2026-07-21T00:00:00.000Z"
+        description="Helpful local rentals."
+        languages={["English"]}
+        hideMeta
+      />,
+    )
+
+    expect(screen.queryByText(/^Since /)).not.toBeInTheDocument()
+    expect(screen.getByText("Helpful local rentals.")).toBeInTheDocument()
   })
 })
 

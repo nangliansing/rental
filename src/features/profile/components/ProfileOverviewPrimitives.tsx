@@ -25,7 +25,7 @@ export function ProfileAvatar({
   const normalizedStatusLabel = normalizeText(statusLabel) || "Active profile"
   const dimensionClassName =
     size === "compact"
-      ? "h-24 w-24 text-3xl md:h-32 md:w-32 md:text-4xl"
+      ? "h-20 w-20 text-2xl md:h-32 md:w-32 md:text-4xl"
       : size === "medium"
         ? "h-32 w-32 text-4xl lg:h-36 lg:w-36"
         : undefined
@@ -41,7 +41,7 @@ export function ProfileAvatar({
 
       {isActive && (
         <span
-          className="absolute bottom-1 right-1 h-5 w-5 rounded-full border-[3px] border-white bg-emerald-500 shadow-sm md:bottom-2 md:right-2 md:h-6 md:w-6"
+          className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-[3px] border-white bg-emerald-500 shadow-sm md:bottom-2 md:right-2 md:h-6 md:w-6"
           aria-label={normalizedStatusLabel}
           title={normalizedStatusLabel}
         />
@@ -54,15 +54,18 @@ export function ProfileIdentity({
   displayName,
   isVerified = false,
   secondaryText,
+  inlineMeta,
   align = "start",
 }: {
   displayName?: string | null
   isVerified?: boolean
   secondaryText?: string | null
+  inlineMeta?: string | null
   align?: "center" | "start"
 }) {
   const name = normalizeText(displayName) || "Profile"
   const secondary = normalizeText(secondaryText)
+  const meta = normalizeText(inlineMeta)
   const isCentered = align === "center"
 
   return (
@@ -72,27 +75,46 @@ export function ProfileIdentity({
         isCentered ? "items-center" : "items-center md:items-start",
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <h1
-          className={cn(
-            "max-w-full truncate font-bold text-slate-950",
-            isCentered ? "text-xl sm:text-2xl" : "text-3xl",
-          )}
-        >
-          {name}
-        </h1>
-        {isVerified && (
-          <span
-            className="inline-flex shrink-0 items-center"
-            aria-label="Verified profile"
-            title="Verified profile"
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-1",
+          isCentered ? "items-center md:items-start" : "",
+          meta ? "md:flex-row md:flex-wrap md:items-center md:gap-x-2" : "",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <h1
+            className={cn(
+              "max-w-full truncate font-bold text-slate-950",
+              isCentered ? "text-xl sm:text-2xl" : "text-3xl",
+            )}
           >
-            <BadgeCheck
-              aria-hidden="true"
-              className="h-5 w-5 fill-[#1d9bf0] text-white sm:h-6 sm:w-6"
-              strokeWidth={3}
-            />
-          </span>
+            {name}
+          </h1>
+          {isVerified && (
+            <span
+              className="inline-flex shrink-0 items-center"
+              aria-label="Verified profile"
+              title="Verified profile"
+            >
+              <BadgeCheck
+                aria-hidden="true"
+                className="h-5 w-5 fill-[#1d9bf0] text-white sm:h-6 sm:w-6"
+                strokeWidth={3}
+              />
+            </span>
+          )}
+        </div>
+
+        {meta && (
+          <p
+            className={cn(
+              "max-w-full truncate text-sm text-slate-500",
+              isCentered ? "text-center md:text-left" : "",
+            )}
+          >
+            {meta}
+          </p>
         )}
       </div>
 
@@ -110,28 +132,43 @@ export function ProfileIdentity({
   )
 }
 
+export function formatProfileMetaText({
+  createdAt,
+  languages,
+}: {
+  createdAt?: string | null
+  languages?: readonly string[] | null
+}) {
+  const createdMonth = formatCreatedMonth(createdAt)
+  const normalizedLanguages = normalizeStringList(languages)
+
+  return [
+    createdMonth ? `Since ${createdMonth}` : null,
+    normalizedLanguages.length > 0 ? normalizedLanguages.join(" · ") : null,
+  ]
+    .filter(Boolean)
+    .join(" · ")
+}
+
 export function ProfileDetails({
   createdAt,
   description,
   languages,
   emptyBioLabel = "No bio added yet.",
   align = "start",
+  hideMeta = false,
 }: {
   createdAt?: string | null
   description?: string | null
   languages?: readonly string[] | null
   emptyBioLabel?: string | null
   align?: "center" | "start"
+  hideMeta?: boolean
 }) {
-  const createdMonth = formatCreatedMonth(createdAt)
   const normalizedDescription = normalizeText(description)
-  const normalizedLanguages = normalizeStringList(languages)
-  const metaText = [
-    createdMonth ? `Since ${createdMonth}` : null,
-    normalizedLanguages.length > 0 ? normalizedLanguages.join(" · ") : null,
-  ]
-    .filter(Boolean)
-    .join(" · ")
+  const metaText = hideMeta
+    ? ""
+    : formatProfileMetaText({ createdAt, languages })
 
   return (
     <div

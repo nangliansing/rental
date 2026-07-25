@@ -21,6 +21,7 @@ describe("ListerProfileHeader", () => {
     render(<ListerProfileHeader profile={createListerProfile()} />)
 
     expect(screen.getByText("Nang Lian Sing")).toBeInTheDocument()
+    expect(screen.getByText("Since Jul 2026 · English · Thai")).toBeInTheDocument()
     expect(screen.getByLabelText("Online lister")).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Contact" }),

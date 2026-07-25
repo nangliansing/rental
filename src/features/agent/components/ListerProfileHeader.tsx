@@ -10,6 +10,7 @@ import {
   ProfileDetails,
   ProfileIdentity,
   ProfileStatList,
+  formatProfileMetaText,
 } from "@/features/profile/components/ProfileOverviewPrimitives"
 
 import { getListerProfileUrl } from "../utils/listerProfileUrl"
@@ -28,6 +29,14 @@ export function ListerProfileHeader({ profile }: { profile: ListerProfile }) {
     setIsShareOpen(false)
   }, [])
   const profileUrl = useMemo(() => getListerProfileUrl(profile._id), [profile._id])
+  const profileMeta = useMemo(
+    () =>
+      formatProfileMetaText({
+        createdAt: profile.createdAt,
+        languages: profile.supportLanguages,
+      }),
+    [profile.createdAt, profile.supportLanguages],
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 md:flex-row md:items-start md:gap-6">
@@ -43,6 +52,7 @@ export function ListerProfileHeader({ profile }: { profile: ListerProfile }) {
         <ProfileIdentity
           displayName={profile.displayName}
           isVerified={profile.isVerified}
+          inlineMeta={profileMeta}
           align="center"
         />
 
@@ -59,11 +69,10 @@ export function ListerProfileHeader({ profile }: { profile: ListerProfile }) {
 
         <div className="mt-3 w-full max-w-xl">
           <ProfileDetails
-            createdAt={profile.createdAt}
             description={profile.description}
-            languages={profile.supportLanguages}
             emptyBioLabel={null}
             align="center"
+            hideMeta
           />
         </div>
 
