@@ -57,8 +57,9 @@ GitHub Actions workflows in [`.github/workflows/`](./.github/workflows) run on p
 
 - **Frontend CI** — unit tests and production build (`rental-fe/`)
 - **Backend CI** — contract validation, dependency audit, Docker build, tests (`rental-be/`)
+- **E2E Smoke** — Playwright browser smoke (`rental-fe/e2e/`); skips when `VITE_GOOGLE_MAPS_API_KEY` secret is unset
 
-Each workflow only runs when files in its package change.
+Each package workflow runs only when files in that package change. E2E smoke also runs on every push to `main` that touches the frontend.
 
 ### Branch protection (recommended)
 
@@ -68,6 +69,16 @@ In GitHub **Settings → Branches → Add rule** for `main`:
 2. Require status checks to pass:
    - `Validate frontend`
    - `Validate backend`
+   - `Playwright smoke` (optional until `VITE_GOOGLE_MAPS_API_KEY` is configured)
 3. Require branches to be up to date before merging
+
+### GitHub secrets (optional, for E2E smoke)
+
+Add in **Settings → Secrets and variables → Actions**:
+
+| Secret | Purpose |
+| --- | --- |
+| `VITE_GOOGLE_MAPS_API_KEY` | Enables map-search Playwright smoke in CI |
+| `VITE_GOOGLE_MAPS_MAP_ID` | Optional custom map style ID |
 
 Repository: [github.com/nangliansing/rental](https://github.com/nangliansing/rental)

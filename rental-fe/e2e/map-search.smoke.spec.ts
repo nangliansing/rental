@@ -13,7 +13,9 @@ import {
 } from "./fixtures/map-search-routes"
 
 const env = loadEnv("development", process.cwd(), "")
-const hasMapsKey = Boolean(env.VITE_GOOGLE_MAPS_API_KEY?.trim())
+const hasMapsKey = Boolean(
+  (process.env.VITE_GOOGLE_MAPS_API_KEY ?? env.VITE_GOOGLE_MAPS_API_KEY)?.trim(),
+)
 
 test.describe("Map search smoke", () => {
   test.beforeEach(async ({ page }) => {
