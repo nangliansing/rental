@@ -118,6 +118,7 @@ export function ListingCreatePage() {
             variant="contained"
             titleLevel={2}
             hideEmptyRent
+            hideActions
           />
         )}
 
@@ -185,8 +186,8 @@ export function ListingCreatePage() {
                 titleLevel={2}
                 hideEmptyRent
                 showCoordinates
-                editLabel="Edit building"
-                onRequestEdit={() => setStep("building")}
+                hideActions
+                onEditDraft={() => setStep("building")}
               />
             )}
 

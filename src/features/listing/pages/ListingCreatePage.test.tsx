@@ -10,6 +10,18 @@ import { ListingCreatePage } from "./ListingCreatePage"
 
 vi.mock("@/features/buildings/api")
 vi.mock("@/features/pending-post")
+vi.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: vi.fn(() => ({
+    isAuthenticated: false,
+    isLoading: false,
+  })),
+}))
+vi.mock("@/features/profile/api/useMyAgentProfile", () => ({
+  useMyAgentProfile: vi.fn(() => ({
+    canCreateListing: false,
+    isPending: false,
+  })),
+}))
 vi.mock("../components/ListingForm", () => ({
   ListingForm: () => <div>Listing form</div>,
 }))

@@ -277,6 +277,7 @@ export function PendingPostDetailOverlay({
                     building={building}
                     titleLevel={3}
                     hideEmptyRent
+                    hideActions
                     className="border-b-0 border-t px-0 pt-5"
                   />
                 )}

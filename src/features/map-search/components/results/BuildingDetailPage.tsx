@@ -1,7 +1,6 @@
 // src/features/map-search/components/results/BuildingDetailPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react"
 import type React from "react"
-import { useNavigate } from "react-router-dom"
 import { ChevronLeft, SearchX } from "lucide-react"
 
 import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
@@ -31,16 +30,13 @@ export function BuildingDetailPage({
   showInlineBack = true,
   onBack,
 }: BuildingDetailPageProps) {
-  const navigate = useNavigate()
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const shouldRestoreFocusRef = useRef(false)
   const {
     selectedBuilding: building,
     buildingDetailFilters,
-    canCreateListing,
     isListingSearch,
-    onListExistingBuilding,
   } = useMapSearchResults()
 
   const listingsQuery = useSearchListingsInBuilding({
@@ -102,10 +98,7 @@ export function BuildingDetailPage({
 
         <BuildingSummaryCard
           building={building}
-          canCreateListing={canCreateListing}
           hideEmptyRent={isListingSearch}
-          onListHere={() => onListExistingBuilding(building)}
-          onRequestEdit={() => navigate(`/buildings/${building._id}/edit`)}
         />
       </div>
 
