@@ -4,14 +4,14 @@
 **Route:** `/admin`  
 **Layout:** `RootLayout` (bottom nav) + desktop-only workspace (`lg+`)  
 **Automated regression:** `npm test -- src/features/admin` → **88/88 passed**  
-**E2E regression:** `e2e/admin-panel.smoke.spec.ts` → **3/3 passed**; `e2e/admin-moderation.smoke.spec.ts` → **2/2 passed**; `e2e/admin-building-edits.smoke.spec.ts` → **3/3 passed**; `e2e/admin-reported-listings.smoke.spec.ts` → **3/3 passed**; `e2e/admin-reported-reviews.smoke.spec.ts` → **3/3 passed** (Playwright, mocked session, 1280×900 viewport)
+**E2E regression:** `e2e/admin-panel.smoke.spec.ts` → **3/3 passed**; `e2e/admin-moderation.smoke.spec.ts` → **2/2 passed**; `e2e/admin-building-edits.smoke.spec.ts` → **3/3 passed**; `e2e/admin-reported-listings.smoke.spec.ts` → **3/3 passed**; `e2e/admin-reported-reviews.smoke.spec.ts` → **3/3 passed**; `e2e/admin-suspend-lister.smoke.spec.ts` → **2/2 passed** (Playwright, mocked session, 1280×900 viewport)
 
 ## Audit summary
 
 | Area | Before | After |
 |------|--------|-------|
 | Test coverage | API/mutation hooks only (82 tests) | + page auth gates, workspace shell, tab switch (88 tests) |
-| E2E smoke | Auth gates only (3 tests) | Auth gates + pending + building edits + reported listings + reported reviews (14 tests total) |
+| E2E smoke | Auth gates only (3 tests) | Auth gates + pending + building edits + reported listings + reported reviews + suspend lister (16 tests total) |
 | Documentation | None | This audit + manual checklist |
 | UI surface | Single ~4,300-line page, untested shell | **245-line shell** + 6 tab modules; auth gates and tab shell covered by tests |
 | Maintainability | Monolithic `AdminPanelPage.tsx` | Tab-per-folder modules under `src/features/admin/tabs/` |
@@ -74,7 +74,8 @@ Each tab module owns its queries, local context, list/detail UI, and tab-specifi
 | `e2e/fixtures/admin-building-edits.ts` | Stateful building-edit-request mocks (GET list/detail, PATCH approve/reject) |
 | `e2e/admin-reported-reviews.smoke.spec.ts` | Reported reviews tab; detail view; dismiss report; delete review |
 | `e2e/fixtures/admin-reported-listings.ts` | Stateful report mocks (GET list/detail, PATCH status, DELETE listing) |
-| `e2e/fixtures/admin-reported-reviews.ts` | Stateful review-report mocks (GET list/detail, PATCH status, DELETE review) |
+| `e2e/admin-suspend-lister.smoke.spec.ts` | Pending tab lister menu; suspend dialog duration/reason; create suspension |
+| `e2e/fixtures/admin-suspend-lister.ts` | Pending-post mocks + POST `/admin/suspensions` create handler |
 
 ## Existing API coverage (unchanged)
 
@@ -97,14 +98,14 @@ Sign in with an **ADMIN** or **OWNER** account, then open `/admin`.
 | 7 | Building edits tab | **Automated** | E2E: diff view; approve/reject with reason dialog |
 | 8 | Reported listings tab | **Automated** | E2E: dismiss report + delete listing from moderation menu |
 | 9 | Reported reviews tab | **Automated** | E2E: dismiss report + delete review from moderation menu |
-| 10 | Suspend lister (from pending/report) | **Defer** | Duration + reason dialog |
+| 10 | Suspend lister (from pending/report) | **Automated** | E2E: duration + reason dialog from pending lister menu |
 | 11 | Lift suspension | **Defer** | Suspensions tab → lift dialog |
 | 12 | Administrators tab (OWNER) | **Defer** | List admins; remove ADMIN role |
 | 13 | Mobile viewport | **Defer** | `<1024px` shows “Use a larger screen” |
 
 ## Known follow-ups (non-blocking)
 
-- **Tab-level E2E** — extend Playwright beyond pending, building edits, reported listings, and reported reviews (checklist items 10–13); tab modules are isolated and easier to test incrementally.
+- **Tab-level E2E** — extend Playwright beyond pending, building edits, reported listings, reported reviews, and suspend lister (checklist items 11–13); tab modules are isolated and easier to test incrementally.
 - **No nav entry** — admins must know `/admin` URL; consider OWNER-only nav affordance later.
 - **`useUpdateAdminAgentProfileVerification`** — hook exists with tests but no UI wiring (verify/unverify lister).
 - **Search/detail parsers** — 5 search + 5 get-by-id API modules lack dedicated unit tests.
@@ -120,8 +121,9 @@ Sign in with an **ADMIN** or **OWNER** account, then open `/admin`.
 - [x] E2E smoke — building edits diff/approve/reject (3 tests)
 - [x] E2E smoke — reported listings dismiss/delete (3 tests)
 - [x] E2E smoke — reported reviews dismiss/delete (3 tests)
-- [ ] Optional: desktop Chrome manual pass (checklist items 10–13)
-- [ ] Optional: tab-level Playwright specs (suspend lister, suspensions, admins, mobile)
+- [x] E2E smoke — suspend lister from pending tab (2 tests)
+- [ ] Optional: desktop Chrome manual pass (checklist items 11–13)
+- [ ] Optional: tab-level Playwright specs (lift suspension, admins, mobile)
 - [ ] Optional: wire agent verification toggle in admin UI
 
 ## Release recommendation
