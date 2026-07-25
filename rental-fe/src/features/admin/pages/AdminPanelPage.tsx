@@ -15,17 +15,14 @@ import {
   CheckCircle2,
   Clock3,
   Flag,
-  MessageSquareWarning,
   Loader2,
+  MessageSquareWarning,
   ShieldCheck,
-  Star,
-  Trash2,
   UsersRound,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import { LoginRequired } from "@/shared/components/auth/LoginRequired";
@@ -39,27 +36,19 @@ import {
   AdminInfoRow as InfoRow,
   AdminListerCard,
   AdminListState,
-  AdminReviewCard,
   AdminReviewListItem,
   AdminStatusBadge as StatusBadge,
   AdminUserCard,
   AdminWorkspace,
-  ReviewModerationMenu,
 } from "../components";
 import {
-  getAdminReviewReportById,
   getAdminSuspensionById,
   getAdminUserById,
   searchAdminPlatformAdmins,
-  searchAdminReviewReports,
   searchAdminSuspensions,
   useCreateAdminSuspension,
   useLiftAdminSuspension,
   useRemoveAdminRole,
-  useUpdateAdminReviewReportStatus,
-  useDeleteAdminListerReview,
-  type AdminReviewReport,
-  type AdminReviewReportStatusFilter,
   type AdminPlatformAdmin,
   type AdminUserDetails,
   type AdminSuspensionStatus,
@@ -74,6 +63,7 @@ import { getNextAdminPageParam } from "../shared/adminPagination";
 import { BuildingEditsTab } from "../tabs/building-edits";
 import { PendingListingsTab } from "../tabs/pending-listings";
 import { ReportedListingsTab } from "../tabs/reported-listings";
+import { ReportedReviewsTab } from "../tabs/reported-reviews";
 
 type AdminTab =
   | "pending"
@@ -82,46 +72,12 @@ type AdminTab =
   | "reviewReports"
   | "suspensions"
   | "platformAdmins";
-type ReviewReportReviewStatus = Exclude<AdminReviewReportStatusFilter, "OPEN">;
-type ReviewReportReviewAction = {
-  report: AdminReviewReport;
-  status: ReviewReportReviewStatus;
-} | null;
-type ReviewReportDeleteReviewAction = AdminReviewReport | null;
 type SuspensionAction = {
   userId: string;
   name: string;
 } | null;
 type LiftSuspensionAction = AdminSuspensionListItem | null;
 type RemoveAdminRoleAction = AdminUserDetails | null;
-
-type ReviewReportReviewContextValue = {
-  selectedReviewReport: AdminReviewReport | null;
-  isReviewSubmitting: boolean;
-  isDeletingReview: boolean;
-  selectReviewReport: (reviewReportId: string | null) => void;
-  openReviewDialog: (
-    report: AdminReviewReport,
-    status: ReviewReportReviewStatus,
-  ) => void;
-  openDeleteReviewDialog: (report: AdminReviewReport) => void;
-  action: ReviewReportReviewAction;
-  deleteAction: ReviewReportDeleteReviewAction;
-  selectedReviewReason: string;
-  reviewNote: string;
-  deleteReason: string;
-  deleteNote: string;
-  error: string | null;
-  deleteError: string | null;
-  setSelectedReviewReason: (value: string) => void;
-  setReviewNote: (value: string) => void;
-  setDeleteReason: (value: string) => void;
-  setDeleteNote: (value: string) => void;
-  closeDialog: () => void;
-  closeDeleteReviewDialog: () => void;
-  confirmReview: () => void;
-  confirmDeleteReview: () => void;
-}
 
 type SuspensionContextValue = {
   selectedSuspension: AdminSuspensionListItem | null;
@@ -161,8 +117,6 @@ type PlatformAdminContextValue = {
   confirmRemoveAdmin: () => void;
 }
 
-const ReviewReportReviewContext =
-  createContext<ReviewReportReviewContextValue | null>(null);
 const SuspensionContext = createContext<SuspensionContextValue | null>(null);
 const PlatformAdminContext = createContext<PlatformAdminContextValue | null>(
   null,
@@ -174,13 +128,6 @@ function useRequiredContext<T>(context: T | null, name: string) {
   }
 
   return context;
-}
-
-function useReviewReportReview() {
-  return useRequiredContext(
-    useContext(ReviewReportReviewContext),
-    "ReviewReportReviewContext",
-  );
 }
 
 function useSuspensionReview() {
@@ -198,24 +145,20 @@ function usePlatformAdminReview() {
 }
 
 function AdminReviewProviders({
-  reviewReport,
   suspension,
   platformAdmin,
   children,
 }: {
-  reviewReport: ReviewReportReviewContextValue;
   suspension: SuspensionContextValue;
   platformAdmin: PlatformAdminContextValue;
   children: ReactNode;
 }) {
   return (
-    <ReviewReportReviewContext.Provider value={reviewReport}>
-      <SuspensionContext.Provider value={suspension}>
-        <PlatformAdminContext.Provider value={platformAdmin}>
-          {children}
-        </PlatformAdminContext.Provider>
-      </SuspensionContext.Provider>
-    </ReviewReportReviewContext.Provider>
+    <SuspensionContext.Provider value={suspension}>
+      <PlatformAdminContext.Provider value={platformAdmin}>
+        {children}
+      </PlatformAdminContext.Provider>
+    </SuspensionContext.Provider>
   );
 }
 
@@ -235,34 +178,6 @@ const liftSuspensionReasonOptions = [
   "Required corrections were completed",
   "Report was dismissed after investigation",
   "Admin approved account restoration",
-];
-
-const reviewReportDismissReasonOptions = [
-  "Not enough evidence",
-  "Not a platform violation",
-  "Duplicate report",
-  "Review already corrected",
-  "Reporter misunderstood the review",
-  "Could not verify the issue",
-];
-
-const reviewReportActionTakenReasonOptions = [
-  "Review removed",
-  "Review hidden from first view",
-  "Reviewer warned",
-  "Lister suspended",
-  "Inappropriate text corrected",
-  "Escalated for further review",
-];
-
-const reviewDeleteReasonOptions = [
-  "Inappropriate language",
-  "Harassment or hate",
-  "False information",
-  "Private information",
-  "Spam or duplicate review",
-  "Conflict of interest",
-  "Platform policy violation",
 ];
 
 const suspensionDurationOptions = [
@@ -307,17 +222,6 @@ const tabs: {
   },
 ];
 
-const reviewReportStatusFilters: {
-  label: string;
-  value?: AdminReviewReportStatusFilter;
-}[] = [
-  { label: "All" },
-  { label: "Open", value: "OPEN" },
-  { label: "Reviewed", value: "REVIEWED" },
-  { label: "Dismissed", value: "DISMISSED" },
-  { label: "Action taken", value: "ACTION_TAKEN" },
-];
-
 const suspensionStatusFilters: {
   label: string;
   value?: AdminSuspensionStatusFilter;
@@ -327,52 +231,6 @@ const suspensionStatusFilters: {
   { label: "Expired", value: "EXPIRED" },
   { label: "Lifted", value: "LIFTED" },
 ];
-
-function getReviewReportReasonLabel(reason: AdminReviewReport["reason"]) {
-  const labels: Record<AdminReviewReport["reason"], string> = {
-    INAPPROPRIATE_LANGUAGE: "Inappropriate language",
-    HARASSMENT_OR_HATE: "Harassment or hate",
-    FALSE_INFORMATION: "False information",
-    SPAM: "Spam",
-    PRIVATE_INFORMATION: "Private information",
-    CONFLICT_OF_INTEREST: "Conflict of interest",
-    OTHER: "Other",
-  };
-
-  return labels[reason] ?? reason;
-}
-
-function getReviewReportReporterName(report: AdminReviewReport) {
-  return report.reportedBy?.name ?? report.reportedBy?.email ?? "Reporter";
-}
-
-function getReviewReportReviewOwnerName(report: AdminReviewReport) {
-  return report.reviewOwner?.name ?? report.reviewOwner?.email ?? "Reviewer";
-}
-
-function getReviewReportListerName(report: AdminReviewReport) {
-  return report.listerProfile?.displayName ?? "Lister";
-}
-
-function getReviewRemovedByName(report: AdminReviewReport) {
-  const removedBy = report.review?.moderation?.removedBy;
-
-  if (!removedBy) return "Not recorded";
-
-  const knownAdmin = [report.actionTakenBy, report.reviewedBy].find(
-    (admin) => admin?._id === removedBy,
-  );
-
-  return knownAdmin?.name ?? knownAdmin?.email ?? "Admin user";
-}
-
-function formatReviewTagLabel(tag: string) {
-  return tag
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
 function getSuspensionUserName(suspension: AdminSuspensionListItem) {
   return suspension.user?.name ?? suspension.user?.email ?? "Suspended user";
@@ -398,14 +256,8 @@ function isAdminRole(role: string | undefined) {
 export function AdminPanelPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("pending");
-  const [reviewReportStatus, setReviewReportStatus] = useState<
-    AdminReviewReportStatusFilter | undefined
-  >("OPEN");
   const [suspensionStatus, setSuspensionStatus] =
     useState<AdminSuspensionStatusFilter>("ACTIVE");
-  const [selectedReviewReportId, setSelectedReviewReportId] = useState<
-    string | null
-  >(null);
   const [selectedSuspensionId, setSelectedSuspensionId] = useState<
     string | null
   >(null);
@@ -415,23 +267,6 @@ export function AdminPanelPage() {
   const [removeAdminRoleAction, setRemoveAdminRoleAction] =
     useState<RemoveAdminRoleAction>(null);
   const [removeAdminRoleError, setRemoveAdminRoleError] = useState<
-    string | null
-  >(null);
-  const [reviewReportReviewAction, setReviewReportReviewAction] =
-    useState<ReviewReportReviewAction>(null);
-  const [reviewReportDeleteReviewAction, setReviewReportDeleteReviewAction] =
-    useState<ReviewReportDeleteReviewAction>(null);
-  const [
-    selectedReviewReportReviewReason,
-    setSelectedReviewReportReviewReason,
-  ] = useState("");
-  const [reviewReportReviewNote, setReviewReportReviewNote] = useState("");
-  const [reviewReportDeleteReason, setReviewReportDeleteReason] = useState("");
-  const [reviewReportDeleteNote, setReviewReportDeleteNote] = useState("");
-  const [reviewReportReviewError, setReviewReportReviewError] = useState<
-    string | null
-  >(null);
-  const [reviewReportDeleteError, setReviewReportDeleteError] = useState<
     string | null
   >(null);
   const [suspensionAction, setSuspensionAction] =
@@ -448,19 +283,6 @@ export function AdminPanelPage() {
     null,
   );
   const isAdmin = isAdminRole(user?.role);
-
-  const reviewReportsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.reviewReports.list(reviewReportStatus),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminReviewReports({
-        status: reviewReportStatus,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled: activeTab === "reviewReports" && isAdmin,
-  });
 
   const suspensionsQuery = useInfiniteQuery({
     queryKey: queryKeys.admin.suspensions.list(suspensionStatus),
@@ -486,24 +308,6 @@ export function AdminPanelPage() {
     getNextPageParam: getNextAdminPageParam,
     enabled: activeTab === "platformAdmins" && isAdmin,
   });
-
-  const closeReviewReportReviewDialog = () => {
-    setReviewReportReviewAction(null);
-    setSelectedReviewReportReviewReason("");
-    setReviewReportReviewNote("");
-    setReviewReportReviewError(null);
-  };
-
-  const closeReviewReportDeleteReviewDialog = () => {
-    setReviewReportDeleteReviewAction(null);
-    setReviewReportDeleteReason("");
-    setReviewReportDeleteNote("");
-    setReviewReportDeleteError(null);
-  };
-
-  const updateReviewReportStatusMutation = useUpdateAdminReviewReportStatus();
-
-  const deleteReviewReportReviewMutation = useDeleteAdminListerReview(user?._id);
 
   const closeSuspensionDialog = () => {
     setSuspensionAction(null);
@@ -531,30 +335,6 @@ export function AdminPanelPage() {
 
   const removeAdminRoleMutation = useRemoveAdminRole();
 
-  const reviewReports =
-    reviewReportsQuery.data?.pages.flatMap((page) => page.data) ?? [];
-  const reviewReportsPagination =
-    reviewReportsQuery.data?.pages[0]?.pagination;
-  const selectedReviewReportListItem =
-    reviewReports.find((report) => report._id === selectedReviewReportId) ??
-    reviewReports[0] ??
-    null;
-  const effectiveReviewReportId =
-    selectedReviewReportId ?? selectedReviewReportListItem?._id;
-  const reviewReportDetailQuery = useQuery({
-    queryKey: queryKeys.admin.reviewReports.detail(effectiveReviewReportId),
-    queryFn: () => getAdminReviewReportById(effectiveReviewReportId!),
-    enabled:
-      activeTab === "reviewReports" &&
-      isAdmin &&
-      Boolean(effectiveReviewReportId),
-    retry: (failureCount, error) =>
-      error instanceof ApiError && error.status < 500
-        ? false
-        : failureCount < 2,
-  });
-  const selectedReviewReport =
-    reviewReportDetailQuery.data ?? selectedReviewReportListItem ?? null;
   const suspensions =
     suspensionsQuery.data?.pages.flatMap((page) => page.data) ?? [];
   const suspensionsPagination = suspensionsQuery.data?.pages[0]?.pagination;
@@ -598,126 +378,6 @@ export function AdminPanelPage() {
           agentProfile: null,
         }
       : null);
-  const isReviewReportReviewSubmitting =
-    updateReviewReportStatusMutation.isPending;
-  const isReviewReportReviewDeleting =
-    deleteReviewReportReviewMutation.isPending;
-
-  const handleOpenReviewReportReviewDialog = (
-    report: AdminReviewReport,
-    status: ReviewReportReviewStatus,
-  ) => {
-    setReviewReportReviewAction({ report, status });
-    setSelectedReviewReportReviewReason("");
-    setReviewReportReviewNote("");
-    setReviewReportReviewError(null);
-  };
-
-  const handleOpenReviewReportDeleteReviewDialog = (
-    report: AdminReviewReport,
-  ) => {
-    setReviewReportDeleteReviewAction(report);
-    setReviewReportDeleteReason("");
-    setReviewReportDeleteNote("");
-    setReviewReportDeleteError(null);
-  };
-
-  const handleConfirmReviewReportReview = () => {
-    if (
-      !reviewReportReviewAction ||
-      updateReviewReportStatusMutation.isPending
-    ) {
-      return;
-    }
-
-    const trimmedReviewReason = selectedReviewReportReviewReason.trim();
-    const trimmedReviewNote = reviewReportReviewNote.trim();
-    const requiresNote =
-      reviewReportReviewAction.status === "DISMISSED" ||
-      reviewReportReviewAction.status === "ACTION_TAKEN";
-
-    if (requiresNote && !trimmedReviewReason && !trimmedReviewNote) {
-      setReviewReportReviewError("Review note is required.");
-      return;
-    }
-
-    const reviewNoteForSubmission = trimmedReviewReason
-      ? [trimmedReviewReason, trimmedReviewNote && `Note: ${trimmedReviewNote}`]
-          .filter(Boolean)
-          .join("\n\n")
-      : trimmedReviewNote;
-
-    updateReviewReportStatusMutation.mutate(
-      {
-        reviewReportId: reviewReportReviewAction.report._id,
-        status: reviewReportReviewAction.status,
-        reviewNote: reviewNoteForSubmission,
-      },
-      {
-        onSuccess: closeReviewReportReviewDialog,
-        onError: (error) => {
-          setReviewReportReviewError(
-            error instanceof Error
-              ? error.message
-              : "Could not update review report status.",
-          );
-        },
-      },
-    );
-  };
-
-  const handleConfirmReviewReportDeleteReview = () => {
-    if (
-      !reviewReportDeleteReviewAction ||
-      deleteReviewReportReviewMutation.isPending
-    ) {
-      return;
-    }
-
-    const review = reviewReportDeleteReviewAction.review;
-
-    if (!review || review.isDeleted) {
-      setReviewReportDeleteError("This review is no longer available.");
-      return;
-    }
-
-    const trimmedReason = reviewReportDeleteReason.trim();
-    const trimmedNote = reviewReportDeleteNote.trim();
-
-    if (!trimmedReason && !trimmedNote) {
-      setReviewReportDeleteError("Deletion reason is required.");
-      return;
-    }
-
-    const deleteReason = trimmedReason
-      ? [trimmedReason, trimmedNote && `Note: ${trimmedNote}`]
-          .filter(Boolean)
-          .join("\n\n")
-      : trimmedNote;
-
-    const listerProfileId =
-      reviewReportDeleteReviewAction.listerProfile?._id ??
-      review.listerProfileId;
-
-    deleteReviewReportReviewMutation.mutate(
-      {
-        reviewId: review._id,
-        reviewReportId: reviewReportDeleteReviewAction._id,
-        listerProfileId,
-        listerUserId:
-          reviewReportDeleteReviewAction.listerProfile?.userId ?? undefined,
-        reason: deleteReason,
-      },
-      {
-        onSuccess: closeReviewReportDeleteReviewDialog,
-        onError: (error) => {
-          setReviewReportDeleteError(
-            error instanceof Error ? error.message : "Could not delete review.",
-          );
-        },
-      },
-    );
-  };
 
   const handleOpenSuspensionDialog = (
     action: NonNullable<SuspensionAction>,
@@ -831,43 +491,6 @@ export function AdminPanelPage() {
     );
   };
 
-  const reviewReportReviewContextValue: ReviewReportReviewContextValue = {
-    selectedReviewReport,
-    isReviewSubmitting: isReviewReportReviewSubmitting,
-    isDeletingReview: isReviewReportReviewDeleting,
-    selectReviewReport: setSelectedReviewReportId,
-    openReviewDialog: handleOpenReviewReportReviewDialog,
-    openDeleteReviewDialog: handleOpenReviewReportDeleteReviewDialog,
-    action: reviewReportReviewAction,
-    deleteAction: reviewReportDeleteReviewAction,
-    selectedReviewReason: selectedReviewReportReviewReason,
-    reviewNote: reviewReportReviewNote,
-    deleteReason: reviewReportDeleteReason,
-    deleteNote: reviewReportDeleteNote,
-    error: reviewReportReviewError,
-    deleteError: reviewReportDeleteError,
-    setSelectedReviewReason: (value) => {
-      setSelectedReviewReportReviewReason(value);
-      if (reviewReportReviewError) setReviewReportReviewError(null);
-    },
-    setReviewNote: (value) => {
-      setReviewReportReviewNote(value);
-      if (reviewReportReviewError) setReviewReportReviewError(null);
-    },
-    setDeleteReason: (value) => {
-      setReviewReportDeleteReason(value);
-      if (reviewReportDeleteError) setReviewReportDeleteError(null);
-    },
-    setDeleteNote: (value) => {
-      setReviewReportDeleteNote(value);
-      if (reviewReportDeleteError) setReviewReportDeleteError(null);
-    },
-    closeDialog: closeReviewReportReviewDialog,
-    closeDeleteReviewDialog: closeReviewReportDeleteReviewDialog,
-    confirmReview: handleConfirmReviewReportReview,
-    confirmDeleteReview: handleConfirmReviewReportDeleteReview,
-  };
-
   const suspensionContextValue: SuspensionContextValue = {
     selectedSuspension,
     action: suspensionAction,
@@ -942,7 +565,6 @@ export function AdminPanelPage() {
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <AdminReviewProviders
-        reviewReport={reviewReportReviewContextValue}
         suspension={suspensionContextValue}
         platformAdmin={platformAdminContextValue}
       >
@@ -1019,64 +641,10 @@ export function AdminPanelPage() {
           )}
 
           {activeTab === "reviewReports" && (
-            <AdminWorkspace
-              title="Reported reviews"
-              description="Review feedback reports from profiles."
-              total={reviewReportsPagination?.total}
-              filters={
-                <AdminFilterPills
-                  options={reviewReportStatusFilters}
-                  value={reviewReportStatus}
-                  scrollable
-                  onChange={(nextStatus) => {
-                    setReviewReportStatus(nextStatus);
-                    setSelectedReviewReportId(null);
-                  }}
-                />
-              }
-              list={
-                <AdminListState
-                  isLoading={reviewReportsQuery.isLoading}
-                  error={reviewReportsQuery.error}
-                  errorFallback="Could not load reported reviews."
-                  isEmpty={reviewReports.length === 0}
-                  emptyTitle="No review reports"
-                  emptyDescription="Reported reviews will appear here when users flag profile feedback."
-                  onRetry={() => void reviewReportsQuery.refetch()}
-                  hasNextPage={Boolean(reviewReportsQuery.hasNextPage)}
-                  isFetchingNextPage={reviewReportsQuery.isFetchingNextPage}
-                  onFetchNextPage={() =>
-                    void reviewReportsQuery.fetchNextPage()
-                  }
-                >
-                  {reviewReports.map((report) => (
-                    <ReviewReportListItem
-                      key={report._id}
-                      report={report}
-                      isSelected={selectedReviewReport?._id === report._id}
-                      onSelect={() => setSelectedReviewReportId(report._id)}
-                    />
-                  ))}
-                </AdminListState>
-              }
-              detail={
-                <AdminDetailState
-                  isLoading={reviewReportDetailQuery.isLoading}
-                  shouldShowLoading={Boolean(effectiveReviewReportId)}
-                  error={reviewReportDetailQuery.error}
-                  errorFallback="Could not load this review report."
-                  onRetry={() => void reviewReportDetailQuery.refetch()}
-                >
-                  {selectedReviewReport ? (
-                    <ReviewReportDetail report={selectedReviewReport} />
-                  ) : (
-                    <AdminEmptyState
-                      title="Select a review report"
-                      description="Choose a reported review from the left to inspect the details."
-                    />
-                  )}
-                </AdminDetailState>
-              }
+            <ReportedReviewsTab
+              enabled={isAdmin}
+              currentUserId={user?._id}
+              onSuspendUser={handleOpenSuspensionDialog}
             />
           )}
 
@@ -1186,8 +754,6 @@ export function AdminPanelPage() {
         </div>
       </div>
 
-        <ReviewReportReviewDialog />
-        <ReviewReportDeleteReviewDialog />
         <SuspensionDialog />
         <LiftSuspensionDialog />
         <RemoveAdminRoleDialog />
@@ -1236,334 +802,6 @@ function SelectableChipGroup<TValue extends string | number>({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function AdminModeratedListerCard({
-  name,
-  subtitle,
-  meta,
-  profile,
-  userId,
-  userStatus,
-}: {
-  name: string;
-  subtitle?: string;
-  meta?: string;
-  profile?: Parameters<typeof AdminListerCard>[0]["profile"];
-  userId?: string;
-  userStatus?: string;
-}) {
-  const { openDialog } = useSuspensionReview();
-
-  return (
-    <AdminListerCard
-      name={name}
-      subtitle={subtitle}
-      meta={meta}
-      profile={profile}
-      suspendTarget={
-        userId
-          ? {
-              userId,
-              isSuspended: userStatus === "SUSPENDED",
-            }
-          : undefined
-      }
-      onSuspend={openDialog}
-    />
-  );
-}
-
-function ReviewReportListItem({
-  report,
-  isSelected,
-  onSelect,
-}: {
-  report: AdminReviewReport;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  const meta = [
-    `Review by ${getReviewReportReviewOwnerName(report)}`,
-    `For ${getReviewReportListerName(report)}`,
-    `Reported by ${getReviewReportReporterName(report)}`,
-  ];
-
-  if (report.review?.isDeleted) {
-    meta.push("Review removed");
-  }
-
-  return (
-    <AdminReviewListItem
-      title={getReviewReportReasonLabel(report.reason)}
-      meta={meta}
-      createdAt={formatDate(report.createdAt)}
-      isSelected={isSelected}
-      onSelect={onSelect}
-      image={report.listerProfile?.profilePhoto}
-      imageAlt={getReviewReportListerName(report)}
-      imageFallback={<MessageSquareWarning className="h-6 w-6" />}
-      status={report.status}
-      note={report.note}
-      imageSize="sm"
-    />
-  );
-}
-
-function ReviewReportDetail({
-  report,
-}: {
-  report: AdminReviewReport;
-}) {
-  const {
-    isReviewSubmitting,
-    isDeletingReview,
-    openReviewDialog,
-    openDeleteReviewDialog,
-  } = useReviewReportReview();
-  const review = report.review;
-  const lister = report.listerProfile;
-  const isOpen = report.status === "OPEN";
-  const isReviewDeleted = Boolean(review?.isDeleted);
-
-  return (
-    <article className="space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {getReviewReportReasonLabel(report.reason)}
-            </h2>
-            <StatusBadge status={report.status} />
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Reported {formatDate(report.createdAt)} by{" "}
-            {getReviewReportReporterName(report)}
-          </p>
-        </div>
-
-        {isOpen && (
-          <div className="flex shrink-0 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isReviewSubmitting}
-              onClick={() => openReviewDialog(report, "DISMISSED")}
-            >
-              Dismiss
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isReviewSubmitting}
-              onClick={() => openReviewDialog(report, "REVIEWED")}
-            >
-              Mark reviewed
-            </Button>
-            <Button
-              type="button"
-              disabled={isReviewSubmitting}
-              onClick={() => openReviewDialog(report, "ACTION_TAKEN")}
-            >
-              Action taken
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <DetailPanel title="Report">
-          <InfoRow
-            label="Reason"
-            value={getReviewReportReasonLabel(report.reason)}
-          />
-          <InfoRow label="Status" value={report.status.replaceAll("_", " ")} />
-          <InfoRow
-            label="Details"
-            value={report.note?.trim() || "No extra details provided"}
-          />
-          <InfoRow
-            label="Reporter"
-            value={
-              report.reportedBy
-                ? `${report.reportedBy.name} · ${report.reportedBy.email}`
-                : "Reporter not found"
-            }
-          />
-        </DetailPanel>
-
-        <DetailPanel title="Review status">
-          <AdminReviewCard
-            status={report.status}
-            reviewedAt={report.reviewedAt ? formatDate(report.reviewedAt) : null}
-            reviewedBy={report.reviewedBy?.name}
-            note={report.reviewNote}
-          />
-        </DetailPanel>
-      </div>
-
-      <DetailPanel
-        title="Reported review"
-        action={
-          review && !isReviewDeleted ? (
-            <ReviewModerationMenu
-              isDisabled={isDeletingReview}
-              onDelete={() => openDeleteReviewDialog(report)}
-            />
-          ) : undefined
-        }
-      >
-        {review && !isReviewDeleted ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <AdminRatingStars rating={review.rating} />
-              <span className="text-sm font-medium text-slate-500">
-                {formatDate(review.createdAt)}
-              </span>
-              {review.editedAt && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                  Edited
-                </span>
-              )}
-            </div>
-
-            {review.comment ? (
-              <p className="whitespace-pre-line text-sm leading-6 text-slate-700">
-                {review.comment}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-500">No written comment.</p>
-            )}
-
-            {review.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {review.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
-                  >
-                    {formatReviewTagLabel(tag)}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2">
-              <InfoRow label="Review availability" value="Active" />
-              <InfoRow
-                label="Collapsed"
-                value={review.visibility?.isCollapsed ? "Yes" : "No"}
-              />
-            </div>
-          </div>
-        ) : isReviewDeleted ? (
-          <div className="rounded-lg bg-slate-50 px-4 py-5">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-950">
-                  This review has been removed.
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
-                  The report remains visible for audit history, but the deleted
-                  review is no longer shown on the lister profile.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 rounded-lg bg-white p-4 sm:grid-cols-3">
-              <InfoRow
-                label="Removed at"
-                value={
-                  review?.moderation?.removedAt
-                    ? formatDate(review.moderation.removedAt)
-                    : review?.deletedAt
-                      ? formatDate(review.deletedAt)
-                      : "Not recorded"
-                }
-              />
-              <InfoRow label="Removed by" value={getReviewRemovedByName(report)} />
-              <InfoRow
-                label="Reason"
-                value={review?.moderation?.removedReason ?? "Not recorded"}
-              />
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">
-            The referenced review is no longer available.
-          </p>
-        )}
-      </DetailPanel>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DetailPanel title="Reviewer">
-          <AdminUserCard
-            name={getReviewReportReviewOwnerName(report)}
-            subtitle={report.reviewOwner?.email}
-            meta={
-              report.reviewOwner
-                ? `${report.reviewOwner.status} · ${report.reviewOwner.role}`
-                : "No reviewer details"
-            }
-          />
-        </DetailPanel>
-
-        <DetailPanel title="Lister">
-          <AdminModeratedListerCard
-            name={getReviewReportListerName(report)}
-            subtitle={lister ? `Profile ${lister._id}` : "No profile details"}
-            meta={lister?.isOnline ? "ONLINE" : "OFFLINE"}
-            profile={lister}
-            userId={lister?.userId}
-          />
-        </DetailPanel>
-      </div>
-
-      {report.status === "ACTION_TAKEN" && (
-        <DetailPanel title="Action taken">
-          <InfoRow
-            label="Reason"
-            value={report.actionReason?.trim() || "No action reason provided"}
-          />
-          <InfoRow
-            label="Taken at"
-            value={
-              report.actionTakenAt
-                ? formatDate(report.actionTakenAt)
-                : "No action time recorded"
-            }
-          />
-          <InfoRow
-            label="Taken by"
-            value={report.actionTakenBy?.name ?? "No reviewer details"}
-          />
-        </DetailPanel>
-      )}
-    </article>
-  );
-}
-
-function AdminRatingStars({
-  rating,
-}: {
-  rating: number;
-}) {
-  return (
-    <div className="flex items-center gap-1 text-amber-400">
-      {[1, 2, 3, 4, 5].map((value) => (
-        <Star
-          key={value}
-          className={cn("h-4 w-4", value <= rating ? "fill-current" : "")}
-        />
-      ))}
-      <span className="ml-1 text-sm font-semibold text-slate-700">
-        {rating}.0
-      </span>
     </div>
   );
 }
@@ -1780,190 +1018,6 @@ function PlatformAdminDetail({
         )}
       </DetailPanel>
     </article>
-  );
-}
-
-function ReviewReportReviewDialog() {
-  const {
-    action,
-    selectedReviewReason,
-    reviewNote,
-    error,
-    isReviewSubmitting,
-    setSelectedReviewReason,
-    setReviewNote,
-    closeDialog,
-    confirmReview,
-  } = useReviewReportReview();
-
-  if (!action) return null;
-
-  const actionCopy: Record<
-    ReviewReportReviewStatus,
-    {
-      title: string;
-      description: string;
-      label: string;
-      tone: "neutral" | "red" | "green";
-    }
-  > = {
-    REVIEWED: {
-      title: "Mark review report reviewed",
-      description:
-        "Use this when the reported review was checked and no stronger moderation action is needed yet.",
-      label: "Mark reviewed",
-      tone: "neutral",
-    },
-    DISMISSED: {
-      title: "Dismiss review report",
-      description:
-        "Use this when the report is invalid, duplicated, or does not have enough evidence.",
-      label: "Dismiss report",
-      tone: "red",
-    },
-    ACTION_TAKEN: {
-      title: "Mark action taken",
-      description:
-        "Use this after a separate moderation action has already been completed.",
-      label: "Action taken",
-      tone: "green",
-    },
-  };
-  const copy = actionCopy[action.status];
-  const requiresNote =
-    action.status === "DISMISSED" || action.status === "ACTION_TAKEN";
-  const reasonOptions =
-    action.status === "DISMISSED"
-      ? reviewReportDismissReasonOptions
-      : action.status === "ACTION_TAKEN"
-        ? reviewReportActionTakenReasonOptions
-        : [];
-  const hasPresetReasons = reasonOptions.length > 0;
-  const canSubmit =
-    !isReviewSubmitting &&
-    (!requiresNote ||
-      selectedReviewReason.trim().length > 0 ||
-      reviewNote.trim().length > 0);
-  const reasonOptionItems = reasonOptions.map((reason) => ({
-    label: reason,
-    value: reason,
-  }));
-  const icon =
-    copy.tone === "red" ? (
-      <AlertCircle className="h-5 w-5" />
-    ) : copy.tone === "green" ? (
-      <CheckCircle2 className="h-5 w-5" />
-    ) : (
-      <Flag className="h-5 w-5" />
-    );
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title={copy.title}
-      description={copy.description}
-      icon={icon}
-      tone={copy.tone}
-      itemSummary={
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">
-              {getReviewReportReasonLabel(action.report.reason)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Review by {getReviewReportReviewOwnerName(action.report)} · For{" "}
-              {getReviewReportListerName(action.report)}
-            </p>
-          </div>
-          <StatusBadge status={action.report.status} />
-        </div>
-      }
-      reasonLabel="Common reason"
-      reasonOptions={reasonOptionItems}
-      selectedReason={selectedReviewReason}
-      reasonActiveColor={
-        action.status === "DISMISSED"
-          ? "red"
-          : action.status === "ACTION_TAKEN"
-            ? "green"
-            : "black"
-      }
-      noteLabel={
-        hasPresetReasons ? "Extra note or custom reason" : "Review note (optional)"
-      }
-      note={reviewNote}
-      notePlaceholder={
-        hasPresetReasons
-          ? "Add details, or write a custom reason if none of the options fit."
-          : "Optional note for future admins."
-      }
-      error={error}
-      confirmLabel={copy.label}
-      isSubmitting={isReviewSubmitting}
-      canSubmit={canSubmit}
-      onReasonChange={setSelectedReviewReason}
-      onNoteChange={setReviewNote}
-      onCancel={closeDialog}
-      onSubmit={confirmReview}
-    />
-  );
-}
-
-function ReviewReportDeleteReviewDialog() {
-  const {
-    deleteAction,
-    deleteReason,
-    deleteNote,
-    deleteError,
-    isDeletingReview,
-    setDeleteReason,
-    setDeleteNote,
-    closeDeleteReviewDialog,
-    confirmDeleteReview,
-  } = useReviewReportReview();
-
-  if (!deleteAction) return null;
-
-  const canSubmit =
-    !isDeletingReview &&
-    (deleteReason.trim().length > 0 || deleteNote.trim().length > 0);
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title="Delete this review"
-      description="This removes the review from the lister profile and notifies the lister with the reason."
-      icon={<Trash2 className="h-5 w-5" />}
-      tone="red"
-      itemSummary={
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">
-              Review by {getReviewReportReviewOwnerName(deleteAction)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              On {getReviewReportListerName(deleteAction)} profile
-            </p>
-          </div>
-          <StatusBadge status={deleteAction.status} />
-        </div>
-      }
-      reasonLabel="Common reason"
-      reasonOptions={toSelectableChipOptions(reviewDeleteReasonOptions)}
-      selectedReason={deleteReason}
-      reasonActiveColor="red"
-      noteLabel="Extra note or custom reason"
-      note={deleteNote}
-      notePlaceholder="Add details, or write a custom reason if none of the options fit."
-      error={deleteError}
-      confirmLabel="Delete review"
-      isSubmitting={isDeletingReview}
-      canSubmit={canSubmit}
-      onReasonChange={(reason) => setDeleteReason(reason)}
-      onNoteChange={setDeleteNote}
-      onCancel={closeDeleteReviewDialog}
-      onSubmit={confirmDeleteReview}
-    />
   );
 }
 
