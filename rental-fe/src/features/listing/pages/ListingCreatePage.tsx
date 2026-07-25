@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { Link, useLocation, useSearchParams } from "react-router-dom"
 import { CheckCircle2, Loader2, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,14 @@ import {
 } from "@/features/pending-post"
 import { useBuildingById } from "@/features/buildings/api"
 import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
+import {
+  ProfilePageError,
+  ProfilePageLoading,
+  ProfileSetupRequired,
+} from "@/features/profile/components/ProfilePageStates"
+import { useMyProfileGate } from "@/features/profile/hooks/useMyProfileGate"
 import { useNavigateBack } from "@/shared/hooks/useNavigateBack"
+import { LoginRequired } from "@/shared/components/auth/LoginRequired"
 import { useStandalonePageBack } from "@/shared/components/navigation/StandalonePageBackContext"
 
 import {
@@ -30,7 +37,12 @@ function formatCoordinate(value: number) {
 }
 
 export function ListingCreatePage() {
+  const location = useLocation()
   const navigateBack = useNavigateBack("/")
+  const gate = useMyProfileGate()
+  const loginHref = `/login?redirect=${encodeURIComponent(
+    `${location.pathname}${location.search}`,
+  )}`
   const createPendingPostMutation = useCreatePendingPost()
   const [searchParams] = useSearchParams()
   const buildingId = searchParams.get("buildingId")
@@ -41,9 +53,10 @@ export function ListingCreatePage() {
   const selectedLocation = parseCreateListingLocation(lat, lng)
   const hasInvalidLocationParams =
     hasLocationParams && !isExistingBuilding && !selectedLocation
+  const canCreateListing = Boolean(gate.profile)
   const buildingQuery = useBuildingById({
     buildingId: buildingId ?? undefined,
-    enabled: isExistingBuilding,
+    enabled: isExistingBuilding && canCreateListing,
   })
 
   const [step, setStep] = useState<CreateListingStep>(
@@ -86,12 +99,44 @@ export function ListingCreatePage() {
   }
 
   if (submittedPendingPost) {
-    return <PendingPostSubmitted pendingPost={submittedPendingPost} />;
+    return <PendingPostSubmitted pendingPost={submittedPendingPost} />
   }
 
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-slate-950">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-2xl">
+        {gate.isProfileLoading && (
+          <ProfilePageLoading message="Checking your profile..." />
+        )}
+
+        {gate.showLogin && (
+          <LoginRequired
+            title="Log in to list a room"
+            description="Sign in and set up your contact profile before submitting a listing."
+            loginHref={loginHref}
+            secondaryHref="/"
+            secondaryLabel="Back to map"
+          />
+        )}
+
+        {!gate.isAuthLoading && gate.isAuthenticated && gate.isMissing && (
+          <ProfileSetupRequired
+            title="Create your contact profile first"
+            description="You need a contact profile before you can submit a listing for review."
+            actionLabel="Set up profile"
+            actionHref="/profile"
+          />
+        )}
+
+        {gate.showProfileError && (
+          <ProfilePageError
+            message={gate.errorMessage}
+            onRetry={() => void gate.profileQuery.refetch()}
+          />
+        )}
+
+        {canCreateListing && (
+          <div className="space-y-6">
         <header>
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-500">
@@ -196,6 +241,8 @@ export function ListingCreatePage() {
               onSubmit={handleSubmitListing}
             />
           </section>
+        )}
+          </div>
         )}
       </div>
     </main>

@@ -8,18 +8,26 @@ import { useCreatePendingPost } from "@/features/pending-post"
 
 import { ListingCreatePage } from "./ListingCreatePage"
 
+const gateMocks = vi.hoisted(() => ({
+  gate: vi.fn(),
+}))
+
 vi.mock("@/features/buildings/api")
 vi.mock("@/features/pending-post")
+vi.mock("@/features/profile/hooks/useMyProfileGate", () => ({
+  useMyProfileGate: () => gateMocks.gate(),
+}))
 vi.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: vi.fn(() => ({
-    isAuthenticated: false,
+    isAuthenticated: true,
     isLoading: false,
   })),
 }))
 vi.mock("@/features/profile/api/useMyAgentProfile", () => ({
   useMyAgentProfile: vi.fn(() => ({
-    canCreateListing: false,
+    canCreateListing: true,
     isPending: false,
+    data: { _id: "profile-1" },
   })),
 }))
 vi.mock("../components/ListingForm", () => ({
@@ -48,8 +56,24 @@ vi.mock("../components/BuildingForm", () => ({
   ),
 }))
 
+function setGate(overrides: Record<string, unknown> = {}) {
+  gateMocks.gate.mockReturnValue({
+    isAuthenticated: true,
+    isAuthLoading: false,
+    isProfileLoading: false,
+    isMissing: false,
+    profile: { _id: "profile-1", displayName: "Lister" },
+    profileQuery: { refetch: vi.fn() },
+    showLogin: false,
+    showProfileError: false,
+    errorMessage: "",
+    ...overrides,
+  })
+}
+
 describe("ListingCreatePage", () => {
   beforeEach(() => {
+    setGate()
     vi.mocked(useCreatePendingPost).mockReturnValue({
       mutateAsync: vi.fn(),
     } as never)
@@ -68,6 +92,45 @@ describe("ListingCreatePage", () => {
       isLoading: false,
       isError: false,
     } as never)
+  })
+
+  it("requires login before showing the listing form", () => {
+    setGate({
+      isAuthenticated: false,
+      profile: undefined,
+      showLogin: true,
+    })
+
+    render(
+      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
+        <ListingCreatePage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("heading", { name: "Log in to list a room" })).toBeInTheDocument()
+    expect(screen.queryByText("Listing form")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
+      "href",
+      "/login?redirect=%2Flistings%2Fnew%3FbuildingId%3Dbuilding-1",
+    )
+  })
+
+  it("requires a contact profile before showing the listing form", () => {
+    setGate({
+      isMissing: true,
+      profile: undefined,
+    })
+
+    render(
+      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
+        <ListingCreatePage />
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Create your contact profile first" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Listing form")).not.toBeInTheDocument()
   })
 
   it("loads and displays the selected existing building instead of its raw id", () => {

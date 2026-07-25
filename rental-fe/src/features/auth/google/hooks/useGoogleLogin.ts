@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 
 import { establishAuthSession } from "@/features/auth/utils/authSession"
+import { getPostLoginRedirect } from "@/features/auth/utils/getPostLoginRedirect"
 import { getSafeAuthRedirect } from "@/features/auth/utils/getSafeAuthRedirect"
 
 import { loginWithGoogle } from "../api"
@@ -17,9 +18,15 @@ export function useGoogleLogin(redirectTo: string) {
     onMutate: async () => {
       await queryClient.cancelQueries()
     },
-    onSuccess: ({ accessToken, user }) => {
+    onSuccess: ({ accessToken, user, isNewUser }) => {
       establishAuthSession(queryClient, user, accessToken)
-      navigate(safeRedirect, { replace: true })
+      navigate(
+        getPostLoginRedirect({
+          isNewUser,
+          requestedRedirect: safeRedirect,
+        }),
+        { replace: true },
+      )
     },
   })
 

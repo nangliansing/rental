@@ -93,7 +93,8 @@ function ProfileSetup({
       <div>
         <h1 className="text-2xl font-semibold">Contact profile</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Set how renters can recognize and contact you.
+          Set how renters can recognize and contact you. After this, you can list
+          your first room from the map.
         </p>
       </div>
 
