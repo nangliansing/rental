@@ -8,6 +8,8 @@ import type { ComponentType } from "react"
 
 import type { PendingPost } from "@/features/pending-post"
 
+import { MAP_SEARCH_LIST_ROOM_PATH } from "@/features/map-search/constants"
+
 export type PendingPostStatusStyle = {
   label: string
   icon: ComponentType<{ className?: string }>
@@ -75,14 +77,36 @@ export function formatPendingPostSubmittedAt(value: string | null | undefined) {
   }).format(submittedAt)
 }
 
-export const PENDING_EMPTY_COPY = {
+export type PendingEmptyCopyEntry = {
+  title: string
+  description: string
+  action?: {
+    label: string
+    href: string
+  }
+}
+
+export const PENDING_EMPTY_COPY: Record<
+  "all" | "pending" | "approved" | "rejected",
+  PendingEmptyCopyEntry
+> = {
   all: {
     title: "No submissions yet",
-    description: "Your submitted listings will appear here once created.",
+    description:
+      "Submitted rooms appear here while they wait for review. Start from the map to create your first submission.",
+    action: {
+      label: "Submit your first listing",
+      href: MAP_SEARCH_LIST_ROOM_PATH,
+    },
   },
   pending: {
     title: "No pending listings",
-    description: "Listings waiting for review will appear here.",
+    description:
+      "Rooms waiting for review will appear here after you submit them from the map.",
+    action: {
+      label: "Start listing",
+      href: MAP_SEARCH_LIST_ROOM_PATH,
+    },
   },
   approved: {
     title: "No approved submissions",
@@ -92,7 +116,7 @@ export const PENDING_EMPTY_COPY = {
     title: "No rejected submissions",
     description: "Rejected listing submissions will appear here.",
   },
-} as const
+}
 
 export const OWNER_PENDING_STATUS_BY_PROFILE_FILTER = {
   all: "all",
