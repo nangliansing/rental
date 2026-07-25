@@ -66,6 +66,7 @@ export function MyProfilePendingPanel({
         icon={Clock3}
         title={copy.title}
         description={copy.description}
+        action={copy.action}
       />
     )
   }

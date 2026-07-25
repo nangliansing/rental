@@ -149,12 +149,47 @@ function jsonRoute(body: unknown, status = 200) {
   }
 }
 
+export type AuthenticatedSessionMockOptions = {
+  hasAgentProfile?: boolean
+}
+
 function isAuthorized(route: Route) {
   const authorization = route.request().headers().authorization ?? ""
   return authorization === `Bearer ${smokeAccessToken}`
 }
 
-export async function installAuthenticatedSessionMocks(page: Page) {
+function buildCreatedAgentProfile(
+  values: Record<string, unknown> = {},
+) {
+  return {
+    ...smokeAgentProfile,
+    ...values,
+    listingSummary: {
+      activeCount: 0,
+      pendingCount: 0,
+      rejectedCount: 0,
+    },
+    reviewSummary: {
+      averageRating: 0,
+      reviewCount: 0,
+      ratingCounts: {
+        oneStar: 0,
+        twoStars: 0,
+        threeStars: 0,
+        fourStars: 0,
+        fiveStars: 0,
+      },
+      tagCounts: [],
+    },
+  }
+}
+
+export async function installAuthenticatedSessionMocks(
+  page: Page,
+  options: AuthenticatedSessionMockOptions = {},
+) {
+  let hasAgentProfile = options.hasAgentProfile ?? true
+  let createdAgentProfile = buildCreatedAgentProfile()
   await page.route("**/api/v1/users/token/refresh", async (route) => {
     await route.fulfill(
       jsonRoute({
@@ -194,10 +229,24 @@ export async function installAuthenticatedSessionMocks(page: Page) {
     }
 
     if (route.request().method() === "GET") {
+      if (!hasAgentProfile) {
+        await route.fulfill(
+          jsonRoute(
+            {
+              success: false,
+              code: "AGENT_PROFILE_NOT_FOUND",
+              message: "Agent profile not found",
+            },
+            404,
+          ),
+        )
+        return
+      }
+
       await route.fulfill(
         jsonRoute({
           success: true,
-          data: smokeAgentProfile,
+          data: createdAgentProfile,
         }),
       )
       return
@@ -207,7 +256,30 @@ export async function installAuthenticatedSessionMocks(page: Page) {
       await route.fulfill(
         jsonRoute({
           success: true,
-          data: smokeAgentProfile,
+          data: createdAgentProfile,
+        }),
+      )
+      return
+    }
+
+    await route.continue()
+  })
+
+  await page.route("**/api/v1/agent-profiles", async (route) => {
+    if (!isAuthorized(route)) {
+      await route.fulfill(jsonRoute({ success: false }, 401))
+      return
+    }
+
+    if (route.request().method() === "POST") {
+      const requestBody = route.request().postDataJSON() as Record<string, unknown>
+      hasAgentProfile = true
+      createdAgentProfile = buildCreatedAgentProfile(requestBody)
+
+      await route.fulfill(
+        jsonRoute({
+          success: true,
+          data: createdAgentProfile,
         }),
       )
       return

@@ -8,6 +8,8 @@ import type { ComponentType } from "react"
 
 import type { PendingPost } from "@/features/pending-post"
 
+import { MAP_SEARCH_LIST_ROOM_PATH } from "@/features/map-search/constants"
+
 export type PendingPostStatusStyle = {
   label: string
   icon: ComponentType<{ className?: string }>
@@ -78,11 +80,21 @@ export function formatPendingPostSubmittedAt(value: string | null | undefined) {
 export const PENDING_EMPTY_COPY = {
   all: {
     title: "No submissions yet",
-    description: "Your submitted listings will appear here once created.",
+    description:
+      "Submitted rooms appear here while they wait for review. Start from the map to create your first submission.",
+    action: {
+      label: "Submit your first listing",
+      href: MAP_SEARCH_LIST_ROOM_PATH,
+    },
   },
   pending: {
     title: "No pending listings",
-    description: "Listings waiting for review will appear here.",
+    description:
+      "Rooms waiting for review will appear here after you submit them from the map.",
+    action: {
+      label: "Start listing",
+      href: MAP_SEARCH_LIST_ROOM_PATH,
+    },
   },
   approved: {
     title: "No approved submissions",

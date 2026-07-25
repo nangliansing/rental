@@ -1,15 +1,23 @@
 import type { ComponentType } from "react"
+import { Link } from "react-router-dom"
+
+type MyProfileEmptyStateAction = {
+    label: string
+    href: string
+}
 
 type MyProfileEmptyStateProps = {
     icon: ComponentType<{ className?: string }>
     title: string
     description: string
+    action?: MyProfileEmptyStateAction
 }
 
 export function MyProfileEmptyState({
     icon: Icon,
     title,
     description,
+    action,
 }: MyProfileEmptyStateProps) {
     return (
         <div className="mt-8 py-16 text-center">
@@ -24,6 +32,15 @@ export function MyProfileEmptyState({
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
                 {description}
             </p>
+
+            {action && (
+                <Link
+                    to={action.href}
+                    className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                    {action.label}
+                </Link>
+            )}
         </div>
     )
 }
