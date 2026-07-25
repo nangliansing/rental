@@ -1,8 +1,6 @@
 import {
   createContext,
-  useEffect,
   useContext,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -19,7 +17,6 @@ import {
   Flag,
   MessageSquareWarning,
   Loader2,
-  MoreHorizontal,
   ShieldCheck,
   Star,
   Trash2,
@@ -35,42 +32,34 @@ import { LoginRequired } from "@/shared/components/auth/LoginRequired";
 import { ReasonNoteDialog } from "@/shared/components/dialogs/ReasonNoteDialog";
 
 import {
-  AdminBuildingCard,
   AdminDetailPanel as DetailPanel,
   AdminEmptyState,
   AdminFilterPills,
   AdminDetailState,
   AdminInfoRow as InfoRow,
   AdminListerCard,
-  AdminListingCard,
   AdminListState,
   AdminReviewCard,
   AdminReviewListItem,
   AdminStatusBadge as StatusBadge,
   AdminUserCard,
   AdminWorkspace,
+  ReviewModerationMenu,
 } from "../components";
 import {
-  getAdminReportById,
   getAdminReviewReportById,
   getAdminSuspensionById,
   getAdminUserById,
   searchAdminPlatformAdmins,
-  searchAdminReports,
   searchAdminReviewReports,
   searchAdminSuspensions,
   useCreateAdminSuspension,
   useLiftAdminSuspension,
   useRemoveAdminRole,
-  useUpdateAdminReportStatus,
   useUpdateAdminReviewReportStatus,
   useDeleteAdminListerReview,
-  useDeleteAdminListing,
   type AdminReviewReport,
   type AdminReviewReportStatusFilter,
-  type AdminReport,
-  type AdminReportListing,
-  type AdminReportStatusFilter,
   type AdminPlatformAdmin,
   type AdminUserDetails,
   type AdminSuspensionStatus,
@@ -79,13 +68,12 @@ import {
 } from "../api";
 import { toSelectableChipOptions } from "../shared/adminChipOptions";
 import {
-  formatBaht,
-  formatCompactBaht,
   formatDate,
 } from "../shared/adminFormatters";
 import { getNextAdminPageParam } from "../shared/adminPagination";
 import { BuildingEditsTab } from "../tabs/building-edits";
 import { PendingListingsTab } from "../tabs/pending-listings";
+import { ReportedListingsTab } from "../tabs/reported-listings";
 
 type AdminTab =
   | "pending"
@@ -94,55 +82,18 @@ type AdminTab =
   | "reviewReports"
   | "suspensions"
   | "platformAdmins";
-type ReportReviewStatus = Exclude<AdminReportStatusFilter, "OPEN">;
-type ReportReviewAction = {
-  report: AdminReport;
-  status: ReportReviewStatus;
-} | null;
 type ReviewReportReviewStatus = Exclude<AdminReviewReportStatusFilter, "OPEN">;
 type ReviewReportReviewAction = {
   report: AdminReviewReport;
   status: ReviewReportReviewStatus;
 } | null;
 type ReviewReportDeleteReviewAction = AdminReviewReport | null;
-type ReportListingDeleteAction = {
-  report: AdminReport;
-  listing: AdminReportListing;
-} | null;
 type SuspensionAction = {
   userId: string;
   name: string;
 } | null;
 type LiftSuspensionAction = AdminSuspensionListItem | null;
 type RemoveAdminRoleAction = AdminUserDetails | null;
-
-type ReportReviewContextValue = {
-  selectedReport: AdminReport | null;
-  isReviewSubmitting: boolean;
-  isDeletingListing: boolean;
-  selectReport: (reportId: string | null) => void;
-  openReviewDialog: (report: AdminReport, status: ReportReviewStatus) => void;
-  openDeleteListingDialog: (
-    report: AdminReport,
-    listing: AdminReportListing,
-  ) => void;
-  action: ReportReviewAction;
-  deleteAction: ReportListingDeleteAction;
-  selectedReviewReason: string;
-  reviewNote: string;
-  deleteReason: string;
-  deleteNote: string;
-  error: string | null;
-  deleteError: string | null;
-  setSelectedReviewReason: (value: string) => void;
-  setReviewNote: (value: string) => void;
-  setDeleteReason: (value: string) => void;
-  setDeleteNote: (value: string) => void;
-  closeDialog: () => void;
-  closeDeleteListingDialog: () => void;
-  confirmReview: () => void;
-  confirmDeleteListing: () => void;
-}
 
 type ReviewReportReviewContextValue = {
   selectedReviewReport: AdminReviewReport | null;
@@ -210,9 +161,6 @@ type PlatformAdminContextValue = {
   confirmRemoveAdmin: () => void;
 }
 
-const ReportReviewContext = createContext<ReportReviewContextValue | null>(
-  null,
-);
 const ReviewReportReviewContext =
   createContext<ReviewReportReviewContextValue | null>(null);
 const SuspensionContext = createContext<SuspensionContextValue | null>(null);
@@ -226,13 +174,6 @@ function useRequiredContext<T>(context: T | null, name: string) {
   }
 
   return context;
-}
-
-function useReportReview() {
-  return useRequiredContext(
-    useContext(ReportReviewContext),
-    "ReportReviewContext",
-  );
 }
 
 function useReviewReportReview() {
@@ -257,28 +198,24 @@ function usePlatformAdminReview() {
 }
 
 function AdminReviewProviders({
-  report,
   reviewReport,
   suspension,
   platformAdmin,
   children,
 }: {
-  report: ReportReviewContextValue;
   reviewReport: ReviewReportReviewContextValue;
   suspension: SuspensionContextValue;
   platformAdmin: PlatformAdminContextValue;
   children: ReactNode;
 }) {
   return (
-    <ReportReviewContext.Provider value={report}>
-      <ReviewReportReviewContext.Provider value={reviewReport}>
-        <SuspensionContext.Provider value={suspension}>
-          <PlatformAdminContext.Provider value={platformAdmin}>
-            {children}
-          </PlatformAdminContext.Provider>
-        </SuspensionContext.Provider>
-      </ReviewReportReviewContext.Provider>
-    </ReportReviewContext.Provider>
+    <ReviewReportReviewContext.Provider value={reviewReport}>
+      <SuspensionContext.Provider value={suspension}>
+        <PlatformAdminContext.Provider value={platformAdmin}>
+          {children}
+        </PlatformAdminContext.Provider>
+      </SuspensionContext.Provider>
+    </ReviewReportReviewContext.Provider>
   );
 }
 
@@ -298,33 +235,6 @@ const liftSuspensionReasonOptions = [
   "Required corrections were completed",
   "Report was dismissed after investigation",
   "Admin approved account restoration",
-];
-
-const listingDeleteReasonOptions = [
-  "Fake or misleading listing",
-  "Inappropriate photos or content",
-  "Photos used without permission",
-  "Unsafe, hateful, or abusive content",
-  "Duplicate or spam listing",
-  "Report confirmed after review",
-];
-
-const reportDismissReasonOptions = [
-  "Not enough evidence",
-  "Not a platform violation",
-  "Duplicate report",
-  "Listing already corrected",
-  "Reporter misunderstood the listing",
-  "Could not verify the issue",
-];
-
-const reportActionTakenReasonOptions = [
-  "Listing removed",
-  "Lister suspended",
-  "Warning issued to lister",
-  "Listing content corrected",
-  "Photos removed or replaced",
-  "Escalated for further review",
 ];
 
 const reviewReportDismissReasonOptions = [
@@ -397,17 +307,6 @@ const tabs: {
   },
 ];
 
-const reportStatusFilters: {
-  label: string;
-  value?: AdminReportStatusFilter;
-}[] = [
-  { label: "All" },
-  { label: "Open", value: "OPEN" },
-  { label: "Reviewed", value: "REVIEWED" },
-  { label: "Dismissed", value: "DISMISSED" },
-  { label: "Action taken", value: "ACTION_TAKEN" },
-];
-
 const reviewReportStatusFilters: {
   label: string;
   value?: AdminReviewReportStatusFilter;
@@ -428,44 +327,6 @@ const suspensionStatusFilters: {
   { label: "Expired", value: "EXPIRED" },
   { label: "Lifted", value: "LIFTED" },
 ];
-
-function getReportReasonLabel(reason: AdminReport["reason"]) {
-  const labels: Record<AdminReport["reason"], string> = {
-    WRONG_PRICE: "Wrong price",
-    UNAVAILABLE: "Room unavailable",
-    MISLEADING_PHOTOS: "Misleading photos",
-    WRONG_BUILDING_OR_LOCATION: "Wrong building or location",
-    SUSPICIOUS_CONTACT: "Suspicious contact",
-    UNRESPONSIVE_LISTER: "Lister is unresponsive",
-    FAKE_OR_SUSPICIOUS_LISTER: "Fake or suspicious lister",
-    DUPLICATE_LISTING: "Duplicate listing",
-    INAPPROPRIATE_CONTENT: "Inappropriate content",
-    UNAUTHORIZED_PHOTOS: "Photos used without permission",
-    HATE_OR_HARASSMENT: "Hate or harassment",
-    OTHER: "Other",
-  };
-
-  return labels[reason] ?? reason;
-}
-
-function getReportCoverImage(report: AdminReport) {
-  return (
-    report.listing?.media.find((media) => media.isCover) ??
-    report.listing?.media[0]
-  );
-}
-
-function getReportListingTitle(report: AdminReport) {
-  return report.building?.name ?? "Reported listing";
-}
-
-function getReportReporterName(report: AdminReport) {
-  return report.reportedBy?.name ?? "Reporter";
-}
-
-function getReportListerName(report: AdminReport) {
-  return report.listingAgentProfile?.displayName ?? report.listingOwner?.name ?? "Lister";
-}
 
 function getReviewReportReasonLabel(reason: AdminReviewReport["reason"]) {
   const labels: Record<AdminReviewReport["reason"], string> = {
@@ -537,15 +398,11 @@ function isAdminRole(role: string | undefined) {
 export function AdminPanelPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("pending");
-  const [reportStatus, setReportStatus] = useState<
-    AdminReportStatusFilter | undefined
-  >("OPEN");
   const [reviewReportStatus, setReviewReportStatus] = useState<
     AdminReviewReportStatusFilter | undefined
   >("OPEN");
   const [suspensionStatus, setSuspensionStatus] =
     useState<AdminSuspensionStatusFilter>("ACTIVE");
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [selectedReviewReportId, setSelectedReviewReportId] = useState<
     string | null
   >(null);
@@ -560,37 +417,21 @@ export function AdminPanelPage() {
   const [removeAdminRoleError, setRemoveAdminRoleError] = useState<
     string | null
   >(null);
-  const [reportReviewAction, setReportReviewAction] =
-    useState<ReportReviewAction>(null);
   const [reviewReportReviewAction, setReviewReportReviewAction] =
     useState<ReviewReportReviewAction>(null);
   const [reviewReportDeleteReviewAction, setReviewReportDeleteReviewAction] =
     useState<ReviewReportDeleteReviewAction>(null);
-  const [reportListingDeleteAction, setReportListingDeleteAction] =
-    useState<ReportListingDeleteAction>(null);
-  const [selectedReportReviewReason, setSelectedReportReviewReason] =
-    useState("");
   const [
     selectedReviewReportReviewReason,
     setSelectedReviewReportReviewReason,
   ] = useState("");
-  const [reportReviewNote, setReportReviewNote] = useState("");
   const [reviewReportReviewNote, setReviewReportReviewNote] = useState("");
   const [reviewReportDeleteReason, setReviewReportDeleteReason] = useState("");
   const [reviewReportDeleteNote, setReviewReportDeleteNote] = useState("");
-  const [reportListingDeleteReason, setReportListingDeleteReason] =
-    useState("");
-  const [reportListingDeleteNote, setReportListingDeleteNote] = useState("");
-  const [reportReviewError, setReportReviewError] = useState<string | null>(
-    null,
-  );
   const [reviewReportReviewError, setReviewReportReviewError] = useState<
     string | null
   >(null);
   const [reviewReportDeleteError, setReviewReportDeleteError] = useState<
-    string | null
-  >(null);
-  const [reportListingDeleteError, setReportListingDeleteError] = useState<
     string | null
   >(null);
   const [suspensionAction, setSuspensionAction] =
@@ -607,19 +448,6 @@ export function AdminPanelPage() {
     null,
   );
   const isAdmin = isAdminRole(user?.role);
-
-  const reportsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.reports.list(reportStatus),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminReports({
-        status: reportStatus,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled: activeTab === "reports" && isAdmin,
-  });
 
   const reviewReportsQuery = useInfiniteQuery({
     queryKey: queryKeys.admin.reviewReports.list(reviewReportStatus),
@@ -659,13 +487,6 @@ export function AdminPanelPage() {
     enabled: activeTab === "platformAdmins" && isAdmin,
   });
 
-  const closeReportReviewDialog = () => {
-    setReportReviewAction(null);
-    setSelectedReportReviewReason("");
-    setReportReviewNote("");
-    setReportReviewError(null);
-  };
-
   const closeReviewReportReviewDialog = () => {
     setReviewReportReviewAction(null);
     setSelectedReviewReportReviewReason("");
@@ -680,20 +501,9 @@ export function AdminPanelPage() {
     setReviewReportDeleteError(null);
   };
 
-  const closeReportListingDeleteDialog = () => {
-    setReportListingDeleteAction(null);
-    setReportListingDeleteReason("");
-    setReportListingDeleteNote("");
-    setReportListingDeleteError(null);
-  };
-
-  const updateReportStatusMutation = useUpdateAdminReportStatus();
-
   const updateReviewReportStatusMutation = useUpdateAdminReviewReportStatus();
 
   const deleteReviewReportReviewMutation = useDeleteAdminListerReview(user?._id);
-
-  const deleteReportListingMutation = useDeleteAdminListing(user?._id);
 
   const closeSuspensionDialog = () => {
     setSuspensionAction(null);
@@ -721,21 +531,6 @@ export function AdminPanelPage() {
 
   const removeAdminRoleMutation = useRemoveAdminRole();
 
-  const reports = reportsQuery.data?.pages.flatMap((page) => page.data) ?? [];
-  const reportsPagination = reportsQuery.data?.pages[0]?.pagination;
-  const selectedReportListItem =
-    reports.find((report) => report._id === selectedReportId) ??
-    reports[0] ??
-    null;
-  const effectiveReportId = selectedReportId ?? selectedReportListItem?._id;
-  const reportDetailQuery = useQuery({
-    queryKey: queryKeys.admin.reports.detail(effectiveReportId),
-    queryFn: () => getAdminReportById(effectiveReportId!),
-    enabled:
-      activeTab === "reports" && isAdmin && Boolean(effectiveReportId),
-  });
-  const selectedReport =
-    reportDetailQuery.data ?? selectedReportListItem ?? null;
   const reviewReports =
     reviewReportsQuery.data?.pages.flatMap((page) => page.data) ?? [];
   const reviewReportsPagination =
@@ -803,22 +598,10 @@ export function AdminPanelPage() {
           agentProfile: null,
         }
       : null);
-  const isReportReviewSubmitting = updateReportStatusMutation.isPending;
   const isReviewReportReviewSubmitting =
     updateReviewReportStatusMutation.isPending;
   const isReviewReportReviewDeleting =
     deleteReviewReportReviewMutation.isPending;
-  const isReportListingDeleting = deleteReportListingMutation.isPending;
-
-  const handleOpenReportReviewDialog = (
-    report: AdminReport,
-    status: ReportReviewStatus,
-  ) => {
-    setReportReviewAction({ report, status });
-    setSelectedReportReviewReason("");
-    setReportReviewNote("");
-    setReportReviewError(null);
-  };
 
   const handleOpenReviewReportReviewDialog = (
     report: AdminReviewReport,
@@ -837,55 +620,6 @@ export function AdminPanelPage() {
     setReviewReportDeleteReason("");
     setReviewReportDeleteNote("");
     setReviewReportDeleteError(null);
-  };
-
-  const handleOpenReportListingDeleteDialog = (
-    report: AdminReport,
-    listing: AdminReportListing,
-  ) => {
-    setReportListingDeleteAction({ report, listing });
-    setReportListingDeleteReason("");
-    setReportListingDeleteNote("");
-    setReportListingDeleteError(null);
-  };
-
-  const handleConfirmReportReview = () => {
-    if (!reportReviewAction || isReportReviewSubmitting) return;
-
-    const trimmedReviewReason = selectedReportReviewReason.trim();
-    const trimmedReviewNote = reportReviewNote.trim();
-    const requiresNote =
-      reportReviewAction.status === "DISMISSED" ||
-      reportReviewAction.status === "ACTION_TAKEN";
-
-    if (requiresNote && !trimmedReviewReason && !trimmedReviewNote) {
-      setReportReviewError("Review note is required.");
-      return;
-    }
-
-    const reviewNoteForSubmission = trimmedReviewReason
-      ? [trimmedReviewReason, trimmedReviewNote && `Note: ${trimmedReviewNote}`]
-          .filter(Boolean)
-          .join("\n\n")
-      : trimmedReviewNote;
-
-    updateReportStatusMutation.mutate(
-      {
-        reportId: reportReviewAction.report._id,
-        status: reportReviewAction.status,
-        reviewNote: reviewNoteForSubmission,
-      },
-      {
-        onSuccess: closeReportReviewDialog,
-        onError: (error) => {
-          setReportReviewError(
-            error instanceof Error
-              ? error.message
-              : "Could not update report status.",
-          );
-        },
-      },
-    );
   };
 
   const handleConfirmReviewReportReview = () => {
@@ -979,44 +713,6 @@ export function AdminPanelPage() {
         onError: (error) => {
           setReviewReportDeleteError(
             error instanceof Error ? error.message : "Could not delete review.",
-          );
-        },
-      },
-    );
-  };
-
-  const handleConfirmReportListingDelete = () => {
-    if (!reportListingDeleteAction || isReportListingDeleting) return;
-
-    const trimmedReason = reportListingDeleteReason.trim();
-    const trimmedNote = reportListingDeleteNote.trim();
-
-    if (!trimmedReason && !trimmedNote) {
-      setReportListingDeleteError("Deletion reason is required.");
-      return;
-    }
-
-    const deleteReason = trimmedReason
-      ? [trimmedReason, trimmedNote && `Note: ${trimmedNote}`]
-          .filter(Boolean)
-          .join("\n\n")
-      : trimmedNote;
-
-    const { listing, report } = reportListingDeleteAction;
-    deleteReportListingMutation.mutate(
-      {
-        listingId: listing._id,
-        reportId: report._id,
-        agentProfileId: report.listingAgentProfile?._id,
-        listingOwnerUserId: report.listingOwner?._id,
-        buildingId: listing.buildingId,
-        reason: deleteReason,
-      },
-      {
-        onSuccess: closeReportListingDeleteDialog,
-        onError: (error) => {
-          setReportListingDeleteError(
-            error instanceof Error ? error.message : "Could not delete listing.",
           );
         },
       },
@@ -1135,43 +831,6 @@ export function AdminPanelPage() {
     );
   };
 
-  const reportReviewContextValue: ReportReviewContextValue = {
-    selectedReport,
-    isReviewSubmitting: isReportReviewSubmitting,
-    isDeletingListing: isReportListingDeleting,
-    selectReport: setSelectedReportId,
-    openReviewDialog: handleOpenReportReviewDialog,
-    openDeleteListingDialog: handleOpenReportListingDeleteDialog,
-    action: reportReviewAction,
-    deleteAction: reportListingDeleteAction,
-    selectedReviewReason: selectedReportReviewReason,
-    reviewNote: reportReviewNote,
-    deleteReason: reportListingDeleteReason,
-    deleteNote: reportListingDeleteNote,
-    error: reportReviewError,
-    deleteError: reportListingDeleteError,
-    setSelectedReviewReason: (value) => {
-      setSelectedReportReviewReason(value);
-      if (reportReviewError) setReportReviewError(null);
-    },
-    setReviewNote: (value) => {
-      setReportReviewNote(value);
-      if (reportReviewError) setReportReviewError(null);
-    },
-    setDeleteReason: (value) => {
-      setReportListingDeleteReason(value);
-      if (reportListingDeleteError) setReportListingDeleteError(null);
-    },
-    setDeleteNote: (value) => {
-      setReportListingDeleteNote(value);
-      if (reportListingDeleteError) setReportListingDeleteError(null);
-    },
-    closeDialog: closeReportReviewDialog,
-    closeDeleteListingDialog: closeReportListingDeleteDialog,
-    confirmReview: handleConfirmReportReview,
-    confirmDeleteListing: handleConfirmReportListingDelete,
-  };
-
   const reviewReportReviewContextValue: ReviewReportReviewContextValue = {
     selectedReviewReport,
     isReviewSubmitting: isReviewReportReviewSubmitting,
@@ -1283,7 +942,6 @@ export function AdminPanelPage() {
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <AdminReviewProviders
-        report={reportReviewContextValue}
         reviewReport={reviewReportReviewContextValue}
         suspension={suspensionContextValue}
         platformAdmin={platformAdminContextValue}
@@ -1353,57 +1011,10 @@ export function AdminPanelPage() {
           )}
 
           {activeTab === "reports" && (
-            <AdminWorkspace
-              title="Reported listings"
-              description="Review listing reports from renters and listers."
-              total={reportsPagination?.total}
-              filters={
-                <AdminFilterPills
-                  options={reportStatusFilters}
-                  value={reportStatus}
-                  scrollable
-                  onChange={(nextStatus) => {
-                    setReportStatus(nextStatus);
-                    setSelectedReportId(null);
-                  }}
-                />
-              }
-              list={
-                <AdminListState
-                  isLoading={reportsQuery.isLoading}
-                  error={reportsQuery.error}
-                  errorFallback="Could not load reported listings."
-                  isEmpty={reports.length === 0}
-                  emptyTitle="No reports"
-                  emptyDescription="Reported listings will appear here when users flag them."
-                  onRetry={() => void reportsQuery.refetch()}
-                  hasNextPage={Boolean(reportsQuery.hasNextPage)}
-                  isFetchingNextPage={reportsQuery.isFetchingNextPage}
-                  onFetchNextPage={() => void reportsQuery.fetchNextPage()}
-                >
-                  {reports.map((report) => (
-                    <ReportListItem key={report._id} report={report} />
-                  ))}
-                </AdminListState>
-              }
-              detail={
-                <AdminDetailState
-                  isLoading={reportDetailQuery.isLoading}
-                  shouldShowLoading={Boolean(effectiveReportId)}
-                  error={reportDetailQuery.error}
-                  errorFallback="Could not load this report."
-                  onRetry={() => void reportDetailQuery.refetch()}
-                >
-                  {selectedReport ? (
-                    <ReportDetail report={selectedReport} />
-                  ) : (
-                    <AdminEmptyState
-                      title="Select a report"
-                      description="Choose a reported listing from the left to inspect the details."
-                    />
-                  )}
-                </AdminDetailState>
-              }
+            <ReportedListingsTab
+              enabled={isAdmin}
+              currentUserId={user?._id}
+              onSuspendUser={handleOpenSuspensionDialog}
             />
           )}
 
@@ -1575,10 +1186,8 @@ export function AdminPanelPage() {
         </div>
       </div>
 
-        <ReportReviewDialog />
         <ReviewReportReviewDialog />
         <ReviewReportDeleteReviewDialog />
-        <ReportListingDeleteDialog />
         <SuspensionDialog />
         <LiftSuspensionDialog />
         <RemoveAdminRoleDialog />
@@ -1664,195 +1273,6 @@ function AdminModeratedListerCard({
       }
       onSuspend={openDialog}
     />
-  );
-}
-
-function ReportListItem({
-  report,
-}: {
-  report: AdminReport;
-}) {
-  const { selectedReport, selectReport } = useReportReview();
-  const coverImage = getReportCoverImage(report);
-
-  return (
-    <AdminReviewListItem
-      title={getReportReasonLabel(report.reason)}
-      meta={[
-        `${getReportListingTitle(report)}${
-          report.listing ? ` · ${formatCompactBaht(report.listing.rent)}` : ""
-        }`,
-        `By ${getReportReporterName(report)}`,
-      ]}
-      createdAt={formatDate(report.createdAt)}
-      isSelected={selectedReport?._id === report._id}
-      onSelect={() => selectReport(report._id)}
-      image={coverImage}
-      imageAlt={coverImage?.alt ?? getReportListingTitle(report)}
-      imageFallback={<Flag className="h-6 w-6" />}
-      status={report.status}
-      imageSize="sm"
-    />
-  );
-}
-
-function ReportDetail({
-  report,
-}: {
-  report: AdminReport;
-}) {
-  const {
-    isReviewSubmitting,
-    isDeletingListing,
-    openReviewDialog,
-    openDeleteListingDialog,
-  } = useReportReview();
-  const listing = report.listing;
-  const isListingDeleted = Boolean(listing?.isDeleted);
-  const building = report.building;
-  const lister = report.listingAgentProfile;
-  const isOpen = report.status === "OPEN";
-
-  return (
-    <article className="space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {getReportReasonLabel(report.reason)}
-            </h2>
-            <StatusBadge status={report.status} />
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Reported {formatDate(report.createdAt)} by{" "}
-            {getReportReporterName(report)}
-          </p>
-        </div>
-
-        {isOpen && (
-          <div className="flex shrink-0 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isReviewSubmitting}
-              onClick={() => openReviewDialog(report, "DISMISSED")}
-            >
-              Dismiss
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isReviewSubmitting}
-              onClick={() => openReviewDialog(report, "REVIEWED")}
-            >
-              Mark reviewed
-            </Button>
-            <Button
-              type="button"
-              disabled={isReviewSubmitting}
-              onClick={() => openReviewDialog(report, "ACTION_TAKEN")}
-            >
-              Action taken
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <DetailPanel title="Report">
-          <InfoRow label="Reason" value={getReportReasonLabel(report.reason)} />
-          <InfoRow label="Status" value={report.status.replaceAll("_", " ")} />
-          <InfoRow
-            label="Details"
-            value={report.note?.trim() || "No extra details provided"}
-          />
-          <InfoRow
-            label="Reporter"
-            value={`${report.reportedBy.name} · ${report.reportedBy.email}`}
-          />
-        </DetailPanel>
-
-        <DetailPanel title="Review">
-          <AdminReviewCard
-            status={report.status}
-            reviewedAt={report.reviewedAt ? formatDate(report.reviewedAt) : null}
-            reviewedBy={report.reviewedBy?.name}
-            note={report.reviewNote}
-          />
-        </DetailPanel>
-      </div>
-
-      <DetailPanel
-        title="Reported listing"
-        action={
-          listing && !isListingDeleted ? (
-            <ListingModerationMenu
-              isDisabled={isDeletingListing}
-              onDelete={() => openDeleteListingDialog(report, listing)}
-            />
-          ) : undefined
-        }
-      >
-        {listing && !isListingDeleted ? (
-          <AdminListingCard
-            listing={listing}
-            imageAlt={getReportListingTitle(report)}
-            showImage
-            showAdminState
-          />
-        ) : isListingDeleted ? (
-          <div className="rounded-lg bg-slate-50 px-4 py-5">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-950">
-                  This listing has been removed.
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
-                  The report is still available for audit history, but the
-                  deleted listing is no longer shown as active content.
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">
-            The referenced listing is no longer available in the admin lookup.
-          </p>
-        )}
-      </DetailPanel>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DetailPanel title="Lister">
-          <AdminModeratedListerCard
-            name={getReportListerName(report)}
-            subtitle={
-              report.listingOwner
-                ? `${report.listingOwner.name} · ${report.listingOwner.email}`
-                : "No owner details"
-            }
-            meta={`${lister?.isOnline ? "ONLINE" : "OFFLINE"}${
-              report.listingOwner ? ` · ${report.listingOwner.status}` : ""
-            }`}
-            profile={lister}
-            userId={report.listingOwner?._id}
-            userStatus={report.listingOwner?.status}
-          />
-        </DetailPanel>
-
-        <DetailPanel title="Building">
-          {building ? (
-            <AdminBuildingCard building={building} showActive />
-          ) : (
-            <p className="text-sm text-slate-500">
-              No building details were found for this report.
-            </p>
-          )}
-        </DetailPanel>
-      </div>
-    </article>
   );
 }
 
@@ -2148,133 +1568,6 @@ function AdminRatingStars({
   );
 }
 
-function ListingModerationMenu({
-  isDisabled,
-  onDelete,
-}: {
-  isDisabled?: boolean;
-  onDelete: () => void;
-}) {
-  return (
-    <ModerationMoreMenu
-      ariaLabel="Open listing moderation actions"
-      isDisabled={isDisabled}
-      items={[
-        {
-          label: "Delete listing",
-          icon: <Trash2 className="h-4 w-4" />,
-          tone: "danger",
-          onSelect: onDelete,
-        },
-      ]}
-    />
-  );
-}
-
-function ReviewModerationMenu({
-  isDisabled,
-  onDelete,
-}: {
-  isDisabled?: boolean;
-  onDelete: () => void;
-}) {
-  return (
-    <ModerationMoreMenu
-      ariaLabel="Open review moderation actions"
-      isDisabled={isDisabled}
-      items={[
-        {
-          label: "Delete this review",
-          icon: <Trash2 className="h-4 w-4" />,
-          tone: "danger",
-          onSelect: onDelete,
-        },
-      ]}
-    />
-  );
-}
-
-type ModerationMoreMenuItem = {
-  label: string;
-  icon: ReactNode;
-  tone?: "danger" | "neutral";
-  onSelect: () => void;
-};
-
-function ModerationMoreMenu({
-  ariaLabel,
-  isDisabled,
-  items,
-}: {
-  ariaLabel: string;
-  isDisabled?: boolean;
-  items: ModerationMoreMenuItem[];
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        type="button"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={ariaLabel}
-        aria-expanded={isOpen}
-        disabled={isDisabled}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <MoreHorizontal className="h-5 w-5" />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-10 z-20 w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg">
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold transition",
-                item.tone === "danger"
-                  ? "text-red-600 hover:bg-red-50"
-                  : "text-slate-700 hover:bg-slate-50",
-              )}
-              onClick={() => {
-                setIsOpen(false);
-                item.onSelect();
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function SuspensionListItem({
   suspension,
 }: {
@@ -2490,127 +1783,6 @@ function PlatformAdminDetail({
   );
 }
 
-function ReportReviewDialog() {
-  const {
-    action,
-    selectedReviewReason,
-    reviewNote,
-    error,
-    isReviewSubmitting,
-    setSelectedReviewReason,
-    setReviewNote,
-    closeDialog,
-    confirmReview,
-  } = useReportReview();
-
-  if (!action) return null;
-
-  const actionCopy: Record<
-    ReportReviewStatus,
-    { title: string; description: string; label: string; tone: "neutral" | "red" | "green" }
-  > = {
-    REVIEWED: {
-      title: "Mark report reviewed",
-      description:
-        "Use this when the report was checked and no stronger moderation action is needed yet.",
-      label: "Mark reviewed",
-      tone: "neutral",
-    },
-    DISMISSED: {
-      title: "Dismiss report",
-      description:
-        "Use this when the report is invalid, duplicated, or does not have enough evidence.",
-      label: "Dismiss report",
-      tone: "red",
-    },
-    ACTION_TAKEN: {
-      title: "Mark action taken",
-      description:
-        "Use this after a separate moderation action has already been completed.",
-      label: "Action taken",
-      tone: "green",
-    },
-  };
-  const copy = actionCopy[action.status];
-  const requiresNote =
-    action.status === "DISMISSED" || action.status === "ACTION_TAKEN";
-  const reasonOptions =
-    action.status === "DISMISSED"
-      ? reportDismissReasonOptions
-      : action.status === "ACTION_TAKEN"
-        ? reportActionTakenReasonOptions
-        : [];
-  const hasPresetReasons = reasonOptions.length > 0;
-  const canSubmit =
-    !isReviewSubmitting &&
-    (!requiresNote ||
-      selectedReviewReason.trim().length > 0 ||
-      reviewNote.trim().length > 0);
-  const reasonOptionItems = reasonOptions.map((reason) => ({
-    label: reason,
-    value: reason,
-  }));
-  const icon =
-    copy.tone === "red" ? (
-      <AlertCircle className="h-5 w-5" />
-    ) : copy.tone === "green" ? (
-      <CheckCircle2 className="h-5 w-5" />
-    ) : (
-      <Flag className="h-5 w-5" />
-    );
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title={copy.title}
-      description={copy.description}
-      icon={icon}
-      tone={copy.tone}
-      itemSummary={
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">
-              {getReportReasonLabel(action.report.reason)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {getReportListingTitle(action.report)} · Reported by{" "}
-              {getReportReporterName(action.report)}
-            </p>
-          </div>
-          <StatusBadge status={action.report.status} />
-        </div>
-      }
-      reasonLabel="Common reason"
-      reasonOptions={reasonOptionItems}
-      selectedReason={selectedReviewReason}
-      reasonActiveColor={
-        action.status === "DISMISSED"
-          ? "red"
-          : action.status === "ACTION_TAKEN"
-            ? "green"
-            : "black"
-      }
-      noteLabel={
-        hasPresetReasons ? "Extra note or custom reason" : "Review note (optional)"
-      }
-      note={reviewNote}
-      notePlaceholder={
-        hasPresetReasons
-          ? "Add details, or write a custom reason if none of the options fit."
-          : "Optional note for future admins."
-      }
-      error={error}
-      confirmLabel={copy.label}
-      isSubmitting={isReviewSubmitting}
-      canSubmit={canSubmit}
-      onReasonChange={setSelectedReviewReason}
-      onNoteChange={setReviewNote}
-      onCancel={closeDialog}
-      onSubmit={confirmReview}
-    />
-  );
-}
-
 function ReviewReportReviewDialog() {
   const {
     action,
@@ -2791,67 +1963,6 @@ function ReviewReportDeleteReviewDialog() {
       onNoteChange={setDeleteNote}
       onCancel={closeDeleteReviewDialog}
       onSubmit={confirmDeleteReview}
-    />
-  );
-}
-
-function ReportListingDeleteDialog() {
-  const {
-    deleteAction,
-    deleteReason,
-    deleteNote,
-    deleteError,
-    isDeletingListing,
-    setDeleteReason,
-    setDeleteNote,
-    closeDeleteListingDialog,
-    confirmDeleteListing,
-  } = useReportReview();
-
-  if (!deleteAction) return null;
-
-  const canSubmit =
-    !isDeletingListing &&
-    (deleteReason.trim().length > 0 || deleteNote.trim().length > 0);
-  const listing = deleteAction.listing;
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title="Delete listing"
-      description="This will remove the listing from the platform and notify the lister with the reason."
-      icon={<Trash2 className="h-5 w-5" />}
-      tone="red"
-      itemSummary={
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">
-              {getReportListingTitle(deleteAction.report)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Reported for {getReportReasonLabel(deleteAction.report.reason)}
-            </p>
-          </div>
-          <p className="shrink-0 text-sm font-semibold text-slate-950">
-            {formatBaht(listing.rent)}
-          </p>
-        </div>
-      }
-      reasonLabel="Deletion reason"
-      reasonOptions={toSelectableChipOptions(listingDeleteReasonOptions)}
-      selectedReason={deleteReason}
-      reasonActiveColor="red"
-      noteLabel="Extra note or custom reason"
-      note={deleteNote}
-      notePlaceholder="Explain exactly why this listing is being removed."
-      error={deleteError}
-      confirmLabel="Delete listing"
-      isSubmitting={isDeletingListing}
-      canSubmit={canSubmit}
-      onReasonChange={setDeleteReason}
-      onNoteChange={setDeleteNote}
-      onCancel={closeDeleteListingDialog}
-      onSubmit={confirmDeleteListing}
     />
   );
 }
