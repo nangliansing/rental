@@ -8,8 +8,8 @@ import {
   getBuildingName,
   getBuildingType,
   getSubmissionType,
-  toSelectableChipOptions,
 } from "./pendingListingDisplayUtils"
+import { toSelectableChipOptions } from "../../shared/adminChipOptions"
 import {
   pendingApproveReasonOptions,
   pendingRejectReasonOptions,

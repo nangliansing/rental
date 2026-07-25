@@ -38,12 +38,11 @@ import {
   AdminBuildingCard,
   AdminDetailPanel as DetailPanel,
   AdminEmptyState,
-  AdminErrorState,
   AdminFilterPills,
+  AdminDetailState,
   AdminInfoRow as InfoRow,
   AdminListerCard,
   AdminListingCard,
-  AdminListLoading,
   AdminListState,
   AdminReviewCard,
   AdminReviewListItem,
@@ -52,12 +51,10 @@ import {
   AdminWorkspace,
 } from "../components";
 import {
-  getAdminBuildingEditRequestById,
   getAdminReportById,
   getAdminReviewReportById,
   getAdminSuspensionById,
   getAdminUserById,
-  searchAdminBuildingEditRequests,
   searchAdminPlatformAdmins,
   searchAdminReports,
   searchAdminReviewReports,
@@ -65,8 +62,6 @@ import {
   useCreateAdminSuspension,
   useLiftAdminSuspension,
   useRemoveAdminRole,
-  useApproveAdminBuildingEditRequest,
-  useRejectAdminBuildingEditRequest,
   useUpdateAdminReportStatus,
   useUpdateAdminReviewReportStatus,
   useDeleteAdminListerReview,
@@ -76,20 +71,20 @@ import {
   type AdminReport,
   type AdminReportListing,
   type AdminReportStatusFilter,
-  type AdminBuildingEditRequest,
-  type AdminBuildingEditRequestStatusFilter,
   type AdminPlatformAdmin,
   type AdminUserDetails,
   type AdminSuspensionStatus,
   type AdminSuspensionListItem,
   type AdminSuspensionStatusFilter,
 } from "../api";
+import { toSelectableChipOptions } from "../shared/adminChipOptions";
 import {
   formatBaht,
   formatCompactBaht,
   formatDate,
 } from "../shared/adminFormatters";
 import { getNextAdminPageParam } from "../shared/adminPagination";
+import { BuildingEditsTab } from "../tabs/building-edits";
 import { PendingListingsTab } from "../tabs/pending-listings";
 
 type AdminTab =
@@ -99,8 +94,6 @@ type AdminTab =
   | "reviewReports"
   | "suspensions"
   | "platformAdmins";
-type BuildingEditApproveAction = AdminBuildingEditRequest | null;
-type BuildingEditRejectAction = AdminBuildingEditRequest | null;
 type ReportReviewStatus = Exclude<AdminReportStatusFilter, "OPEN">;
 type ReportReviewAction = {
   report: AdminReport;
@@ -122,25 +115,6 @@ type SuspensionAction = {
 } | null;
 type LiftSuspensionAction = AdminSuspensionListItem | null;
 type RemoveAdminRoleAction = AdminUserDetails | null;
-
-type BuildingEditReviewContextValue = {
-  selectedRequest: AdminBuildingEditRequest | null;
-  isReviewSubmitting: boolean;
-  selectRequest: (requestId: string | null) => void;
-  openApproveDialog: (request: AdminBuildingEditRequest) => void;
-  openRejectDialog: (request: AdminBuildingEditRequest) => void;
-  approveAction: BuildingEditApproveAction;
-  rejectAction: BuildingEditRejectAction;
-  selectedRejectReason: string;
-  reviewReason: string;
-  error: string | null;
-  setSelectedRejectReason: (value: string) => void;
-  setReviewReason: (value: string) => void;
-  closeApproveDialog: () => void;
-  closeRejectDialog: () => void;
-  approveEdit: () => void;
-  rejectEdit: () => void;
-}
 
 type ReportReviewContextValue = {
   selectedReport: AdminReport | null;
@@ -236,8 +210,6 @@ type PlatformAdminContextValue = {
   confirmRemoveAdmin: () => void;
 }
 
-const BuildingEditReviewContext =
-  createContext<BuildingEditReviewContextValue | null>(null);
 const ReportReviewContext = createContext<ReportReviewContextValue | null>(
   null,
 );
@@ -254,13 +226,6 @@ function useRequiredContext<T>(context: T | null, name: string) {
   }
 
   return context;
-}
-
-function useBuildingEditReview() {
-  return useRequiredContext(
-    useContext(BuildingEditReviewContext),
-    "BuildingEditReviewContext",
-  );
 }
 
 function useReportReview() {
@@ -292,14 +257,12 @@ function usePlatformAdminReview() {
 }
 
 function AdminReviewProviders({
-  buildingEdit,
   report,
   reviewReport,
   suspension,
   platformAdmin,
   children,
 }: {
-  buildingEdit: BuildingEditReviewContextValue;
   report: ReportReviewContextValue;
   reviewReport: ReviewReportReviewContextValue;
   suspension: SuspensionContextValue;
@@ -307,28 +270,17 @@ function AdminReviewProviders({
   children: ReactNode;
 }) {
   return (
-    <BuildingEditReviewContext.Provider value={buildingEdit}>
-      <ReportReviewContext.Provider value={report}>
-        <ReviewReportReviewContext.Provider value={reviewReport}>
-          <SuspensionContext.Provider value={suspension}>
-            <PlatformAdminContext.Provider value={platformAdmin}>
-              {children}
-            </PlatformAdminContext.Provider>
-          </SuspensionContext.Provider>
-        </ReviewReportReviewContext.Provider>
-      </ReportReviewContext.Provider>
-    </BuildingEditReviewContext.Provider>
+    <ReportReviewContext.Provider value={report}>
+      <ReviewReportReviewContext.Provider value={reviewReport}>
+        <SuspensionContext.Provider value={suspension}>
+          <PlatformAdminContext.Provider value={platformAdmin}>
+            {children}
+          </PlatformAdminContext.Provider>
+        </SuspensionContext.Provider>
+      </ReviewReportReviewContext.Provider>
+    </ReportReviewContext.Provider>
   );
 }
-
-const buildingEditRejectReasonOptions = [
-  "Building name looks incorrect",
-  "Address or pin location needs review",
-  "Building type is incorrect",
-  "Facilities do not match the building",
-  "Security details need review",
-  "Proposed changes are incomplete",
-];
 
 const suspensionReasonOptions = [
   "Fake or suspicious lister",
@@ -416,19 +368,6 @@ type SelectableChipOption<TValue extends string | number> = {
   value: TValue;
 };
 
-function toSelectableChipOptions<TValue extends string | number>(
-  options: TValue[] | SelectableChipOption<TValue>[],
-) {
-  return options.map((option) =>
-    typeof option === "object"
-      ? option
-      : {
-          label: String(option),
-          value: option,
-        },
-  );
-}
-
 const tabs: {
   key: AdminTab;
   label: string;
@@ -456,16 +395,6 @@ const tabs: {
     icon: UsersRound,
     isReady: true,
   },
-];
-
-const buildingEditStatusFilters: {
-  label: string;
-  value?: AdminBuildingEditRequestStatusFilter;
-}[] = [
-  { label: "All" },
-  { label: "Pending", value: "PENDING" },
-  { label: "Approved", value: "APPROVED" },
-  { label: "Rejected", value: "REJECTED" },
 ];
 
 const reportStatusFilters: {
@@ -499,31 +428,6 @@ const suspensionStatusFilters: {
   { label: "Expired", value: "EXPIRED" },
   { label: "Lifted", value: "LIFTED" },
 ];
-
-function getBuildingEditRequestName(request: AdminBuildingEditRequest) {
-  const currentName = request.originalBuilding.name;
-  const proposedName = request.proposedBuilding.name;
-
-  if (proposedName && proposedName !== currentName) {
-    return `${currentName} → ${proposedName}`;
-  }
-
-  return request.building?.name ?? currentName;
-}
-
-function getBuildingEditRequestAgentName(request: AdminBuildingEditRequest) {
-  return request.agentProfile?.displayName ?? request.requestedBy.name;
-}
-
-function getBuildingEditRequestMeta(request: AdminBuildingEditRequest) {
-  const proposed = request.proposedBuilding;
-  const requester = getBuildingEditRequestAgentName(request);
-
-  return [
-    `${proposed.buildingType} · ${proposed.address || "No address"}`,
-    `Requested by ${requester}`,
-  ];
-}
 
 function getReportReasonLabel(reason: AdminReport["reason"]) {
   const labels: Record<AdminReport["reason"], string> = {
@@ -633,9 +537,6 @@ function isAdminRole(role: string | undefined) {
 export function AdminPanelPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("pending");
-  const [buildingEditStatus, setBuildingEditStatus] = useState<
-    AdminBuildingEditRequestStatusFilter | undefined
-  >("PENDING");
   const [reportStatus, setReportStatus] = useState<
     AdminReportStatusFilter | undefined
   >("OPEN");
@@ -644,8 +545,6 @@ export function AdminPanelPage() {
   >("OPEN");
   const [suspensionStatus, setSuspensionStatus] =
     useState<AdminSuspensionStatusFilter>("ACTIVE");
-  const [selectedBuildingEditRequestId, setSelectedBuildingEditRequestId] =
-    useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [selectedReviewReportId, setSelectedReviewReportId] = useState<
     string | null
@@ -707,32 +606,7 @@ export function AdminPanelPage() {
   const [liftSuspensionError, setLiftSuspensionError] = useState<string | null>(
     null,
   );
-  const [buildingEditApproveAction, setBuildingEditApproveAction] =
-    useState<BuildingEditApproveAction>(null);
-  const [buildingEditRejectAction, setBuildingEditRejectAction] =
-    useState<BuildingEditRejectAction>(null);
-  const [
-    selectedBuildingEditRejectReason,
-    setSelectedBuildingEditRejectReason,
-  ] = useState("");
-  const [buildingEditReviewReason, setBuildingEditReviewReason] = useState("");
-  const [buildingEditReviewError, setBuildingEditReviewError] = useState<
-    string | null
-  >(null);
   const isAdmin = isAdminRole(user?.role);
-
-  const buildingEditRequestsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.buildingEditRequests.list(buildingEditStatus),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminBuildingEditRequests({
-        status: buildingEditStatus,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled: activeTab === "buildingEdits" && isAdmin,
-  });
 
   const reportsQuery = useInfiniteQuery({
     queryKey: queryKeys.admin.reports.list(reportStatus),
@@ -784,23 +658,6 @@ export function AdminPanelPage() {
     getNextPageParam: getNextAdminPageParam,
     enabled: activeTab === "platformAdmins" && isAdmin,
   });
-
-  const closeBuildingEditApproveDialog = () => {
-    setBuildingEditApproveAction(null);
-    setBuildingEditReviewReason("");
-    setBuildingEditReviewError(null);
-  };
-
-  const closeBuildingEditRejectDialog = () => {
-    setBuildingEditRejectAction(null);
-    setSelectedBuildingEditRejectReason("");
-    setBuildingEditReviewReason("");
-    setBuildingEditReviewError(null);
-  };
-
-  const approveBuildingEditMutation = useApproveAdminBuildingEditRequest();
-
-  const rejectBuildingEditMutation = useRejectAdminBuildingEditRequest();
 
   const closeReportReviewDialog = () => {
     setReportReviewAction(null);
@@ -864,33 +721,6 @@ export function AdminPanelPage() {
 
   const removeAdminRoleMutation = useRemoveAdminRole();
 
-  const buildingEditRequests =
-    buildingEditRequestsQuery.data?.pages.flatMap((page) => page.data) ?? [];
-  const buildingEditPagination =
-    buildingEditRequestsQuery.data?.pages[0]?.pagination;
-  const selectedBuildingEditRequestListItem =
-    buildingEditRequests.find(
-      (request) => request._id === selectedBuildingEditRequestId,
-    ) ??
-    buildingEditRequests[0] ??
-    null;
-  const effectiveBuildingEditRequestId =
-    selectedBuildingEditRequestId ?? selectedBuildingEditRequestListItem?._id;
-  const buildingEditRequestDetailQuery = useQuery({
-    queryKey: queryKeys.admin.buildingEditRequests.detail(
-      effectiveBuildingEditRequestId,
-    ),
-    queryFn: () =>
-      getAdminBuildingEditRequestById(effectiveBuildingEditRequestId!),
-    enabled:
-      activeTab === "buildingEdits" &&
-      isAdmin &&
-      Boolean(effectiveBuildingEditRequestId),
-  });
-  const selectedBuildingEditRequest =
-    buildingEditRequestDetailQuery.data ??
-    selectedBuildingEditRequestListItem ??
-    null;
   const reports = reportsQuery.data?.pages.flatMap((page) => page.data) ?? [];
   const reportsPagination = reportsQuery.data?.pages[0]?.pagination;
   const selectedReportListItem =
@@ -973,90 +803,12 @@ export function AdminPanelPage() {
           agentProfile: null,
         }
       : null);
-  const isBuildingEditReviewSubmitting =
-    approveBuildingEditMutation.isPending || rejectBuildingEditMutation.isPending;
   const isReportReviewSubmitting = updateReportStatusMutation.isPending;
   const isReviewReportReviewSubmitting =
     updateReviewReportStatusMutation.isPending;
   const isReviewReportReviewDeleting =
     deleteReviewReportReviewMutation.isPending;
   const isReportListingDeleting = deleteReportListingMutation.isPending;
-
-  const handleOpenApproveBuildingEditDialog = (
-    request: AdminBuildingEditRequest,
-  ) => {
-    setBuildingEditApproveAction(request);
-    setBuildingEditRejectAction(null);
-    setSelectedBuildingEditRejectReason("");
-    setBuildingEditReviewReason("");
-    setBuildingEditReviewError(null);
-  };
-
-  const handleOpenRejectBuildingEditDialog = (
-    request: AdminBuildingEditRequest,
-  ) => {
-    setBuildingEditRejectAction(request);
-    setBuildingEditApproveAction(null);
-    setSelectedBuildingEditRejectReason("");
-    setBuildingEditReviewReason("");
-    setBuildingEditReviewError(null);
-  };
-
-  const handleApproveBuildingEdit = () => {
-    if (!buildingEditApproveAction || isBuildingEditReviewSubmitting) return;
-
-    approveBuildingEditMutation.mutate(
-      {
-        buildingEditRequestId: buildingEditApproveAction._id,
-        reviewReason: buildingEditReviewReason,
-      },
-      {
-        onSuccess: closeBuildingEditApproveDialog,
-        onError: (error) => {
-          setBuildingEditReviewError(
-            error instanceof Error
-              ? error.message
-              : "Could not approve building edit.",
-          );
-        },
-      },
-    );
-  };
-
-  const handleRejectBuildingEdit = () => {
-    if (!buildingEditRejectAction || isBuildingEditReviewSubmitting) return;
-
-    const trimmedRejectReason = selectedBuildingEditRejectReason.trim();
-    const trimmedReviewReason = buildingEditReviewReason.trim();
-
-    if (!trimmedRejectReason && !trimmedReviewReason) {
-      setBuildingEditReviewError("Rejection reason is required.");
-      return;
-    }
-
-    const reviewReason = trimmedRejectReason
-      ? [trimmedRejectReason, trimmedReviewReason && `Note: ${trimmedReviewReason}`]
-          .filter(Boolean)
-          .join("\n\n")
-      : trimmedReviewReason;
-
-    rejectBuildingEditMutation.mutate(
-      {
-        buildingEditRequestId: buildingEditRejectAction._id,
-        reviewReason,
-      },
-      {
-        onSuccess: closeBuildingEditRejectDialog,
-        onError: (error) => {
-          setBuildingEditReviewError(
-            error instanceof Error
-              ? error.message
-              : "Could not reject building edit.",
-          );
-        },
-      },
-    );
-  };
 
   const handleOpenReportReviewDialog = (
     report: AdminReport,
@@ -1383,31 +1135,6 @@ export function AdminPanelPage() {
     );
   };
 
-  const buildingEditReviewContextValue: BuildingEditReviewContextValue = {
-    selectedRequest: selectedBuildingEditRequest,
-    isReviewSubmitting: isBuildingEditReviewSubmitting,
-    selectRequest: setSelectedBuildingEditRequestId,
-    openApproveDialog: handleOpenApproveBuildingEditDialog,
-    openRejectDialog: handleOpenRejectBuildingEditDialog,
-    approveAction: buildingEditApproveAction,
-    rejectAction: buildingEditRejectAction,
-    selectedRejectReason: selectedBuildingEditRejectReason,
-    reviewReason: buildingEditReviewReason,
-    error: buildingEditReviewError,
-    setSelectedRejectReason: (value) => {
-      setSelectedBuildingEditRejectReason(value);
-      if (buildingEditReviewError) setBuildingEditReviewError(null);
-    },
-    setReviewReason: (value) => {
-      setBuildingEditReviewReason(value);
-      if (buildingEditReviewError) setBuildingEditReviewError(null);
-    },
-    closeApproveDialog: closeBuildingEditApproveDialog,
-    closeRejectDialog: closeBuildingEditRejectDialog,
-    approveEdit: handleApproveBuildingEdit,
-    rejectEdit: handleRejectBuildingEdit,
-  };
-
   const reportReviewContextValue: ReportReviewContextValue = {
     selectedReport,
     isReviewSubmitting: isReportReviewSubmitting,
@@ -1556,7 +1283,6 @@ export function AdminPanelPage() {
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <AdminReviewProviders
-        buildingEdit={buildingEditReviewContextValue}
         report={reportReviewContextValue}
         reviewReport={reviewReportReviewContextValue}
         suspension={suspensionContextValue}
@@ -1623,66 +1349,7 @@ export function AdminPanelPage() {
           )}
 
           {activeTab === "buildingEdits" && (
-            <AdminWorkspace
-              title="Building edits"
-              description="Review proposed changes to existing buildings."
-              total={buildingEditPagination?.total}
-              filters={
-                <AdminFilterPills
-                  options={buildingEditStatusFilters}
-                  value={buildingEditStatus}
-                  onChange={(nextStatus) => {
-                    setBuildingEditStatus(nextStatus);
-                    setSelectedBuildingEditRequestId(null);
-                  }}
-                />
-              }
-              list={
-                <AdminListState
-                  isLoading={buildingEditRequestsQuery.isLoading}
-                  error={buildingEditRequestsQuery.error}
-                  errorFallback="Could not load building edit requests."
-                  isEmpty={buildingEditRequests.length === 0}
-                  emptyTitle="No building edit requests"
-                  emptyDescription="Requests to update building details will appear here."
-                  onRetry={() => void buildingEditRequestsQuery.refetch()}
-                  hasNextPage={Boolean(buildingEditRequestsQuery.hasNextPage)}
-                  isFetchingNextPage={
-                    buildingEditRequestsQuery.isFetchingNextPage
-                  }
-                  onFetchNextPage={() =>
-                    void buildingEditRequestsQuery.fetchNextPage()
-                  }
-                >
-                  {buildingEditRequests.map((request) => (
-                    <BuildingEditRequestListItem
-                      key={request._id}
-                      request={request}
-                    />
-                  ))}
-                </AdminListState>
-              }
-              detail={
-                <AdminDetailState
-                  isLoading={buildingEditRequestDetailQuery.isLoading}
-                  shouldShowLoading={Boolean(effectiveBuildingEditRequestId)}
-                  error={buildingEditRequestDetailQuery.error}
-                  errorFallback="Could not load this building edit request."
-                  onRetry={() => void buildingEditRequestDetailQuery.refetch()}
-                >
-                  {selectedBuildingEditRequest ? (
-                    <BuildingEditRequestDetail
-                      request={selectedBuildingEditRequest}
-                    />
-                  ) : (
-                    <AdminEmptyState
-                      title="Select a building edit"
-                      description="Choose a request from the left to compare the current and proposed details."
-                    />
-                  )}
-                </AdminDetailState>
-              }
-            />
+            <BuildingEditsTab enabled={isAdmin} />
           )}
 
           {activeTab === "reports" && (
@@ -1908,8 +1575,6 @@ export function AdminPanelPage() {
         </div>
       </div>
 
-        <BuildingEditApproveDialog />
-        <BuildingEditRejectDialog />
         <ReportReviewDialog />
         <ReviewReportReviewDialog />
         <ReviewReportDeleteReviewDialog />
@@ -1920,35 +1585,6 @@ export function AdminPanelPage() {
       </AdminReviewProviders>
     </main>
   );
-}
-
-function AdminDetailState({
-  isLoading,
-  shouldShowLoading,
-  error,
-  errorFallback,
-  onRetry,
-  children,
-}: {
-  isLoading: boolean;
-  shouldShowLoading: boolean;
-  error: unknown;
-  errorFallback: string;
-  onRetry: () => void;
-  children: ReactNode;
-}) {
-  if (isLoading && shouldShowLoading) return <AdminListLoading />;
-
-  if (error) {
-    return (
-      <AdminErrorState
-        message={error instanceof Error ? error.message : errorFallback}
-        onRetry={onRetry}
-      />
-    );
-  }
-
-  return <>{children}</>;
 }
 
 function SelectableChipGroup<TValue extends string | number>({
@@ -1992,139 +1628,6 @@ function SelectableChipGroup<TValue extends string | number>({
         );
       })}
     </div>
-  );
-}
-
-function BuildingEditRequestListItem({
-  request,
-}: {
-  request: AdminBuildingEditRequest;
-}) {
-  const { selectedRequest, selectRequest } = useBuildingEditReview();
-
-  return (
-    <AdminReviewListItem
-      title={getBuildingEditRequestName(request)}
-      meta={getBuildingEditRequestMeta(request)}
-      createdAt={formatDate(request.createdAt)}
-      isSelected={selectedRequest?._id === request._id}
-      onSelect={() => selectRequest(request._id)}
-      status={request.status}
-      note={request.requestReason}
-      imageSize="sm"
-    />
-  );
-}
-
-function BuildingEditRequestDetail({
-  request,
-}: {
-  request: AdminBuildingEditRequest;
-}) {
-  const { isReviewSubmitting, openApproveDialog, openRejectDialog } =
-    useBuildingEditReview();
-  const isPending = request.status === "PENDING";
-
-  return (
-    <article className="space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {getBuildingEditRequestName(request)}
-            </h2>
-            <StatusBadge status={request.status} />
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Requested {formatDate(request.createdAt)} by{" "}
-            {getBuildingEditRequestAgentName(request)}
-          </p>
-        </div>
-
-        {isPending && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isReviewSubmitting}
-              onClick={() => openRejectDialog(request)}
-            >
-              Reject
-            </Button>
-            <Button
-              type="button"
-              disabled={isReviewSubmitting}
-              onClick={() => openApproveDialog(request)}
-            >
-              Approve edit
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {request.requestReason && (
-        <DetailPanel title="Request reason">
-          <p className="text-sm leading-6 text-slate-600">
-            {request.requestReason}
-          </p>
-        </DetailPanel>
-      )}
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DetailPanel title="Current building">
-          <AdminBuildingCard building={request.originalBuilding} />
-        </DetailPanel>
-
-        <DetailPanel title="Proposed building">
-          <AdminBuildingCard
-            building={request.proposedBuilding}
-            compareTo={request.originalBuilding}
-          />
-        </DetailPanel>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DetailPanel title="Requester">
-          <BuildingEditRequesterSummary request={request} />
-        </DetailPanel>
-
-        <DetailPanel title="Review">
-          <AdminReviewCard
-            status={request.status}
-            reviewedAt={
-              request.reviewedAt ? formatDate(request.reviewedAt) : null
-            }
-            reviewedBy={request.reviewedBy?.name}
-            noteLabel="Review reason"
-            note={request.reviewReason}
-          />
-        </DetailPanel>
-      </div>
-
-      {request.building && (
-        <DetailPanel title="Canonical building now">
-          <AdminBuildingCard building={request.building} />
-        </DetailPanel>
-      )}
-    </article>
-  );
-}
-
-function BuildingEditRequesterSummary({
-  request,
-}: {
-  request: AdminBuildingEditRequest;
-}) {
-  const agentProfile = request.agentProfile;
-
-  return (
-    <AdminUserCard
-      name={getBuildingEditRequestAgentName(request)}
-      subtitle={`${request.requestedBy.name} · ${request.requestedBy.email}`}
-      meta={`${request.requestedBy.status} · ${request.requestedBy.role}`}
-      photo={agentProfile?.profilePhoto}
-      isVerified={agentProfile?.isVerified}
-    />
   );
 }
 
@@ -2984,115 +2487,6 @@ function PlatformAdminDetail({
         )}
       </DetailPanel>
     </article>
-  );
-}
-
-function BuildingEditApproveDialog() {
-  const {
-    approveAction: request,
-    reviewReason,
-    error,
-    isReviewSubmitting,
-    setReviewReason,
-    closeApproveDialog,
-    approveEdit,
-  } = useBuildingEditReview();
-
-  if (!request) return null;
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title="Approve building edit"
-      description="This will update the live building details with the proposed changes from this request."
-      icon={<CheckCircle2 className="h-5 w-5" />}
-      tone="green"
-      itemSummary={
-        <div>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">
-                {getBuildingEditRequestName(request)}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Requested by {getBuildingEditRequestAgentName(request)}
-              </p>
-            </div>
-            <StatusBadge status={request.status} />
-          </div>
-        </div>
-      }
-      noteLabel="Review note"
-      note={reviewReason}
-      notePlaceholder="Optional note, e.g. checked address and facilities."
-      error={error}
-      confirmLabel="Approve edit"
-      isSubmitting={isReviewSubmitting}
-      canSubmit={!isReviewSubmitting}
-      onNoteChange={setReviewReason}
-      onCancel={closeApproveDialog}
-      onSubmit={approveEdit}
-    />
-  );
-}
-
-function BuildingEditRejectDialog() {
-  const {
-    rejectAction: request,
-    selectedRejectReason,
-    reviewReason,
-    error,
-    isReviewSubmitting,
-    setSelectedRejectReason,
-    setReviewReason,
-    closeRejectDialog,
-    rejectEdit,
-  } = useBuildingEditReview();
-
-  if (!request) return null;
-
-  const canSubmit =
-    !isReviewSubmitting &&
-    (selectedRejectReason.trim().length > 0 ||
-      reviewReason.trim().length > 0);
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title="Reject building edit"
-      description="Add a clear reason so the lister understands which building details need to be fixed."
-      icon={<AlertCircle className="h-5 w-5" />}
-      tone="red"
-      itemSummary={
-        <div>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">
-                {getBuildingEditRequestName(request)}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Requested by {getBuildingEditRequestAgentName(request)}
-              </p>
-            </div>
-            <StatusBadge status={request.status} />
-          </div>
-        </div>
-      }
-      reasonLabel="Common reason"
-      reasonOptions={toSelectableChipOptions(buildingEditRejectReasonOptions)}
-      selectedReason={selectedRejectReason}
-      reasonActiveColor="red"
-      noteLabel="Extra note or custom reason"
-      note={reviewReason}
-      error={error}
-      confirmLabel="Reject edit"
-      isSubmitting={isReviewSubmitting}
-      canSubmit={canSubmit}
-      onReasonChange={setSelectedRejectReason}
-      onNoteChange={setReviewReason}
-      onCancel={closeRejectDialog}
-      onSubmit={rejectEdit}
-    />
   );
 }
 

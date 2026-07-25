@@ -10,6 +10,7 @@ export {
   AdminListLoading,
   AdminListState,
 } from "./AdminListState"
+export { AdminDetailState } from "./AdminDetailState"
 export { AdminFilterPills } from "./AdminFilterPills"
 export type { AdminFilterPillOption } from "./AdminFilterPills"
 export { AdminInfoRow } from "./AdminInfoRow"
