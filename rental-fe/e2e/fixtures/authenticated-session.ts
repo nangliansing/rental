@@ -153,6 +153,49 @@ function jsonRoute(body: unknown, status = 200) {
 
 export type AuthenticatedSessionMockOptions = {
   hasAgentProfile?: boolean
+  withPendingPost?: boolean
+}
+
+function buildSeedPendingPost(): SmokePendingPost {
+  const now = "2026-07-25T08:00:00.000Z"
+
+  return {
+    _id: "pending-smoke-seed-1",
+    status: "PENDING",
+    submittedBy: smokeAuthUser._id,
+    existingBuildingId: smokeListingBuilding._id,
+    existingBuilding: {
+      ...smokeListingBuilding,
+      isActive: true,
+      minRent: smokeListingBuilding.minRent,
+      maxRent: smokeListingBuilding.maxRent,
+    },
+    building: null,
+    listing: {
+      rent: 15000,
+      contractMonths: 12,
+      bedroomCount: 1,
+      size: 30,
+      media: [
+        {
+          publicId: "test/pending-cover",
+          secureUrl: "https://example.com/pending.jpg",
+          resourceType: "image",
+          position: 0,
+          alt: "Pending room",
+          isCover: true,
+        },
+      ],
+    },
+    reviewNote: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    approvedBuildingId: null,
+    approvedListingId: null,
+    isDeleted: false,
+    createdAt: now,
+    updatedAt: now,
+  }
 }
 
 function isAuthorized(route: Route) {
@@ -271,10 +314,40 @@ export async function installAuthenticatedSessionMocks(
   options: AuthenticatedSessionMockOptions = {},
 ) {
   let hasAgentProfile = options.hasAgentProfile ?? true
-  let createdAgentProfile = buildCreatedAgentProfile()
-  let ownerPendingPosts: SmokePendingPost[] = []
-  let nextPendingPostId = 1
+  let createdAgentProfile = hasAgentProfile
+    ? { ...smokeAgentProfile }
+    : buildCreatedAgentProfile()
+  let ownerPendingPosts: SmokePendingPost[] = options.withPendingPost
+    ? [buildSeedPendingPost()]
+    : []
+  let nextPendingPostId = ownerPendingPosts.length + 1
+  let isSessionActive = true
+
+  if (options.withPendingPost) {
+    createdAgentProfile = {
+      ...createdAgentProfile,
+      listingSummary: {
+        ...createdAgentProfile.listingSummary,
+        pendingCount: ownerPendingPosts.length,
+      },
+    }
+  }
+
   await page.route("**/api/v1/users/token/refresh", async (route) => {
+    if (!isSessionActive) {
+      await route.fulfill(
+        jsonRoute(
+          {
+            success: false,
+            code: "INVALID_REFRESH_TOKEN",
+            message: "Your session expired. Please log in again.",
+          },
+          401,
+        ),
+      )
+      return
+    }
+
     await route.fulfill(
       jsonRoute({
         success: true,
@@ -283,8 +356,24 @@ export async function installAuthenticatedSessionMocks(
     )
   })
 
+  await page.route("**/api/v1/users/logout", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue()
+      return
+    }
+
+    isSessionActive = false
+
+    await route.fulfill(
+      jsonRoute({
+        success: true,
+        message: "Logged out",
+      }),
+    )
+  })
+
   await page.route("**/api/v1/users/me", async (route) => {
-    if (!isAuthorized(route)) {
+    if (!isSessionActive || !isAuthorized(route)) {
       await route.fulfill(
         jsonRoute(
           {
@@ -337,6 +426,12 @@ export async function installAuthenticatedSessionMocks(
     }
 
     if (route.request().method() === "PATCH") {
+      const requestBody = route.request().postDataJSON() as Record<string, unknown>
+      createdAgentProfile = {
+        ...createdAgentProfile,
+        ...requestBody,
+      }
+
       await route.fulfill(
         jsonRoute({
           success: true,
@@ -403,15 +498,56 @@ export async function installAuthenticatedSessionMocks(
       return
     }
 
+    const url = new URL(route.request().url())
+    const page = Number(url.searchParams.get("page") ?? "1")
+    const limit = Number(url.searchParams.get("limit") ?? "20")
+
     await route.fulfill(
       jsonRoute({
         success: true,
-        data: { listings: [smokeSavedListing.listing] },
+        data: {
+          agentProfile: createdAgentProfile,
+          listings: [smokeSavedListing.listing],
+        },
         pagination: {
-          page: 1,
-          limit: 12,
+          page,
+          limit,
           total: 1,
-          totalPages: 1,
+        },
+      }),
+    )
+  })
+
+  await page.route("**/api/v1/search/listings/listing-smoke-1", async (route) => {
+    await route.fulfill(
+      jsonRoute(
+        {
+          success: false,
+          code: "LISTING_NOT_FOUND",
+          message: "This listing could not be found.",
+        },
+        404,
+      ),
+    )
+  })
+
+  await page.route("**/api/v1/listings/listing-smoke-1", async (route) => {
+    if (!isAuthorized(route)) {
+      await route.fulfill(jsonRoute({ success: false }, 401))
+      return
+    }
+
+    if (route.request().method() !== "GET") {
+      await route.continue()
+      return
+    }
+
+    await route.fulfill(
+      jsonRoute({
+        success: true,
+        data: {
+          agentProfile: createdAgentProfile,
+          listing: smokeSavedListing.listing,
         },
       }),
     )

@@ -4,6 +4,7 @@ import { loadEnv } from "vite"
 const env = loadEnv("development", process.cwd(), "")
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173"
 const skipWebServer = Boolean(process.env.PLAYWRIGHT_SKIP_WEBSERVER)
+const browserChannel = process.env.PLAYWRIGHT_CHANNEL
 
 export default defineConfig({
   testDir: "./e2e",
@@ -22,6 +23,7 @@ export default defineConfig({
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 7"],
+        ...(browserChannel ? { channel: browserChannel as "chrome" } : {}),
       },
     },
   ],
