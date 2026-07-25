@@ -21,6 +21,14 @@ export const smokeNearbyBuilding = {
   distanceMeters: 120,
 }
 
+export const smokeRefreshedNearbyBuilding = {
+  ...smokeNearbyBuilding,
+  _id: "building-smoke-nearby-500m-1",
+  name: "Smoke 500m Nearby Residence",
+  address: "789 Radius Road, Bangkok",
+  distanceMeters: 80,
+}
+
 export const smokePannedAreaBuilding = {
   ...smokeAreaBuilding,
   _id: "building-smoke-panned-1",
