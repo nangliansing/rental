@@ -6,6 +6,7 @@ import {
 } from "./fixtures/admin-moderation"
 
 test.describe("Admin moderation smoke", () => {
+  test.describe.configure({ mode: "serial" })
   test.use({ viewport: { width: 1280, height: 900 } })
 
   test.beforeEach(async ({ page }) => {
@@ -30,10 +31,19 @@ test.describe("Admin moderation smoke", () => {
     await page
       .getByRole("button", { name: "Submission is complete and ready to publish" })
       .click()
+
+    const approveResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        /\/admin\/pending-posts\/[^/]+\/approve$/.test(response.url()) &&
+        response.ok(),
+    )
+
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Approve and publish" })
       .click()
+    await approveResponse
 
     await expect(page.getByText("No pending listings")).toBeVisible({
       timeout: 15_000,
@@ -51,10 +61,19 @@ test.describe("Admin moderation smoke", () => {
     await page
       .getByRole("button", { name: "Room details or pricing look incorrect" })
       .click()
+
+    const rejectResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        /\/admin\/pending-posts\/[^/]+\/reject$/.test(response.url()) &&
+        response.ok(),
+    )
+
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Reject submission" })
       .click()
+    await rejectResponse
 
     await expect(page.getByText("No pending listings")).toBeVisible({
       timeout: 15_000,
