@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Clock3,
   Flag,
-  ImageIcon,
   MessageSquareWarning,
   Loader2,
   MoreHorizontal,
@@ -34,16 +33,18 @@ import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import { LoginRequired } from "@/shared/components/auth/LoginRequired";
 import { ReasonNoteDialog } from "@/shared/components/dialogs/ReasonNoteDialog";
-import { InfiniteScrollSentinel } from "@/shared/components/feedback/InfiniteScrollSentinel";
-import { OptimizedImage } from "@/shared/components/media/OptimizedImage";
 
 import {
   AdminBuildingCard,
   AdminDetailPanel as DetailPanel,
+  AdminEmptyState,
+  AdminErrorState,
   AdminFilterPills,
   AdminInfoRow as InfoRow,
   AdminListerCard,
   AdminListingCard,
+  AdminListLoading,
+  AdminListState,
   AdminReviewCard,
   AdminReviewListItem,
   AdminStatusBadge as StatusBadge,
@@ -61,8 +62,6 @@ import {
   searchAdminReports,
   searchAdminReviewReports,
   searchAdminSuspensions,
-  searchAdminPendingPosts,
-  useApproveAdminPendingPost,
   useCreateAdminSuspension,
   useLiftAdminSuspension,
   useRemoveAdminRole,
@@ -72,7 +71,6 @@ import {
   useUpdateAdminReviewReportStatus,
   useDeleteAdminListerReview,
   useDeleteAdminListing,
-  useRejectAdminPendingPost,
   type AdminReviewReport,
   type AdminReviewReportStatusFilter,
   type AdminReport,
@@ -80,14 +78,19 @@ import {
   type AdminReportStatusFilter,
   type AdminBuildingEditRequest,
   type AdminBuildingEditRequestStatusFilter,
-  type AdminPendingPost,
-  type AdminPendingPostStatusFilter,
   type AdminPlatformAdmin,
   type AdminUserDetails,
   type AdminSuspensionStatus,
   type AdminSuspensionListItem,
   type AdminSuspensionStatusFilter,
 } from "../api";
+import {
+  formatBaht,
+  formatCompactBaht,
+  formatDate,
+} from "../shared/adminFormatters";
+import { getNextAdminPageParam } from "../shared/adminPagination";
+import { PendingListingsTab } from "../tabs/pending-listings";
 
 type AdminTab =
   | "pending"
@@ -96,10 +99,6 @@ type AdminTab =
   | "reviewReports"
   | "suspensions"
   | "platformAdmins";
-type ReviewAction = {
-  type: "approve" | "reject";
-  post: AdminPendingPost;
-} | null;
 type BuildingEditApproveAction = AdminBuildingEditRequest | null;
 type BuildingEditRejectAction = AdminBuildingEditRequest | null;
 type ReportReviewStatus = Exclude<AdminReportStatusFilter, "OPEN">;
@@ -123,22 +122,6 @@ type SuspensionAction = {
 } | null;
 type LiftSuspensionAction = AdminSuspensionListItem | null;
 type RemoveAdminRoleAction = AdminUserDetails | null;
-
-type PendingReviewContextValue = {
-  selectedPost: AdminPendingPost | null;
-  isReviewSubmitting: boolean;
-  selectPost: (postId: string | null) => void;
-  openApproveDialog: (post: AdminPendingPost) => void;
-  openRejectDialog: (post: AdminPendingPost) => void;
-  action: ReviewAction;
-  selectedRejectReason: string;
-  reviewNote: string;
-  error: string | null;
-  setSelectedRejectReason: (value: string) => void;
-  setReviewNote: (value: string) => void;
-  closeDialog: () => void;
-  confirmAction: () => void;
-}
 
 type BuildingEditReviewContextValue = {
   selectedRequest: AdminBuildingEditRequest | null;
@@ -253,9 +236,6 @@ type PlatformAdminContextValue = {
   confirmRemoveAdmin: () => void;
 }
 
-const PendingReviewContext = createContext<PendingReviewContextValue | null>(
-  null,
-);
 const BuildingEditReviewContext =
   createContext<BuildingEditReviewContextValue | null>(null);
 const ReportReviewContext = createContext<ReportReviewContextValue | null>(
@@ -274,13 +254,6 @@ function useRequiredContext<T>(context: T | null, name: string) {
   }
 
   return context;
-}
-
-function usePendingReview() {
-  return useRequiredContext(
-    useContext(PendingReviewContext),
-    "PendingReviewContext",
-  );
 }
 
 function useBuildingEditReview() {
@@ -319,7 +292,6 @@ function usePlatformAdminReview() {
 }
 
 function AdminReviewProviders({
-  pending,
   buildingEdit,
   report,
   reviewReport,
@@ -327,7 +299,6 @@ function AdminReviewProviders({
   platformAdmin,
   children,
 }: {
-  pending: PendingReviewContextValue;
   buildingEdit: BuildingEditReviewContextValue;
   report: ReportReviewContextValue;
   reviewReport: ReviewReportReviewContextValue;
@@ -336,37 +307,19 @@ function AdminReviewProviders({
   children: ReactNode;
 }) {
   return (
-    <PendingReviewContext.Provider value={pending}>
-      <BuildingEditReviewContext.Provider value={buildingEdit}>
-        <ReportReviewContext.Provider value={report}>
-          <ReviewReportReviewContext.Provider value={reviewReport}>
-            <SuspensionContext.Provider value={suspension}>
-              <PlatformAdminContext.Provider value={platformAdmin}>
-                {children}
-              </PlatformAdminContext.Provider>
-            </SuspensionContext.Provider>
-          </ReviewReportReviewContext.Provider>
-        </ReportReviewContext.Provider>
-      </BuildingEditReviewContext.Provider>
-    </PendingReviewContext.Provider>
+    <BuildingEditReviewContext.Provider value={buildingEdit}>
+      <ReportReviewContext.Provider value={report}>
+        <ReviewReportReviewContext.Provider value={reviewReport}>
+          <SuspensionContext.Provider value={suspension}>
+            <PlatformAdminContext.Provider value={platformAdmin}>
+              {children}
+            </PlatformAdminContext.Provider>
+          </SuspensionContext.Provider>
+        </ReviewReportReviewContext.Provider>
+      </ReportReviewContext.Provider>
+    </BuildingEditReviewContext.Provider>
   );
 }
-
-const rejectReasonOptions = [
-  "Listing photos are unclear",
-  "Building details are incomplete",
-  "Room details or pricing look incorrect",
-  "Duplicate building submission",
-  "Contact information needs review",
-  "Submission does not meet platform guidelines",
-];
-
-const approveReasonOptions = [
-  "Verified building location, listing details, and photos",
-  "Listing details match platform requirements",
-  "Existing building and room details verified",
-  "Submission is complete and ready to publish",
-];
 
 const buildingEditRejectReasonOptions = [
   "Building name looks incorrect",
@@ -505,14 +458,6 @@ const tabs: {
   },
 ];
 
-const statusFilters: { label: string; value?: AdminPendingPostStatusFilter }[] =
-  [
-    { label: "All" },
-    { label: "Pending", value: "PENDING" },
-    { label: "Approved", value: "APPROVED" },
-    { label: "Rejected", value: "REJECTED" },
-  ];
-
 const buildingEditStatusFilters: {
   label: string;
   value?: AdminBuildingEditRequestStatusFilter;
@@ -554,60 +499,6 @@ const suspensionStatusFilters: {
   { label: "Expired", value: "EXPIRED" },
   { label: "Lifted", value: "LIFTED" },
 ];
-
-function formatBaht(value: number) {
-  return `฿${value.toLocaleString()}`;
-}
-
-function formatCompactBaht(value: number) {
-  if (value >= 1000)
-    return `฿${Number(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k`;
-
-  return `฿${value}`;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function getCoverImage(post: AdminPendingPost) {
-  return (
-    post.listing.media.find((media) => media.isCover) ?? post.listing.media[0]
-  );
-}
-
-function getBuildingName(post: AdminPendingPost) {
-  return post.existingBuilding?.name ?? post.building?.name ?? "New building";
-}
-
-function getBuildingType(post: AdminPendingPost) {
-  return (
-    post.existingBuilding?.buildingType ??
-    post.building?.buildingType ??
-    "Building"
-  );
-}
-
-function getBuildingAddress(post: AdminPendingPost) {
-  return (
-    post.existingBuilding?.address ?? post.building?.address ?? "No address"
-  );
-}
-
-function getSubmissionType(post: AdminPendingPost) {
-  return post.existingBuildingId ? "Existing building" : "New building";
-}
-
-function getAgentName(post: AdminPendingPost) {
-  return (
-    post.agentProfile?.displayName ??
-    post.submittedBy?.name ??
-    "Unknown submitter"
-  );
-}
 
 function getBuildingEditRequestName(request: AdminBuildingEditRequest) {
   const currentName = request.originalBuilding.name;
@@ -739,21 +630,9 @@ function isAdminRole(role: string | undefined) {
   return role === "OWNER" || role === "ADMIN";
 }
 
-function getNextAdminPageParam(lastPage: {
-  pagination: { page: number; limit: number; total: number };
-}) {
-  const { page, limit, total } = lastPage.pagination;
-  const loaded = page * limit;
-
-  return loaded < total ? page + 1 : undefined;
-}
-
 export function AdminPanelPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("pending");
-  const [status, setStatus] = useState<
-    AdminPendingPostStatusFilter | undefined
-  >("PENDING");
   const [buildingEditStatus, setBuildingEditStatus] = useState<
     AdminBuildingEditRequestStatusFilter | undefined
   >("PENDING");
@@ -765,7 +644,6 @@ export function AdminPanelPage() {
   >("OPEN");
   const [suspensionStatus, setSuspensionStatus] =
     useState<AdminSuspensionStatusFilter>("ACTIVE");
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedBuildingEditRequestId, setSelectedBuildingEditRequestId] =
     useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -829,10 +707,6 @@ export function AdminPanelPage() {
   const [liftSuspensionError, setLiftSuspensionError] = useState<string | null>(
     null,
   );
-  const [reviewAction, setReviewAction] = useState<ReviewAction>(null);
-  const [selectedRejectReason, setSelectedRejectReason] = useState("");
-  const [reviewNote, setReviewNote] = useState("");
-  const [reviewError, setReviewError] = useState<string | null>(null);
   const [buildingEditApproveAction, setBuildingEditApproveAction] =
     useState<BuildingEditApproveAction>(null);
   const [buildingEditRejectAction, setBuildingEditRejectAction] =
@@ -846,19 +720,6 @@ export function AdminPanelPage() {
     string | null
   >(null);
   const isAdmin = isAdminRole(user?.role);
-
-  const pendingPostsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.pendingPosts.list(status),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminPendingPosts({
-        status,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled: activeTab === "pending" && isAdmin,
-  });
 
   const buildingEditRequestsQuery = useInfiniteQuery({
     queryKey: queryKeys.admin.buildingEditRequests.list(buildingEditStatus),
@@ -923,17 +784,6 @@ export function AdminPanelPage() {
     getNextPageParam: getNextAdminPageParam,
     enabled: activeTab === "platformAdmins" && isAdmin,
   });
-
-  const closeReviewDialog = () => {
-    setReviewAction(null);
-    setSelectedRejectReason("");
-    setReviewNote("");
-    setReviewError(null);
-  };
-
-  const approveMutation = useApproveAdminPendingPost(user?._id);
-
-  const rejectMutation = useRejectAdminPendingPost();
 
   const closeBuildingEditApproveDialog = () => {
     setBuildingEditApproveAction(null);
@@ -1014,12 +864,6 @@ export function AdminPanelPage() {
 
   const removeAdminRoleMutation = useRemoveAdminRole();
 
-  const pendingPosts = pendingPostsQuery.data?.pages.flatMap((page) => page.data) ?? [];
-  const pagination = pendingPostsQuery.data?.pages[0]?.pagination;
-  const selectedPost =
-    pendingPosts.find((post) => post._id === selectedPostId) ??
-    pendingPosts[0] ??
-    null;
   const buildingEditRequests =
     buildingEditRequestsQuery.data?.pages.flatMap((page) => page.data) ?? [];
   const buildingEditPagination =
@@ -1129,8 +973,6 @@ export function AdminPanelPage() {
           agentProfile: null,
         }
       : null);
-  const isReviewSubmitting =
-    approveMutation.isPending || rejectMutation.isPending;
   const isBuildingEditReviewSubmitting =
     approveBuildingEditMutation.isPending || rejectBuildingEditMutation.isPending;
   const isReportReviewSubmitting = updateReportStatusMutation.isPending;
@@ -1139,89 +981,6 @@ export function AdminPanelPage() {
   const isReviewReportReviewDeleting =
     deleteReviewReportReviewMutation.isPending;
   const isReportListingDeleting = deleteReportListingMutation.isPending;
-
-  const handleOpenApproveDialog = (post: AdminPendingPost) => {
-    setReviewAction({ type: "approve", post });
-    setSelectedRejectReason("");
-    setReviewNote("");
-    setReviewError(null);
-  };
-
-  const handleOpenRejectDialog = (post: AdminPendingPost) => {
-    setReviewAction({ type: "reject", post });
-    setSelectedRejectReason("");
-    setReviewNote("");
-    setReviewError(null);
-  };
-
-  const handleConfirmReviewAction = () => {
-    if (!reviewAction || isReviewSubmitting) return;
-
-    if (reviewAction.type === "approve") {
-      const trimmedApproveReason = selectedRejectReason.trim();
-      const trimmedReviewNote = reviewNote.trim();
-
-      if (!trimmedApproveReason && !trimmedReviewNote) {
-        setReviewError("Approval reason is required.");
-        return;
-      }
-
-      const approvalReason = trimmedApproveReason
-        ? [trimmedApproveReason, trimmedReviewNote && `Note: ${trimmedReviewNote}`]
-            .filter(Boolean)
-            .join("\n\n")
-        : trimmedReviewNote;
-
-      approveMutation.mutate(
-        {
-          pendingPostId: reviewAction.post._id,
-          reason: approvalReason,
-        },
-        {
-          onSuccess: closeReviewDialog,
-          onError: (error) => {
-            setReviewError(
-              error instanceof Error
-                ? error.message
-                : "Could not approve submission.",
-            );
-          },
-        },
-      );
-      return;
-    }
-
-    const trimmedRejectReason = selectedRejectReason.trim();
-    const trimmedReviewNote = reviewNote.trim();
-
-    if (!trimmedRejectReason && !trimmedReviewNote) {
-      setReviewError("Rejection reason is required.");
-      return;
-    }
-
-    const rejectionReason = trimmedRejectReason
-      ? [trimmedRejectReason, trimmedReviewNote && `Note: ${trimmedReviewNote}`]
-          .filter(Boolean)
-          .join("\n\n")
-      : trimmedReviewNote;
-
-    rejectMutation.mutate(
-      {
-        pendingPostId: reviewAction.post._id,
-        reason: rejectionReason,
-      },
-      {
-        onSuccess: closeReviewDialog,
-        onError: (error) => {
-          setReviewError(
-            error instanceof Error
-              ? error.message
-              : "Could not reject submission.",
-          );
-        },
-      },
-    );
-  };
 
   const handleOpenApproveBuildingEditDialog = (
     request: AdminBuildingEditRequest,
@@ -1624,28 +1383,6 @@ export function AdminPanelPage() {
     );
   };
 
-  const pendingReviewContextValue: PendingReviewContextValue = {
-    selectedPost,
-    isReviewSubmitting,
-    selectPost: setSelectedPostId,
-    openApproveDialog: handleOpenApproveDialog,
-    openRejectDialog: handleOpenRejectDialog,
-    action: reviewAction,
-    selectedRejectReason,
-    reviewNote,
-    error: reviewError,
-    setSelectedRejectReason: (value) => {
-      setSelectedRejectReason(value);
-      if (reviewError) setReviewError(null);
-    },
-    setReviewNote: (value) => {
-      setReviewNote(value);
-      if (reviewError) setReviewError(null);
-    },
-    closeDialog: closeReviewDialog,
-    confirmAction: handleConfirmReviewAction,
-  };
-
   const buildingEditReviewContextValue: BuildingEditReviewContextValue = {
     selectedRequest: selectedBuildingEditRequest,
     isReviewSubmitting: isBuildingEditReviewSubmitting,
@@ -1819,7 +1556,6 @@ export function AdminPanelPage() {
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <AdminReviewProviders
-        pending={pendingReviewContextValue}
         buildingEdit={buildingEditReviewContextValue}
         report={reportReviewContextValue}
         reviewReport={reviewReportReviewContextValue}
@@ -1879,48 +1615,10 @@ export function AdminPanelPage() {
           </nav>
 
           {activeTab === "pending" && (
-            <AdminWorkspace
-              title="Pending listings"
-              description="Select one submission to inspect."
-              total={pagination?.total}
-              filters={
-                <AdminFilterPills
-                  options={statusFilters}
-                  value={status}
-                  onChange={(nextStatus) => {
-                    setStatus(nextStatus);
-                    setSelectedPostId(null);
-                  }}
-                />
-              }
-              list={
-                <AdminListState
-                  isLoading={pendingPostsQuery.isLoading}
-                  error={pendingPostsQuery.error}
-                  errorFallback="Could not load pending listings."
-                  isEmpty={pendingPosts.length === 0}
-                  emptyTitle="No pending listings"
-                  emptyDescription="New submissions will appear here when listers send them for review."
-                  onRetry={() => void pendingPostsQuery.refetch()}
-                  hasNextPage={Boolean(pendingPostsQuery.hasNextPage)}
-                  isFetchingNextPage={pendingPostsQuery.isFetchingNextPage}
-                  onFetchNextPage={() => void pendingPostsQuery.fetchNextPage()}
-                >
-                  {pendingPosts.map((post) => (
-                    <PendingPostListItem key={post._id} post={post} />
-                  ))}
-                </AdminListState>
-              }
-              detail={
-                selectedPost ? (
-                  <PendingPostDetail post={selectedPost} />
-                ) : (
-                  <EmptyState
-                    title="Select a submission"
-                    description="Choose a pending listing from the left to review the details."
-                  />
-                )
-              }
+            <PendingListingsTab
+              enabled={isAdmin}
+              currentUserId={user?._id}
+              onSuspendUser={handleOpenSuspensionDialog}
             />
           )}
 
@@ -1977,7 +1675,7 @@ export function AdminPanelPage() {
                       request={selectedBuildingEditRequest}
                     />
                   ) : (
-                    <EmptyState
+                    <AdminEmptyState
                       title="Select a building edit"
                       description="Choose a request from the left to compare the current and proposed details."
                     />
@@ -2032,7 +1730,7 @@ export function AdminPanelPage() {
                   {selectedReport ? (
                     <ReportDetail report={selectedReport} />
                   ) : (
-                    <EmptyState
+                    <AdminEmptyState
                       title="Select a report"
                       description="Choose a reported listing from the left to inspect the details."
                     />
@@ -2094,7 +1792,7 @@ export function AdminPanelPage() {
                   {selectedReviewReport ? (
                     <ReviewReportDetail report={selectedReviewReport} />
                   ) : (
-                    <EmptyState
+                    <AdminEmptyState
                       title="Select a review report"
                       description="Choose a reported review from the left to inspect the details."
                     />
@@ -2152,7 +1850,7 @@ export function AdminPanelPage() {
                   {selectedSuspension ? (
                     <SuspensionDetail suspension={selectedSuspension} />
                   ) : (
-                    <EmptyState
+                    <AdminEmptyState
                       title="Select a suspension"
                       description="Choose a suspension record from the left to inspect who was restricted and why."
                     />
@@ -2198,7 +1896,7 @@ export function AdminPanelPage() {
                   {selectedPlatformAdmin ? (
                     <PlatformAdminDetail admin={selectedPlatformAdmin} />
                   ) : (
-                    <EmptyState
+                    <AdminEmptyState
                       title="Select an account"
                       description="Choose an administrator from the left to inspect account details."
                     />
@@ -2210,7 +1908,6 @@ export function AdminPanelPage() {
         </div>
       </div>
 
-        <ReviewActionDialog />
         <BuildingEditApproveDialog />
         <BuildingEditRejectDialog />
         <ReportReviewDialog />
@@ -2222,82 +1919,6 @@ export function AdminPanelPage() {
         <RemoveAdminRoleDialog />
       </AdminReviewProviders>
     </main>
-  );
-}
-
-function PendingPostListItem({
-  post,
-}: {
-  post: AdminPendingPost;
-}) {
-  const { selectedPost, selectPost } = usePendingReview();
-  const coverImage = getCoverImage(post);
-
-  return (
-    <AdminReviewListItem
-      title={getBuildingName(post)}
-      meta={[`${getSubmissionType(post)} · ${getBuildingType(post)}`, getAgentName(post)]}
-      createdAt={formatDate(post.createdAt)}
-      isSelected={selectedPost?._id === post._id}
-      onSelect={() => selectPost(post._id)}
-      image={coverImage}
-      imageAlt={post.listing.description ?? getBuildingName(post)}
-      imageBadge={`${post.listing.media.length} photos`}
-      rightText={formatCompactBaht(post.listing.rent)}
-    />
-  );
-}
-
-function AdminListState({
-  isLoading,
-  error,
-  errorFallback,
-  isEmpty,
-  emptyTitle,
-  emptyDescription,
-  onRetry,
-  hasNextPage,
-  isFetchingNextPage,
-  onFetchNextPage,
-  children,
-}: {
-  isLoading: boolean;
-  error: unknown;
-  errorFallback: string;
-  isEmpty: boolean;
-  emptyTitle: string;
-  emptyDescription: string;
-  onRetry: () => void;
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  onFetchNextPage: () => void;
-  children: ReactNode;
-}) {
-  if (isLoading) return <PendingListLoading />;
-
-  if (error) {
-    return (
-      <AdminError
-        message={error instanceof Error ? error.message : errorFallback}
-        onRetry={onRetry}
-      />
-    );
-  }
-
-  if (isEmpty) {
-    return <EmptyState title={emptyTitle} description={emptyDescription} />;
-  }
-
-  return (
-    <div className="space-y-2 pb-4">
-      {children}
-      <InfiniteScrollSentinel
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        onFetchNextPage={onFetchNextPage}
-        endMessage="No more items"
-      />
-    </div>
   );
 }
 
@@ -2316,11 +1937,11 @@ function AdminDetailState({
   onRetry: () => void;
   children: ReactNode;
 }) {
-  if (isLoading && shouldShowLoading) return <PendingListLoading />;
+  if (isLoading && shouldShowLoading) return <AdminListLoading />;
 
   if (error) {
     return (
-      <AdminError
+      <AdminErrorState
         message={error instanceof Error ? error.message : errorFallback}
         onRetry={onRetry}
       />
@@ -2540,136 +2161,6 @@ function AdminModeratedListerCard({
       }
       onSuspend={openDialog}
     />
-  );
-}
-
-function PendingPostDetail({
-  post,
-}: {
-  post: AdminPendingPost;
-}) {
-  const { isReviewSubmitting, openApproveDialog, openRejectDialog } =
-    usePendingReview();
-  const location = post.existingBuilding?.location ?? post.building?.location;
-  const buildingSummary = {
-    name: getBuildingName(post),
-    buildingType: getBuildingType(post),
-    address: getBuildingAddress(post),
-    location,
-    facilities:
-      post.existingBuilding?.facilities ?? post.building?.facilities ?? [],
-    security: post.existingBuilding?.security ?? post.building?.security ?? [],
-  };
-  const isPending = post.status === "PENDING";
-
-  return (
-    <article className="space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {getBuildingName(post)}
-            </h2>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {getSubmissionType(post)}
-            </span>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-              {post.status}
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Submitted {formatDate(post.createdAt)} by {getAgentName(post)}
-          </p>
-        </div>
-
-        {isPending && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isReviewSubmitting}
-              onClick={() => openRejectDialog(post)}
-            >
-              Reject
-            </Button>
-            <Button
-              type="button"
-              disabled={isReviewSubmitting}
-              onClick={() => openApproveDialog(post)}
-            >
-              Approve
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <section>
-        <SectionTitle
-          title="Photos"
-          detail={`${post.listing.media.length} uploaded`}
-        />
-        <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-3">
-          {post.listing.media.map((media, index) => (
-            <div
-              key={media.publicId}
-              className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100"
-            >
-              <OptimizedImage
-                src={media.secureUrl}
-                alt={media.alt ?? `Listing photo ${index + 1}`}
-                className="h-full w-full object-cover"
-                width={960}
-                height={720}
-                sizes="(min-width: 1280px) 33vw, 50vw"
-                fallback={
-                  <div className="flex h-full w-full items-center justify-center text-slate-400">
-                    <ImageIcon aria-hidden="true" className="h-8 w-8" />
-                    <span className="sr-only">Photo unavailable</span>
-                  </div>
-                }
-              />
-              <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-semibold text-slate-800">
-                {index + 1}/{post.listing.media.length}
-              </span>
-              {media.isCover && (
-                <span className="absolute bottom-2 left-2 rounded-full bg-slate-950/85 px-2 py-0.5 text-xs font-semibold text-white">
-                  Cover
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DetailPanel title="Building">
-          <AdminBuildingCard building={buildingSummary} />
-        </DetailPanel>
-
-        <DetailPanel title="Lister">
-          <AdminModeratedListerCard
-            name={getAgentName(post)}
-            subtitle={
-              post.submittedBy
-                ? `${post.submittedBy.name} · ${post.submittedBy.email}`
-                : "The submitting account no longer exists"
-            }
-            meta={
-              post.submittedBy
-                ? `${post.submittedBy.status} · ${post.submittedBy.role}`
-                : "ACCOUNT UNAVAILABLE"
-            }
-            profile={post.agentProfile}
-            userId={post.submittedBy?._id}
-            userStatus={post.submittedBy?.status}
-          />
-        </DetailPanel>
-      </div>
-
-      <DetailPanel title="Listing">
-        <AdminListingCard listing={post.listing} />
-      </DetailPanel>
-    </article>
   );
 }
 
@@ -3496,88 +2987,6 @@ function PlatformAdminDetail({
   );
 }
 
-function ReviewActionDialog() {
-  const {
-    action,
-    selectedRejectReason,
-    reviewNote,
-    error,
-    isReviewSubmitting,
-    setSelectedRejectReason,
-    setReviewNote,
-    closeDialog,
-    confirmAction,
-  } = usePendingReview();
-
-  if (!action) return null;
-
-  const isReject = action.type === "reject";
-  const title = isReject ? "Reject submission" : "Approve and publish";
-  const description = isReject
-    ? "Add a clear reason so the lister understands what needs to be fixed."
-    : "Add a clear reason so the lister understands which listing was approved and why.";
-  const actionLabel = isReject ? "Reject submission" : "Approve and publish";
-  const canSubmit =
-    !isReviewSubmitting &&
-    (selectedRejectReason.trim().length > 0 || reviewNote.trim().length > 0);
-
-  return (
-    <ReasonNoteDialog
-      isOpen
-      title={title}
-      description={description}
-      icon={
-        isReject ? (
-          <AlertCircle className="h-5 w-5" />
-        ) : (
-          <CheckCircle2 className="h-5 w-5" />
-        )
-      }
-      tone={isReject ? "red" : "green"}
-      itemSummary={
-        <div>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">
-                {getBuildingName(action.post)}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                {getSubmissionType(action.post)} ·{" "}
-                {getBuildingType(action.post)}
-              </p>
-            </div>
-            <p className="shrink-0 text-sm font-semibold text-slate-950">
-              {formatBaht(action.post.listing.rent)}
-            </p>
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Submitted by {getAgentName(action.post)}
-          </p>
-        </div>
-      }
-      reasonLabel="Common reason"
-      reasonOptions={
-        isReject
-          ? toSelectableChipOptions(rejectReasonOptions)
-          : toSelectableChipOptions(approveReasonOptions)
-      }
-      selectedReason={selectedRejectReason}
-      reasonActiveColor={isReject ? "red" : "green"}
-      noteLabel="Extra note or custom reason"
-      note={reviewNote}
-      showNoteField
-      error={error}
-      confirmLabel={actionLabel}
-      isSubmitting={isReviewSubmitting}
-      canSubmit={canSubmit}
-      onReasonChange={(reason) => setSelectedRejectReason(reason)}
-      onNoteChange={setReviewNote}
-      onCancel={closeDialog}
-      onSubmit={confirmAction}
-    />
-  );
-}
-
 function BuildingEditApproveDialog() {
   const {
     approveAction: request,
@@ -4219,17 +3628,6 @@ function RemoveAdminRoleDialog() {
   );
 }
 
-function SectionTitle({ title, detail }: { title: string; detail?: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-        {title}
-      </h3>
-      {detail && <p className="text-sm text-slate-400">{detail}</p>}
-    </div>
-  );
-}
-
 function LargeScreenOnly() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 text-center lg:hidden">
@@ -4260,19 +3658,6 @@ function AdminLoading() {
   );
 }
 
-function PendingListLoading() {
-  return (
-    <div className="flex min-h-48 items-center justify-center rounded-lg bg-slate-50">
-      <div className="text-center">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
-        <p className="mt-3 text-sm font-medium text-slate-600">
-          Loading submissions...
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function AdminForbidden() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-white px-4 pb-24 text-slate-950">
@@ -4286,44 +3671,5 @@ function AdminForbidden() {
         </p>
       </div>
     </main>
-  );
-}
-
-function AdminError({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="rounded-lg border border-red-100 bg-red-50 p-4">
-      <p className="text-sm font-medium text-red-700">{message}</p>
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-3"
-        onClick={onRetry}
-      >
-        Try again
-      </Button>
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center">
-      <h2 className="text-base font-semibold">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-        {description}
-      </p>
-    </div>
   );
 }
