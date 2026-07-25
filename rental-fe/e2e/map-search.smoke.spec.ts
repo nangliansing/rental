@@ -12,6 +12,8 @@ import {
 } from "./fixtures/map-search-buildings"
 import {
   clickMapAt,
+  DESKTOP_VIEWPORT,
+  getActiveResultsPanel,
   getMobileResultsPanel,
   moveMapToStale,
   waitForAreaSearchError,
@@ -111,6 +113,7 @@ test.describe("Map search smoke", () => {
   })
 
   test("commits a new area search after moving the map", async ({ page }) => {
+    await page.setViewportSize(DESKTOP_VIEWPORT)
     await installMapSearchApiMocks(page, { pannedAreaOnSecondSearch: true })
     await page.goto(areaSearchUrl)
 
@@ -127,10 +130,12 @@ test.describe("Map search smoke", () => {
     await expect(searchButton).toBeEnabled()
     await searchButton.click()
 
-    const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel.getByText(smokePannedAreaBuilding.name)).toBeVisible(
-      { timeout: 20_000 },
-    )
+    const resultsPanel = getActiveResultsPanel(page)
+    await expect(
+      resultsPanel.getByText(smokePannedAreaBuilding.name),
+    ).toBeVisible({
+      timeout: 20_000,
+    })
     await expect(page).toHaveURL(/search=area/)
     await expect(page).toHaveURL(/neLat=/)
   })
