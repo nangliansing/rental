@@ -1,8 +1,16 @@
 import { render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { StandalonePageLayout } from "./StandalonePageLayout"
+
+vi.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ isAuthenticated: false }),
+}))
+
+vi.mock("@/features/profile/api", () => ({
+  useMyAgentProfile: () => ({ data: undefined }),
+}))
 
 function TestChild() {
   return <div>Page content</div>
@@ -21,7 +29,7 @@ describe("StandalonePageLayout", () => {
     )
 
     expect(screen.getByRole("button", { name: "Go back" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Search rentals" })).toHaveAttribute(
       "href",
       "/",
     )

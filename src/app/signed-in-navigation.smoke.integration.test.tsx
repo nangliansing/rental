@@ -201,7 +201,7 @@ describe("Signed-in navigation smoke (integration)", () => {
     expect(
       await screen.findByRole("heading", { name: "Edit contact profile" }),
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Search rentals" })).toHaveAttribute(
       "href",
       "/",
     )

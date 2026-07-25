@@ -19,6 +19,14 @@ vi.mock("react-router-dom", async () => {
   }
 })
 
+vi.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ isAuthenticated: false }),
+}))
+
+vi.mock("@/features/profile/api", () => ({
+  useMyAgentProfile: () => ({ data: undefined }),
+}))
+
 function renderHeader(initialEntry = "/login") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -34,11 +42,11 @@ describe("StandalonePageHeader", () => {
     navigateMock.mockClear()
   })
 
-  it("renders back, home, and profile controls", () => {
+  it("renders back, search, and profile controls", () => {
     renderHeader()
 
     expect(screen.getByRole("button", { name: "Go back" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Search rentals" })).toHaveAttribute(
       "href",
       "/",
     )

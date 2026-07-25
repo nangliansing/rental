@@ -9,6 +9,14 @@ import {
 } from "./StandalonePageBackContext"
 import { StandalonePageHeader } from "./StandalonePageHeader"
 
+vi.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ isAuthenticated: false }),
+}))
+
+vi.mock("@/features/profile/api", () => ({
+  useMyAgentProfile: () => ({ data: undefined }),
+}))
+
 function BackHandlerProbe({ onBack }: { onBack: () => void }) {
   useStandalonePageBack(onBack)
 

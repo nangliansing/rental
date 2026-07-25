@@ -63,7 +63,7 @@ test.describe("Signed-in smoke", () => {
     await page.goto("/profile/edit")
 
     await expect(page.getByRole("button", { name: "Go back" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Go to home" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Search rentals" })).toBeVisible()
     await expect(page.getByRole("link", { name: "Go to profile" })).toBeVisible()
     await expect(
       page.getByRole("heading", { name: "Edit contact profile" }),
