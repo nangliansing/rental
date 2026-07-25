@@ -89,8 +89,7 @@ describe("ProfileDetails", () => {
       />,
     )
 
-    expect(screen.getByText("Since Jul 2026")).toBeInTheDocument()
-    expect(screen.getByText("English · Thai")).toBeInTheDocument()
+    expect(screen.getByText("Since Jul 2026 · English · Thai")).toBeInTheDocument()
     expect(screen.getByText("Helpful local rentals.")).toBeInTheDocument()
   })
 

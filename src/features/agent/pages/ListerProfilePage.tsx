@@ -66,11 +66,11 @@ export function ListerProfilePage() {
   return (
     <main className="min-h-screen bg-white pb-10 text-slate-950">
       <div className="mx-auto max-w-6xl">
-        <section className="px-4 pt-6 md:pt-8">
+        <section className="px-4 pt-5 md:pt-6">
           <ListerProfileHeader profile={profile} />
         </section>
 
-        <section className="mt-8 px-4">
+        <section className="mt-2 px-4">
           <div className="mx-auto w-full max-w-4xl">
             <ListerProfileTabs
               activeTab={activeTab}

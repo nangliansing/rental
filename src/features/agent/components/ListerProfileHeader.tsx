@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from "react"
 import { Share2 } from "lucide-react"
 
-import { ContactActions } from "@/features/contacts/components/ContactActions"
+import { ContactOptionsDialog } from "@/features/contacts/components/ContactOptionsDialog"
+import { useContactActions } from "@/features/contacts/hooks/useContactActions"
 import { toContactValues } from "@/features/contacts/utils/toContactValues"
 import { MyProfileShareModal } from "@/features/profile/components/MyProfileShareModal"
 import {
@@ -15,6 +16,12 @@ import { getListerProfileUrl } from "../utils/listerProfileUrl"
 
 import type { ListerProfile } from "../api"
 
+const PROFILE_ACTION_BUTTON_CLASSNAME =
+  "inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-slate-100 px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
+
+const PROFILE_ICON_BUTTON_CLASSNAME =
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
+
 export function ListerProfileHeader({ profile }: { profile: ListerProfile }) {
   const [isShareOpen, setIsShareOpen] = useState(false)
   const closeShareModal = useCallback(() => {
@@ -23,58 +30,127 @@ export function ListerProfileHeader({ profile }: { profile: ListerProfile }) {
   const profileUrl = useMemo(() => getListerProfileUrl(profile._id), [profile._id])
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col items-center gap-5 md:mx-0 md:flex-row md:items-start md:gap-8">
+    <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 md:flex-row md:items-start md:gap-6">
       <ProfileAvatar
         displayName={profile.displayName}
         photo={profile.profilePhoto}
         isActive={profile.isOnline}
         statusLabel="Online lister"
-        size="medium"
+        size="compact"
       />
 
-      <div className="min-w-0 flex-1 text-center md:text-left">
+      <div className="flex w-full min-w-0 flex-1 flex-col items-center md:items-start">
         <ProfileIdentity
           displayName={profile.displayName}
           isVerified={profile.isVerified}
+          align="center"
         />
 
-        <div className="mx-auto mt-2 max-w-xl space-y-2 md:mx-0">
+        <div className="mt-3 w-full">
+          <ListerProfileStats profile={profile} />
+        </div>
+
+        <ListerProfileActionBar
+          profile={profile}
+          profileUrl={profileUrl}
+          isShareOpen={isShareOpen}
+          onShareOpen={() => setIsShareOpen(true)}
+        />
+
+        <div className="mt-3 w-full max-w-xl">
           <ProfileDetails
             createdAt={profile.createdAt}
             description={profile.description}
             languages={profile.supportLanguages}
+            emptyBioLabel={null}
+            align="center"
           />
         </div>
-
-        <div className="mt-4 flex min-w-0 flex-wrap items-center justify-center gap-2 md:justify-start">
-          <ContactActions
-            contactOwnerName={profile.displayName}
-            contacts={toContactValues(profile)}
-            context={{
-              type: "profile",
-              url: profileUrl,
-              message: `Hi, I found your rental profile: ${profileUrl}`,
-            }}
-            className="max-w-full justify-center md:justify-start"
-          />
-          <button
-            type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 hover:bg-slate-50"
-            aria-label="Share profile"
-            aria-expanded={isShareOpen}
-            onClick={() => setIsShareOpen(true)}
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
-        </div>
-
-        <ListerProfileStats profile={profile} />
 
         {isShareOpen && (
           <MyProfileShareModal profile={profile} onClose={closeShareModal} />
         )}
       </div>
     </div>
+  )
+}
+
+function ListerProfileActionBar({
+  profile,
+  profileUrl,
+  isShareOpen,
+  onShareOpen,
+}: {
+  profile: ListerProfile
+  profileUrl: string
+  isShareOpen: boolean
+  onShareOpen: () => void
+}) {
+  const {
+    contactLinks,
+    contactOwnerName,
+    closeContactDialog,
+    handleSelectContact,
+    hasContactOptions,
+    isContactDialogOpen,
+    openContactDialog,
+  } = useContactActions({
+    contactOwnerName: profile.displayName,
+    contacts: toContactValues(profile),
+    context: {
+      type: "profile",
+      url: profileUrl,
+      message: `Hi, I found your rental profile: ${profileUrl}`,
+    },
+  })
+
+  if (!hasContactOptions) {
+    return (
+      <div className="mt-4 flex items-center justify-center md:justify-start">
+        <button
+          type="button"
+          className={PROFILE_ICON_BUTTON_CLASSNAME}
+          aria-label="Share profile"
+          aria-expanded={isShareOpen}
+          onClick={onShareOpen}
+        >
+          <Share2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="mt-4 flex items-center justify-center gap-2 md:justify-start">
+        <button
+          type="button"
+          className={`${PROFILE_ACTION_BUTTON_CLASSNAME} min-w-[7.25rem] px-6`}
+          aria-haspopup="dialog"
+          aria-expanded={isContactDialogOpen}
+          onClick={openContactDialog}
+        >
+          Contact
+        </button>
+        <button
+          type="button"
+          className={PROFILE_ICON_BUTTON_CLASSNAME}
+          aria-label="Share profile"
+          aria-expanded={isShareOpen}
+          onClick={onShareOpen}
+        >
+          <Share2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      <ContactOptionsDialog
+        contactLinks={contactLinks}
+        contactOwnerName={contactOwnerName}
+        isOpen={isContactDialogOpen}
+        onClose={closeContactDialog}
+        onSelectContact={handleSelectContact}
+      />
+    </>
   )
 }
 
@@ -85,6 +161,7 @@ function ListerProfileStats({ profile }: { profile: ListerProfile }) {
 
   return (
     <ProfileStatList
+      variant="inline"
       items={[
         {
           id: "listings",

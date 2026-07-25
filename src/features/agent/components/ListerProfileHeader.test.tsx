@@ -22,8 +22,10 @@ describe("ListerProfileHeader", () => {
 
     expect(screen.getByText("Nang Lian Sing")).toBeInTheDocument()
     expect(screen.getByLabelText("Online lister")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Phone" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Line" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Contact" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Line" })).not.toBeInTheDocument()
     expect(screen.getByText("Listings")).toBeInTheDocument()
     expect(screen.getByText("Reviews")).toBeInTheDocument()
     expect(screen.getByText("4.5")).toBeInTheDocument()
@@ -84,7 +86,9 @@ describe("ListerProfileHeader", () => {
       />,
     )
 
-    expect(screen.queryByRole("button", { name: "Phone" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Contact" }),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Share profile" }),
     ).toBeInTheDocument()
