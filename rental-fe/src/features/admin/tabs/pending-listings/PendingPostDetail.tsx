@@ -1,7 +1,5 @@
-import { ImageIcon } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
-import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
+import { ListingCoverImage } from "@/features/listing/components/ListingPresentationPrimitives"
 
 import {
   AdminBuildingCard,
@@ -94,19 +92,10 @@ export function PendingPostDetail({
               key={media.publicId}
               className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100"
             >
-              <OptimizedImage
-                src={media.secureUrl}
-                alt={media.alt ?? `Listing photo ${index + 1}`}
-                className="h-full w-full object-cover"
-                width={960}
-                height={720}
-                sizes="(min-width: 1280px) 33vw, 50vw"
-                fallback={
-                  <div className="flex h-full w-full items-center justify-center text-slate-400">
-                    <ImageIcon aria-hidden="true" className="h-8 w-8" />
-                    <span className="sr-only">Photo unavailable</span>
-                  </div>
-                }
+              <ListingCoverImage
+                photo={media}
+                altFallback={`Listing photo ${index + 1}`}
+                fallbackClassName="text-slate-400"
               />
               <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-semibold text-slate-800">
                 {index + 1}/{post.listing.media.length}

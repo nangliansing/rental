@@ -15,6 +15,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 
 import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
+import { ListingCoverImage } from "@/features/listing/components/ListingPresentationPrimitives"
 import {
   formatBedroom,
   formatCompactMoney,
@@ -28,7 +29,6 @@ import {
 } from "@/features/pending-post"
 import { cn } from "@/lib/utils"
 import { ModalPortal } from "@/shared/components/ModalPortal"
-import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 import {
@@ -177,23 +177,10 @@ export function PendingPostDetailOverlay({
                     key={photo.publicId}
                     className="relative aspect-square overflow-hidden bg-slate-100"
                   >
-                    <OptimizedImage
-                      src={photo.secureUrl}
-                      alt={photo.alt ?? `Submission photo ${index + 1}`}
-                      className="h-full w-full object-cover"
-                      width={640}
-                      height={640}
-                      sizes="(min-width: 640px) 33vw, 50vw"
-                      loading="lazy"
-                      fallback={
-                        <div className="flex h-full w-full items-center justify-center">
-                          <ImageIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-slate-300"
-                          />
-                          <span className="sr-only">Photo unavailable</span>
-                        </div>
-                      }
+                    <ListingCoverImage
+                      photo={photo}
+                      altFallback={`Submission photo ${index + 1}`}
+                      fallbackClassName="text-slate-300"
                     />
                     {photo.isCover && (
                       <span className="absolute left-2 top-2 rounded-full bg-slate-950/65 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-md">

@@ -1,7 +1,3 @@
-import { format, quality } from "@cloudinary/url-gen/actions/delivery"
-import { limitFit } from "@cloudinary/url-gen/actions/resize"
-import { CloudinaryImage } from "@cloudinary/url-gen/assets/CloudinaryImage"
-
 import { isCloudinaryImageUrl } from "./responsive-image"
 
 export type ParsedCloudinaryDeliveryUrl = {
@@ -52,28 +48,4 @@ export function parseCloudinaryDeliveryUrl(
     publicId,
     version: Number.isFinite(version) ? version : undefined,
   }
-}
-
-export function createCloudinaryGalleryImage(
-  source: string,
-  maxWidth: number,
-): CloudinaryImage | null {
-  const parsed = parseCloudinaryDeliveryUrl(source)
-  if (!parsed) return null
-
-  const normalizedWidth = Math.round(maxWidth)
-  if (!Number.isFinite(normalizedWidth) || normalizedWidth <= 0) return null
-
-  const image = new CloudinaryImage(parsed.publicId, {
-    cloudName: parsed.cloudName,
-  })
-
-  if (parsed.version) {
-    image.setVersion(parsed.version)
-  }
-
-  return image
-    .resize(limitFit().width(normalizedWidth))
-    .delivery(format("auto"))
-    .delivery(quality("auto"))
 }

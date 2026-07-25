@@ -1,9 +1,7 @@
-import {
-  CalendarClock,
-  ImageIcon,
-} from "lucide-react"
+import { CalendarClock } from "lucide-react"
 
 import type { PendingPost } from "@/features/pending-post"
+import { ListingCoverImage } from "@/features/listing/components/ListingPresentationPrimitives"
 import {
   formatBedroom,
   formatCompactMoney,
@@ -20,7 +18,6 @@ import {
   listingGridCardSurfaceClassName,
 } from "@/features/listing/components/ListingGridCardPrimitives"
 import { cn } from "@/lib/utils"
-import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
 
 import {
   formatPendingPostSubmittedAt,
@@ -49,27 +46,12 @@ export function MyProfilePendingCard({ post, onOpen }: MyProfilePendingCardProps
       aria-label={`Open ${status.label.toLowerCase()} submission ${buildingName}`}
       onClick={onOpen}
     >
-      {coverPhoto ? (
-        <OptimizedImage
-          src={coverPhoto.secureUrl}
-          alt={coverPhoto.alt ?? buildingName}
-          className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.03]"
-          width={640}
-          height={640}
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-          loading="lazy"
-          fallback={
-            <div className="flex h-full w-full items-center justify-center">
-              <ImageIcon aria-hidden="true" className="h-8 w-8 text-slate-300" />
-              <span className="sr-only">Photo unavailable</span>
-            </div>
-          }
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <ImageIcon className="h-8 w-8 text-slate-300" />
-        </div>
-      )}
+      <ListingCoverImage
+        photo={coverPhoto}
+        altFallback={buildingName}
+        className="transition duration-200 group-hover:scale-[1.03]"
+        fallbackClassName="text-slate-300"
+      />
 
       <span
         className={cn(

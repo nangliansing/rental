@@ -15,8 +15,8 @@ import {
 
 import { cn } from "@/lib/utils"
 import { ModalPortal } from "@/shared/components/ModalPortal"
-import { CloudinaryGalleryImage } from "@/shared/components/media/CloudinaryGalleryImage"
-import { parseCloudinaryDeliveryUrl } from "@/shared/components/media/cloudinary-image"
+import { ProgressiveGalleryImage } from "@/shared/components/media/ProgressiveGalleryImage"
+import { prefetchProgressiveGalleryImage } from "@/shared/components/media/prefetch-progressive-gallery-image"
 import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
@@ -193,6 +193,15 @@ export function PhotoViewer({
   }, [clearThumbnailSettleTimer])
 
   useEffect(() => {
+    if (normalizedPhotos.length === 0) return
+
+    for (const index of [activeIndex - 1, activeIndex + 1]) {
+      if (index < 0 || index >= normalizedPhotos.length) continue
+      void prefetchProgressiveGalleryImage(normalizedPhotos[index]!.src)
+    }
+  }, [activeIndex, normalizedPhotos])
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {
         selectPhoto(activeIndex - 1)
@@ -329,8 +338,6 @@ export function PhotoViewer({
   )
 }
 
-const GALLERY_IMAGE_WIDTHS = [640, 960, 1280, 1600] as const
-
 type GalleryImageVariant = "hero" | "adjacent" | "thumbnail"
 
 function GalleryImage({
@@ -361,37 +368,13 @@ function GalleryImage({
   }
 
   const isHero = variant === "hero"
-  const cloudinarySource = parseCloudinaryDeliveryUrl(photo.src)
-
-  if (cloudinarySource) {
-    return (
-      <CloudinaryGalleryImage
-        src={photo.src}
-        alt={isHero ? photo.alt || "Photo" : ""}
-        className={className}
-        width={1600}
-        height={1200}
-        sizes="100vw"
-        responsiveSteps={GALLERY_IMAGE_WIDTHS}
-        eager={isHero}
-        fetchPriority={isHero ? "high" : "low"}
-        decoding="async"
-        draggable={false}
-        fallback={<EmptyPhotoState />}
-      />
-    )
-  }
 
   return (
-    <OptimizedImage
+    <ProgressiveGalleryImage
       src={photo.src}
       alt={isHero ? photo.alt || "Photo" : ""}
       className={className}
-      width={1600}
-      height={1200}
-      sizes="100vw"
-      responsiveWidths={GALLERY_IMAGE_WIDTHS}
-      loading={isHero ? "eager" : "lazy"}
+      eager={isHero}
       fetchPriority={isHero ? "high" : "low"}
       decoding="async"
       draggable={false}

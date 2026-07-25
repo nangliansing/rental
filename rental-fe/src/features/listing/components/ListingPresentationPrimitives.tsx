@@ -3,7 +3,7 @@ import type { ImgHTMLAttributes } from "react"
 
 import type { ListingMedia } from "@/features/map-search/types"
 import { cn } from "@/lib/utils"
-import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
+import { ProgressiveCoverImage } from "@/shared/components/media/ProgressiveCoverImage"
 
 import {
   formatBedroom,
@@ -21,7 +21,6 @@ type ListingCoverImageProps = {
   fallbackClassName?: string
   loading?: ImgHTMLAttributes<HTMLImageElement>["loading"]
   fetchPriority?: ImgHTMLAttributes<HTMLImageElement>["fetchPriority"]
-  sizes?: string
 }
 
 export function ListingCoverImage({
@@ -32,7 +31,6 @@ export function ListingCoverImage({
   fallbackClassName,
   loading = "lazy",
   fetchPriority = "auto",
-  sizes = "(min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw",
 }: ListingCoverImageProps) {
   const imageUrl = normalizeText(photo?.secureUrl)
   const alt = normalizeText(photo?.alt) || normalizeText(altFallback) || "Listing photo"
@@ -57,13 +55,10 @@ export function ListingCoverImage({
   )
 
   return (
-    <OptimizedImage
+    <ProgressiveCoverImage
       src={imageUrl}
       alt={alt}
       className={cn("h-full w-full object-cover", className)}
-      width={640}
-      height={640}
-      sizes={sizes}
       loading={loading}
       fetchPriority={fetchPriority}
       fallback={fallback}

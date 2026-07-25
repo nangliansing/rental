@@ -6,7 +6,8 @@ import {
 } from "lucide-react"
 
 import type { ListingMedia } from "@/features/map-search/types"
-import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
+import { ProgressiveCoverImage } from "@/shared/components/media/ProgressiveCoverImage"
+import { COVER_CAROUSEL_MAX_WIDTH } from "@/shared/components/media/gallery-image-delivery"
 
 import { ListingPhotoViewer } from "./ListingPhotoViewer"
 
@@ -69,13 +70,11 @@ export function ListingPhotoCarousel({ photos }: ListingPhotoCarouselProps) {
                 onClick={() => setViewerIndex(index)}
                 aria-label={`Open photo ${index + 1}`}
               >
-                <OptimizedImage
+                <ProgressiveCoverImage
                   src={photo.secureUrl}
                   alt={photo.alt ?? "Room photo"}
                   className="h-full w-full object-cover"
-                  width={960}
-                  height={720}
-                  sizes="(min-width: 1280px) 220px, 100vw"
+                  maxWidth={COVER_CAROUSEL_MAX_WIDTH}
                   loading={index === 0 ? "eager" : "lazy"}
                   fetchPriority={index === 0 ? "high" : "auto"}
                   fallback={
@@ -98,14 +97,14 @@ export function ListingPhotoCarousel({ photos }: ListingPhotoCarouselProps) {
 
       {showNavigation && (
         <>
-          <div className="absolute right-3 top-3 rounded-full bg-slate-950/75 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+          <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-slate-950/75 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
             {activeIndex + 1}/{photos.length}
           </div>
 
           {activeIndex > 0 && (
             <button
               type="button"
-              className="absolute left-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white/55 text-slate-950 opacity-70 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white/90 hover:opacity-100 md:flex md:group-hover:opacity-100"
+              className="absolute left-3 top-1/2 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white/55 text-slate-950 opacity-70 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white/90 hover:opacity-100 md:flex md:group-hover:opacity-100"
               onClick={() => scrollToPhoto(activeIndex - 1)}
               aria-label="Previous photo"
             >
@@ -116,7 +115,7 @@ export function ListingPhotoCarousel({ photos }: ListingPhotoCarouselProps) {
           {activeIndex < photos.length - 1 && (
             <button
               type="button"
-              className="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white/55 text-slate-950 opacity-70 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white/90 hover:opacity-100 md:flex md:group-hover:opacity-100"
+              className="absolute right-3 top-1/2 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white/55 text-slate-950 opacity-70 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white/90 hover:opacity-100 md:flex md:group-hover:opacity-100"
               onClick={() => scrollToPhoto(activeIndex + 1)}
               aria-label="Next photo"
             >
