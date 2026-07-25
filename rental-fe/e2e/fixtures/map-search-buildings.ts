@@ -21,6 +21,24 @@ export const smokeNearbyBuilding = {
   distanceMeters: 120,
 }
 
+export const smokePannedAreaBuilding = {
+  ...smokeAreaBuilding,
+  _id: "building-smoke-panned-1",
+  name: "Smoke Panned Area Residence",
+  address: "789 Panned View Road, Bangkok",
+  location: { type: "Point", coordinates: [100.55, 13.55] },
+  distanceMeters: 650,
+}
+
+export const smokeLineBuilding = {
+  ...smokeAreaBuilding,
+  _id: "building-smoke-line-1",
+  name: "Smoke Line Corridor Residence",
+  address: "101 Line Route, Bangkok",
+  location: { type: "Point", coordinates: [100.6421, 13.76531] },
+  distanceMeters: 250,
+}
+
 export const areaSearchUrl =
   "/?search=area&neLat=14&neLng=101&swLat=13&swLng=100"
 

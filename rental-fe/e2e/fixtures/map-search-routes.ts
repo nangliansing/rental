@@ -2,23 +2,56 @@ import type { Page, Route } from "@playwright/test"
 
 import {
   smokeAreaBuilding,
+  smokeLineBuilding,
   smokeNearbyBuilding,
+  smokePannedAreaBuilding,
 } from "./map-search-buildings"
 
-function jsonRoute(body: unknown) {
+function jsonRoute(body: unknown, status = 200) {
   return {
-    status: 200,
+    status,
     contentType: "application/json",
     body: JSON.stringify(body),
   }
 }
 
-export async function installMapSearchApiMocks(page: Page) {
+export type MapSearchMockOptions = {
+  failAreaSearchOnce?: boolean
+  pannedAreaOnSecondSearch?: boolean
+}
+
+export async function installMapSearchApiMocks(
+  page: Page,
+  options: MapSearchMockOptions = {},
+) {
+  let areaSearchCalls = 0
+
   await page.route("**/api/v1/search/buildings/map", async (route: Route) => {
+    areaSearchCalls += 1
+
+    if (options.failAreaSearchOnce && areaSearchCalls === 1) {
+      await route.fulfill(
+        jsonRoute(
+          {
+            success: false,
+            code: "INTERNAL_ERROR",
+            message: "Simulated search failure",
+          },
+          500,
+        ),
+      )
+      return
+    }
+
+    const building =
+      options.pannedAreaOnSecondSearch && areaSearchCalls > 1
+        ? smokePannedAreaBuilding
+        : smokeAreaBuilding
+
     await route.fulfill(
       jsonRoute({
         success: true,
-        data: [smokeAreaBuilding],
+        data: [building],
         pagination: { page: 1, limit: 20, total: 1 },
       }),
     )
@@ -42,8 +75,8 @@ export async function installMapSearchApiMocks(page: Page) {
       await route.fulfill(
         jsonRoute({
           success: true,
-          data: [],
-          pagination: { page: 1, limit: 20, total: 0 },
+          data: [smokeLineBuilding],
+          pagination: { page: 1, limit: 20, total: 1 },
         }),
       )
     },
