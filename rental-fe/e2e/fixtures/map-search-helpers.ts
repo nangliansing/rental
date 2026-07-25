@@ -4,10 +4,38 @@ export function getMapSurface(page: Page) {
   return page.locator(".gm-style").first()
 }
 
-export async function panMap(
+export function getMobileResultsPanel(page: Page) {
+  return page.getByTestId("results-panel-mobile")
+}
+
+export async function waitForAreaSearchResults(
   page: Page,
-  delta = { x: -140, y: -90 },
+  buildingName: string,
 ) {
+  await page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/v1/search/buildings/map") &&
+      response.ok(),
+    { timeout: 20_000 },
+  )
+
+  const mobilePanel = getMobileResultsPanel(page)
+  await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
+  await expect(mobilePanel.getByText(buildingName)).toBeVisible({
+    timeout: 20_000,
+  })
+}
+
+export async function waitForAreaSearchError(page: Page) {
+  const mobilePanel = getMobileResultsPanel(page)
+  await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
+  await expect(mobilePanel.getByRole("alert")).toContainText(
+    "Could not search this area",
+    { timeout: 20_000 },
+  )
+}
+
+export async function moveMapToStale(page: Page) {
   const map = getMapSurface(page)
   await expect(map).toBeVisible({ timeout: 20_000 })
 
@@ -16,13 +44,22 @@ export async function panMap(
     throw new Error("Map bounding box unavailable")
   }
 
-  const startX = box.x + box.width / 2
-  const startY = box.y + box.height / 2
+  await map.hover({
+    position: { x: box.width / 2, y: box.height / 2 },
+  })
+  await page.mouse.wheel(0, -400)
+  await page.waitForTimeout(750)
 
-  await page.mouse.move(startX, startY)
-  await page.mouse.down()
-  await page.mouse.move(startX + delta.x, startY + delta.y, { steps: 16 })
-  await page.mouse.up()
+  const searchButton = page.getByRole("button", { name: "Search this area" })
+  if (await searchButton.isVisible().catch(() => false)) {
+    return
+  }
+
+  await map.dragTo(map, {
+    sourcePosition: { x: box.width / 2, y: box.height / 2 },
+    targetPosition: { x: box.width / 2 - 140, y: box.height / 2 - 90 },
+  })
+  await page.waitForTimeout(750)
 }
 
 export async function clickMapAt(
@@ -37,12 +74,11 @@ export async function clickMapAt(
     throw new Error("Map bounding box unavailable")
   }
 
-  await page.mouse.click(
-    box.x + box.width / 2 + offset.x,
-    box.y + box.height / 2 + offset.y,
-  )
-}
-
-export function getMobileResultsPanel(page: Page) {
-  return page.getByTestId("results-panel-mobile")
+  await map.click({
+    position: {
+      x: box.width / 2 + offset.x,
+      y: box.height / 2 + offset.y,
+    },
+    force: true,
+  })
 }

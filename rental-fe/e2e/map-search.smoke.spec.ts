@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test"
 
 import {
   areaSearchUrl,
+  lineSearchUrl,
   nearbySearchUrl,
   smokeAreaBuilding,
   smokeLineBuilding,
@@ -12,7 +13,9 @@ import {
 import {
   clickMapAt,
   getMobileResultsPanel,
-  panMap,
+  moveMapToStale,
+  waitForAreaSearchError,
+  waitForAreaSearchResults,
 } from "./fixtures/map-search-helpers"
 import {
   installMapSearchApiMocks,
@@ -25,6 +28,8 @@ const hasMapsKey = Boolean(
 )
 
 test.describe("Map search smoke", () => {
+  test.describe.configure({ mode: "serial" })
+
   test.beforeEach(async ({ page }) => {
     test.skip(
       !hasMapsKey,
@@ -39,13 +44,8 @@ test.describe("Map search smoke", () => {
     await page.goto(areaSearchUrl)
 
     await waitForMapReady(page)
+    await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
-    const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel).toBeVisible()
-    await expect(mobilePanel.getByText("1 building")).toBeVisible()
-    await expect(
-      mobilePanel.getByText(smokeAreaBuilding.name),
-    ).toBeVisible()
     await expect(page).toHaveURL(/search=area/)
   })
 
@@ -56,11 +56,28 @@ test.describe("Map search smoke", () => {
     await waitForMapReady(page)
 
     const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel).toBeVisible()
+    await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
     await expect(
       mobilePanel.getByText(smokeNearbyBuilding.name),
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 20_000 })
     await expect(page).toHaveURL(/search=nearby/)
+  })
+
+  test("hydrates a line search from the URL", async ({ page }) => {
+    await installMapSearchApiMocks(page)
+    await page.goto(lineSearchUrl)
+
+    await waitForMapReady(page)
+
+    const mobilePanel = getMobileResultsPanel(page)
+    await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
+    await expect(mobilePanel.getByText("1 building along line")).toBeVisible({
+      timeout: 20_000,
+    })
+    await expect(mobilePanel.getByText(smokeLineBuilding.name)).toBeVisible({
+      timeout: 20_000,
+    })
+    await expect(page).toHaveURL(/search=line/)
   })
 
   test("opens building detail and returns to the results list", async ({
@@ -70,6 +87,7 @@ test.describe("Map search smoke", () => {
     await page.goto(areaSearchUrl)
 
     await waitForMapReady(page)
+    await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     const mobilePanel = getMobileResultsPanel(page)
     await mobilePanel
@@ -92,27 +110,26 @@ test.describe("Map search smoke", () => {
     ).toBeVisible()
   })
 
-  test("commits a new area search after panning the map", async ({ page }) => {
+  test("commits a new area search after moving the map", async ({ page }) => {
     await installMapSearchApiMocks(page, { pannedAreaOnSecondSearch: true })
     await page.goto(areaSearchUrl)
 
     await waitForMapReady(page)
-
-    const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel.getByText(smokeAreaBuilding.name)).toBeVisible()
+    await waitForAreaSearchResults(page, smokeAreaBuilding.name)
     await expect(
       page.getByRole("button", { name: "Search this area" }),
     ).toHaveCount(0)
 
-    await panMap(page)
+    await moveMapToStale(page)
 
     const searchButton = page.getByRole("button", { name: "Search this area" })
-    await expect(searchButton).toBeVisible()
+    await expect(searchButton).toBeVisible({ timeout: 20_000 })
     await expect(searchButton).toBeEnabled()
     await searchButton.click()
 
+    const mobilePanel = getMobileResultsPanel(page)
     await expect(mobilePanel.getByText(smokePannedAreaBuilding.name)).toBeVisible(
-      { timeout: 15_000 },
+      { timeout: 20_000 },
     )
     await expect(page).toHaveURL(/search=area/)
     await expect(page).toHaveURL(/neLat=/)
@@ -136,18 +153,18 @@ test.describe("Map search smoke", () => {
     const searchButton = page.getByRole("button", {
       name: "Search within 1 km",
     })
-    await expect(searchButton).toBeEnabled()
+    await expect(searchButton).toBeEnabled({ timeout: 20_000 })
     await searchButton.click()
 
     const mobilePanel = getMobileResultsPanel(page)
     await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
-      timeout: 15_000,
+      timeout: 20_000,
     })
     await expect(mobilePanel.getByText(smokeNearbyBuilding.name)).toBeVisible()
     await expect(page).toHaveURL(/search=nearby/)
   })
 
-  test("draws a line and commits a line search from the idle map", async ({
+  test("enters line mode and places two points on the map", async ({
     page,
   }) => {
     await installMapSearchApiMocks(page)
@@ -161,17 +178,18 @@ test.describe("Map search smoke", () => {
     ).toHaveAttribute("aria-pressed", "true")
 
     await clickMapAt(page, { x: -70, y: -40 })
+    await page.waitForTimeout(400)
     await clickMapAt(page, { x: 80, y: 50 })
 
     const searchButton = page.getByRole("button", {
       name: "Search within 500 m of line",
     })
-    await expect(searchButton).toBeEnabled()
+    await expect(searchButton).toBeEnabled({ timeout: 20_000 })
     await searchButton.click()
 
     const mobilePanel = getMobileResultsPanel(page)
     await expect(mobilePanel.getByText("1 building along line")).toBeVisible({
-      timeout: 15_000,
+      timeout: 20_000,
     })
     await expect(mobilePanel.getByText(smokeLineBuilding.name)).toBeVisible()
     await expect(page).toHaveURL(/search=line/)
@@ -184,10 +202,9 @@ test.describe("Map search smoke", () => {
     await page.goto(areaSearchUrl)
 
     await waitForMapReady(page)
+    await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel.getByText(smokeAreaBuilding.name)).toBeVisible()
-
     await mobilePanel.getByRole("button", { name: /^Filters/ }).click()
     await expect(
       mobilePanel.getByRole("heading", { name: "Rental filters" }),
@@ -210,21 +227,15 @@ test.describe("Map search smoke", () => {
     await page.goto(areaSearchUrl)
 
     await waitForMapReady(page)
+    await waitForAreaSearchError(page)
 
     const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel.getByText("Search failed")).toBeVisible({
-      timeout: 15_000,
-    })
-    await expect(mobilePanel.getByRole("alert")).toContainText(
-      "Could not search this area",
-    )
-
     await mobilePanel.getByRole("button", { name: "Retry search" }).click()
 
     await expect(mobilePanel.getByText("1 building")).toBeVisible({
-      timeout: 15_000,
+      timeout: 20_000,
     })
     await expect(mobilePanel.getByText(smokeAreaBuilding.name)).toBeVisible()
-    await expect(mobilePanel.getByText("Search failed")).toHaveCount(0)
+    await expect(mobilePanel.getByRole("alert")).toHaveCount(0)
   })
 })

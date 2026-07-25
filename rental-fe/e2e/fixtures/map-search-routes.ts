@@ -15,6 +15,9 @@ function jsonRoute(body: unknown, status = 200) {
   }
 }
 
+// React Query defaults to 3 retries (4 total attempts) before surfacing an error.
+const INITIAL_AREA_SEARCH_ATTEMPTS = 4
+
 export type MapSearchMockOptions = {
   failAreaSearchOnce?: boolean
   pannedAreaOnSecondSearch?: boolean
@@ -25,21 +28,16 @@ export async function installMapSearchApiMocks(
   options: MapSearchMockOptions = {},
 ) {
   let areaSearchCalls = 0
+  let areaSearchFailuresRemaining = options.failAreaSearchOnce
+    ? INITIAL_AREA_SEARCH_ATTEMPTS
+    : 0
 
   await page.route("**/api/v1/search/buildings/map", async (route: Route) => {
     areaSearchCalls += 1
 
-    if (options.failAreaSearchOnce && areaSearchCalls === 1) {
-      await route.fulfill(
-        jsonRoute(
-          {
-            success: false,
-            code: "INTERNAL_ERROR",
-            message: "Simulated search failure",
-          },
-          500,
-        ),
-      )
+    if (areaSearchFailuresRemaining > 0) {
+      areaSearchFailuresRemaining -= 1
+      await route.abort("failed")
       return
     }
 
@@ -117,5 +115,9 @@ export async function waitForMapReady(page: Page) {
   await page.getByText("Map temporarily unavailable").waitFor({
     state: "hidden",
     timeout: 5_000,
+  })
+  await page.locator(".gm-style").first().waitFor({
+    state: "visible",
+    timeout: 20_000,
   })
 }
