@@ -4,14 +4,14 @@
 **Route:** `/admin`  
 **Layout:** `RootLayout` (bottom nav) + desktop-only workspace (`lg+`)  
 **Automated regression:** `npm test -- src/features/admin` → **88/88 passed**  
-**E2E regression:** `e2e/admin-panel.smoke.spec.ts` → **3/3 passed**; `e2e/admin-moderation.smoke.spec.ts` → **2/2 passed** (Playwright, mocked session, 1280×900 viewport)
+**E2E regression:** `e2e/admin-panel.smoke.spec.ts` → **3/3 passed**; `e2e/admin-moderation.smoke.spec.ts` → **2/2 passed**; `e2e/admin-building-edits.smoke.spec.ts` → **3/3 passed** (Playwright, mocked session, 1280×900 viewport)
 
 ## Audit summary
 
 | Area | Before | After |
 |------|--------|-------|
 | Test coverage | API/mutation hooks only (82 tests) | + page auth gates, workspace shell, tab switch (88 tests) |
-| E2E smoke | Auth gates only (3 tests) | Auth gates + approve/reject moderation (5 tests total) |
+| E2E smoke | Auth gates only (3 tests) | Auth gates + pending approve/reject + building edits diff/approve/reject (8 tests total) |
 | Documentation | None | This audit + manual checklist |
 | UI surface | Single ~4,300-line page, untested shell | **245-line shell** + 6 tab modules; auth gates and tab shell covered by tests |
 | Maintainability | Monolithic `AdminPanelPage.tsx` | Tab-per-folder modules under `src/features/admin/tabs/` |
@@ -68,7 +68,9 @@ Each tab module owns its queries, local context, list/detail UI, and tab-specifi
 | `AdminPanelPage.test.tsx` | Loading, login required, USER forbidden, ADMIN/OWNER review center, tab switch |
 | `AdminWorkspace.test.tsx` | List/detail panes, filters, total badge |
 | `e2e/admin-moderation.smoke.spec.ts` | Pending list + detail; approve/reject with reason dialog |
+| `e2e/admin-building-edits.smoke.spec.ts` | Building edits tab; current/proposed diff; approve/reject edit dialog |
 | `e2e/fixtures/admin-moderation.ts` | Stateful pending-post mocks (GET list, PATCH approve/reject) |
+| `e2e/fixtures/admin-building-edits.ts` | Stateful building-edit-request mocks (GET list/detail, PATCH approve/reject) |
 
 ## Existing API coverage (unchanged)
 
@@ -88,7 +90,7 @@ Sign in with an **ADMIN** or **OWNER** account, then open `/admin`.
 | 4 | Pending tab — list + detail | **Automated** | E2E: seeded post; building heading in detail pane |
 | 5 | Approve pending submission | **Automated** | E2E: reason chip + confirm; empty pending list |
 | 6 | Reject pending submission | **Automated** | E2E: reason chip + confirm; empty pending list |
-| 7 | Building edits tab | **Defer** | Diff view; approve/reject |
+| 7 | Building edits tab | **Automated** | E2E: diff view; approve/reject with reason dialog |
 | 8 | Reported listings tab | **Defer** | Status change + optional listing delete |
 | 9 | Reported reviews tab | **Defer** | Status change + optional review delete |
 | 10 | Suspend lister (from pending/report) | **Defer** | Duration + reason dialog |
@@ -98,7 +100,7 @@ Sign in with an **ADMIN** or **OWNER** account, then open `/admin`.
 
 ## Known follow-ups (non-blocking)
 
-- **Tab-level E2E** — extend Playwright beyond pending approve/reject (checklist items 7–13); tab modules are now isolated and easier to test incrementally.
+- **Tab-level E2E** — extend Playwright beyond pending approve/reject and building edits (checklist items 8–13); tab modules are isolated and easier to test incrementally.
 - **No nav entry** — admins must know `/admin` URL; consider OWNER-only nav affordance later.
 - **`useUpdateAdminAgentProfileVerification`** — hook exists with tests but no UI wiring (verify/unverify lister).
 - **Search/detail parsers** — 5 search + 5 get-by-id API modules lack dedicated unit tests.
@@ -111,8 +113,9 @@ Sign in with an **ADMIN** or **OWNER** account, then open `/admin`.
 - [x] E2E smoke — gates + admin load (3 tests)
 - [x] E2E smoke — pending approve/reject (2 tests)
 - [x] Split `AdminPanelPage` into tab modules (PRs #10–#15; shell ~245 lines)
-- [ ] Optional: desktop Chrome manual pass (checklist items 7–13)
-- [ ] Optional: tab-level Playwright specs (building edits, reports, suspensions, admins)
+- [x] E2E smoke — building edits diff/approve/reject (3 tests)
+- [ ] Optional: desktop Chrome manual pass (checklist items 8–13)
+- [ ] Optional: tab-level Playwright specs (reported listings, reported reviews, suspensions, admins)
 - [ ] Optional: wire agent verification toggle in admin UI
 
 ## Release recommendation
