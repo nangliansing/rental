@@ -28,6 +28,34 @@ export const initialMapInteractionState: MapInteractionState = {
   pinSource: null,
 }
 
+export function createInitialMapInteractionState({
+  initialPosition = null,
+  initialLineMode = false,
+}: {
+  initialPosition?: MapPosition | null
+  initialLineMode?: boolean
+} = {}): MapInteractionState {
+  if (isValidMapPosition(initialPosition)) {
+    return {
+      mode: "pin",
+      selectedPin: initialPosition,
+      currentLocation: null,
+      pinSource: "manual",
+    }
+  }
+
+  if (initialLineMode) {
+    return {
+      mode: "line",
+      selectedPin: null,
+      currentLocation: null,
+      pinSource: null,
+    }
+  }
+
+  return initialMapInteractionState
+}
+
 export function mapInteractionReducer(
   state: MapInteractionState,
   action: MapInteractionAction,

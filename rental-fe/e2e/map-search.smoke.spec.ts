@@ -199,7 +199,7 @@ test.describe("Map search smoke", () => {
     await page.getByRole("button", { name: "750 m", exact: true }).click()
 
     const searchButton = page.getByRole("button", {
-      name: "Search within 750 m of line",
+      name: "Search updated line",
     })
     await expect(searchButton).toBeVisible({ timeout: 20_000 })
     await expect(searchButton).toBeEnabled()

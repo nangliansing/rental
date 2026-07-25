@@ -1,9 +1,43 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  createInitialMapInteractionState,
   initialMapInteractionState,
   mapInteractionReducer,
 } from "./MapInteractionContext"
+
+describe("createInitialMapInteractionState", () => {
+  it("enters pin mode when a nearby search position is provided", () => {
+    const position = { lat: 13.7563, lng: 100.5018 }
+
+    expect(createInitialMapInteractionState({ initialPosition: position })).toEqual({
+      mode: "pin",
+      selectedPin: position,
+      currentLocation: null,
+      pinSource: "manual",
+    })
+  })
+
+  it("enters line mode when a line search URL is hydrated", () => {
+    expect(createInitialMapInteractionState({ initialLineMode: true })).toEqual({
+      mode: "line",
+      selectedPin: null,
+      currentLocation: null,
+      pinSource: null,
+    })
+  })
+
+  it("prefers pin mode when both nearby position and line mode are present", () => {
+    const position = { lat: 13.7563, lng: 100.5018 }
+
+    expect(
+      createInitialMapInteractionState({
+        initialPosition: position,
+        initialLineMode: true,
+      }).mode,
+    ).toBe("pin")
+  })
+})
 
 describe("mapInteractionReducer", () => {
   it("enters and exits manual pin mode atomically", () => {

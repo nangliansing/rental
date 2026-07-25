@@ -2,7 +2,7 @@ import { useMemo, useReducer, type Dispatch } from "react"
 import type { ReactNode } from "react"
 
 import {
-  initialMapInteractionState,
+  createInitialMapInteractionState,
   MapInteractionContext,
   mapInteractionReducer,
   type MapInteractionAction,
@@ -10,7 +10,6 @@ import {
   type MapInteractionState,
 } from "./MapInteractionContext"
 import type { MapPosition } from "../types"
-import { isValidMapPosition } from "../utils/map-position"
 
 function createMapInteractionActions(
   dispatch: Dispatch<MapInteractionAction>,
@@ -30,22 +29,16 @@ function createMapInteractionActions(
 export function MapInteractionProvider({
   children,
   initialPosition = null,
+  initialLineMode = false,
 }: {
   children: ReactNode
   initialPosition?: MapPosition | null
+  initialLineMode?: boolean
 }) {
   const [state, dispatch] = useReducer(
     mapInteractionReducer,
-    initialPosition,
-    (position) =>
-      isValidMapPosition(position)
-        ? {
-            mode: "pin" as const,
-            selectedPin: position,
-            currentLocation: null,
-            pinSource: "manual" as const,
-          }
-        : initialMapInteractionState,
+    { initialPosition, initialLineMode },
+    createInitialMapInteractionState,
   )
 
   const actions = useMemo(() => createMapInteractionActions(dispatch), [])
