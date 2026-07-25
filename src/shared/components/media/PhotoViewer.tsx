@@ -15,8 +15,9 @@ import {
 
 import { cn } from "@/lib/utils"
 import { ModalPortal } from "@/shared/components/ModalPortal"
+import { CloudinaryGalleryImage } from "@/shared/components/media/CloudinaryGalleryImage"
+import { parseCloudinaryDeliveryUrl } from "@/shared/components/media/cloudinary-image"
 import { OptimizedImage } from "@/shared/components/media/OptimizedImage"
-import { ProgressiveImage } from "@/shared/components/media/ProgressiveImage"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 export type PhotoViewerPhoto = {
@@ -259,7 +260,7 @@ export function PhotoViewer({
                   <GalleryImage
                     photo={photo}
                     className="h-full w-full object-contain"
-                    decorative={index !== activeIndex}
+                    variant={index === activeIndex ? "hero" : "adjacent"}
                   />
                 </div>
               ))
@@ -315,7 +316,7 @@ export function PhotoViewer({
                     <GalleryImage
                       photo={photo}
                       className="h-full w-full object-cover"
-                      decorative
+                      variant="thumbnail"
                     />
                   </button>
                 )
@@ -328,21 +329,54 @@ export function PhotoViewer({
   )
 }
 
+const GALLERY_IMAGE_WIDTHS = [640, 960, 1280, 1600] as const
+
+type GalleryImageVariant = "hero" | "adjacent" | "thumbnail"
+
 function GalleryImage({
   photo,
   className,
-  decorative = false,
+  variant = "hero",
 }: {
   photo: PhotoViewerPhoto
   className?: string
-  decorative?: boolean
+  variant?: GalleryImageVariant
 }) {
-  if (!decorative) {
+  if (variant === "thumbnail") {
     return (
-      <ProgressiveImage
+      <OptimizedImage
         src={photo.src}
-        alt={photo.alt || "Photo"}
+        alt=""
         className={className}
+        width={160}
+        height={120}
+        sizes="80px"
+        responsiveWidths={[80, 160]}
+        loading="lazy"
+        fetchPriority="low"
+        draggable={false}
+        fallback={<EmptyPhotoState compact />}
+      />
+    )
+  }
+
+  const isHero = variant === "hero"
+  const cloudinarySource = parseCloudinaryDeliveryUrl(photo.src)
+
+  if (cloudinarySource) {
+    return (
+      <CloudinaryGalleryImage
+        src={photo.src}
+        alt={isHero ? photo.alt || "Photo" : ""}
+        className={className}
+        width={1600}
+        height={1200}
+        sizes="100vw"
+        responsiveSteps={GALLERY_IMAGE_WIDTHS}
+        eager={isHero}
+        fetchPriority={isHero ? "high" : "low"}
+        decoding="async"
+        draggable={false}
         fallback={<EmptyPhotoState />}
       />
     )
@@ -351,16 +385,17 @@ function GalleryImage({
   return (
     <OptimizedImage
       src={photo.src}
-      alt=""
+      alt={isHero ? photo.alt || "Photo" : ""}
       className={className}
-      width={160}
-      height={120}
-      sizes="80px"
-      responsiveWidths={[80, 160]}
-      loading="lazy"
-      fetchPriority="low"
+      width={1600}
+      height={1200}
+      sizes="100vw"
+      responsiveWidths={GALLERY_IMAGE_WIDTHS}
+      loading={isHero ? "eager" : "lazy"}
+      fetchPriority={isHero ? "high" : "low"}
+      decoding="async"
       draggable={false}
-      fallback={<EmptyPhotoState compact />}
+      fallback={<EmptyPhotoState />}
     />
   )
 }
