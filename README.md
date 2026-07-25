@@ -55,5 +55,19 @@ cd rental-be && npm test
 
 GitHub Actions workflows in [`.github/workflows/`](./.github/workflows) run on push and pull request:
 
-- **Frontend CI** — lint, unit tests, production build
-- **Backend CI** — contract validation, audit, Docker build, tests
+- **Frontend CI** — unit tests and production build (`rental-fe/`)
+- **Backend CI** — contract validation, dependency audit, Docker build, tests (`rental-be/`)
+
+Each workflow only runs when files in its package change.
+
+### Branch protection (recommended)
+
+In GitHub **Settings → Branches → Add rule** for `main`:
+
+1. Require a pull request before merging
+2. Require status checks to pass:
+   - `Validate frontend`
+   - `Validate backend`
+3. Require branches to be up to date before merging
+
+Repository: [github.com/nangliansing/rental](https://github.com/nangliansing/rental)

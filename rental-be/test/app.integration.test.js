@@ -316,7 +316,7 @@ describe("near-lines search boundary", () => {
       request("/api/v1/search/buildings/near-lines", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...requestBody, distanceMeters: 1001 }),
+        body: JSON.stringify({ ...requestBody, distanceMeters: 2001 }),
       }),
     ]);
 
