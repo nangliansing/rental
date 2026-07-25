@@ -14,7 +14,12 @@ export async function waitForAreaSearchResults(
 ) {
   const mobilePanel = getMobileResultsPanel(page)
   await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
-  await expect(mobilePanel.getByText(buildingName)).toBeVisible({
+  await expect(mobilePanel.getByText("1 building")).toBeVisible({
+    timeout: 20_000,
+  })
+  await expect(
+    mobilePanel.getByRole("button", { name: new RegExp(buildingName) }),
+  ).toBeVisible({
     timeout: 20_000,
   })
 }

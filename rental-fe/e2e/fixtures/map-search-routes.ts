@@ -23,11 +23,27 @@ export type MapSearchMockOptions = {
   pannedAreaOnSecondSearch?: boolean
 }
 
+// Matches `areaSearchUrl` bounds used in smoke tests.
+function isInitialAreaSearchBounds(bounds: unknown) {
+  if (!bounds || typeof bounds !== "object") return false
+
+  const candidate = bounds as {
+    northEast?: { lat?: number; lng?: number }
+    southWest?: { lat?: number; lng?: number }
+  }
+
+  return (
+    candidate.northEast?.lat === 14 &&
+    candidate.northEast?.lng === 101 &&
+    candidate.southWest?.lat === 13 &&
+    candidate.southWest?.lng === 100
+  )
+}
+
 export async function installMapSearchApiMocks(
   page: Page,
   options: MapSearchMockOptions = {},
 ) {
-  let areaSearchCalls = 0
   let areaSearchFailuresRemaining = options.failAreaSearchOnce
     ? INITIAL_AREA_SEARCH_ATTEMPTS
     : 0
@@ -51,18 +67,22 @@ export async function installMapSearchApiMocks(
   })
 
   await page.route("**/api/v1/search/buildings/map", async (route: Route) => {
-    areaSearchCalls += 1
-
     if (areaSearchFailuresRemaining > 0) {
       areaSearchFailuresRemaining -= 1
       await route.abort("failed")
       return
     }
 
-    const building =
-      options.pannedAreaOnSecondSearch && areaSearchCalls > 1
-        ? smokePannedAreaBuilding
-        : smokeAreaBuilding
+    const requestBody = route.request().postDataJSON() as {
+      bounds?: unknown
+    } | null
+    const usePannedBuilding =
+      options.pannedAreaOnSecondSearch &&
+      !isInitialAreaSearchBounds(requestBody?.bounds)
+
+    const building = usePannedBuilding
+      ? smokePannedAreaBuilding
+      : smokeAreaBuilding
 
     await route.fulfill(
       jsonRoute({
