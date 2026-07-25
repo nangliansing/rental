@@ -1,13 +1,14 @@
 import type { ContactValues } from "../types"
+import { normalizeContactText } from "./contactNormalization"
 
 export function toContactValues(
   source: Partial<ContactValues> | null | undefined,
 ): ContactValues {
   return {
-    phone: source?.phone ?? null,
-    lineUrl: source?.lineUrl ?? null,
-    whatsappPhone: source?.whatsappPhone ?? null,
-    telegramUrl: source?.telegramUrl ?? null,
-    viberPhone: source?.viberPhone ?? null,
+    phone: normalizeContactText(source?.phone),
+    lineUrl: normalizeContactText(source?.lineUrl),
+    whatsappPhone: normalizeContactText(source?.whatsappPhone),
+    telegramUrl: normalizeContactText(source?.telegramUrl),
+    viberPhone: normalizeContactText(source?.viberPhone),
   }
 }

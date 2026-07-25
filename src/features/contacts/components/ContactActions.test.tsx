@@ -6,50 +6,102 @@ import { ContactActions } from "./ContactActions"
 
 afterEach(() => vi.restoreAllMocks())
 
-describe("ContactActions directions", () => {
-  it("confirms and opens valid building directions", async () => {
+describe("ContactActions", () => {
+  it("opens the contact modal and redirects from a selected channel", async () => {
     const user = userEvent.setup()
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
     render(
       <ContactActions
-        contactOwnerName="Lister"
-        contacts={{}}
-        directions={{
-          name: "Bangkapi Residence",
-          coordinates: [100.6435, 13.7654],
+        contactOwnerName="Nang Lian Sing"
+        contacts={{
+          lineUrl: "https://line.me/ti/p/abc",
+          phone: "0812345678",
         }}
       />,
     )
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Directions to Bangkapi Residence",
-      }),
+      screen.getByRole("button", { name: "Contact Nang Lian Sing" }),
     )
-    expect(
-      screen.getByRole("dialog", { name: "Open directions?" }),
-    ).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "Open Maps" }))
+    expect(
+      screen.getByRole("dialog", { name: "Contact Nang Lian Sing" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Line" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Phone" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Line" }))
 
     expect(openSpy).toHaveBeenCalledWith(
-      "https://www.google.com/maps/dir/?api=1&destination=13.7654%2C100.6435",
+      "https://line.me/ti/p/abc",
       "_blank",
       "noopener,noreferrer",
     )
+    expect(
+      screen.queryByRole("dialog", { name: "Contact Nang Lian Sing" }),
+    ).not.toBeInTheDocument()
   })
 
-  it("hides directions for invalid coordinates", () => {
+  it("styles the contact trigger like the save button", () => {
+    render(
+      <ContactActions
+        contactOwnerName="Lister"
+        contacts={{ phone: "0812345678" }}
+      />,
+    )
+
+    const button = screen.getByRole("button", { name: "Contact Lister" })
+
+    expect(button).toHaveClass("size-10", "bg-transparent")
+    expect(button).not.toHaveClass("border")
+  })
+
+  it("hides the contact trigger when no channels exist", () => {
     render(
       <ContactActions
         contactOwnerName="Lister"
         contacts={{}}
-        directions={{ coordinates: [999, 999] }}
       />,
     )
 
-    expect(screen.queryByText("Directions")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Contact Lister" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("ignores invalid contact data and hides the trigger", () => {
+    render(
+      <ContactActions
+        contactOwnerName="   "
+        contacts={{
+          phone: "++--",
+          lineUrl: "javascript:alert(1)",
+          whatsappPhone: null,
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Contact Lister" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("falls back to a safe owner label for invalid names", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ContactActions
+        contactOwnerName={null}
+        contacts={{ phone: "0812345678" }}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Contact Lister" }))
+
+    expect(
+      screen.getByRole("dialog", { name: "Contact Lister" }),
+    ).toBeInTheDocument()
   })
 
   it("renders leadingAction when no contact channels exist", () => {
@@ -66,6 +118,43 @@ describe("ContactActions directions", () => {
     expect(
       screen.getByRole("button", { name: "Save listing" }),
     ).toBeInTheDocument()
-    expect(screen.queryByText("Line")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Contact Lister" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows directions next to contact when a valid destination is provided", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+
+    render(
+      <ContactActions
+        contactOwnerName="Lister"
+        contacts={{ phone: "0812345678" }}
+        directionsDestination={{
+          name: "Bangkapi Residence",
+          coordinates: [100.6435, 13.7654],
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "Get directions to Bangkapi Residence",
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Get directions to Bangkapi Residence",
+      }),
+    )
+    await user.click(screen.getByRole("button", { name: "Open Maps" }))
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://www.google.com/maps/dir/?api=1&destination=13.7654%2C100.6435",
+      "_blank",
+      "noopener,noreferrer",
+    )
   })
 })

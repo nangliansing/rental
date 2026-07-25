@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ListingPostCard } from "@/features/listing/components/ListingPostCard"
+import * as openExternalHrefModule from "@/features/contacts/utils/openExternalHref"
 import { MyProfileSavedPanel } from "@/features/profile/components/MyProfileSavedPanel"
 import { clearAccessToken, setAccessToken } from "@/lib/api-client"
 import { AppNavigation } from "@/shared/components/navigation/AppNavigation"
@@ -201,12 +202,16 @@ describe("Saved listings authenticated smoke (integration)", () => {
     expect(
       screen.getByRole("button", { name: "Save listing" }),
     ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Phone" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Contact Nang Lian Sing" }),
+    ).toBeInTheDocument()
   })
 
-  it("shows Copied feedback after confirming phone contact", async () => {
+  it("opens phone contact from the contact modal", async () => {
     const user = userEvent.setup()
-    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
+    const hrefSpy = vi
+      .spyOn(openExternalHrefModule, "openExternalHref")
+      .mockImplementation(() => undefined)
 
     const listing = {
       ...createSearchListing(),
@@ -226,11 +231,13 @@ describe("Saved listings authenticated smoke (integration)", () => {
       <ListingPostCard listing={listing} currentUserId="other-user" />,
     )
 
+    await user.click(
+      screen.getByRole("button", { name: "Contact Nang Lian Sing" }),
+    )
     await user.click(screen.getByRole("button", { name: "Phone" }))
-    await user.click(screen.getByRole("button", { name: "Copy Phone" }))
 
-    expect(await screen.findByText("Copied")).toBeInTheDocument()
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("0812345678")
+    expect(hrefSpy).toHaveBeenCalledWith("tel:0812345678")
+    hrefSpy.mockRestore()
   })
 })
 

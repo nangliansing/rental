@@ -22,7 +22,7 @@ type ListingPostCardProps = {
   listing: SearchListing
   currentUserId?: string
   canCreateListing?: boolean
-  directions?: DirectionsDestination | null
+  directionsDestination?: DirectionsDestination | null
   onDeleted?: (listing: SearchListing) => void
 }
 
@@ -30,7 +30,7 @@ export function ListingPostCard({
   listing,
   currentUserId,
   canCreateListing = false,
-  directions,
+  directionsDestination,
   onDeleted,
 }: ListingPostCardProps) {
   const dialogActionsRef = useRef<ListingPostCardDialogActions>(null)
@@ -47,7 +47,7 @@ export function ListingPostCard({
         listing={listing}
         currentUserId={currentUserId}
         canCreateListing={canCreateListing}
-        directions={directions}
+        directionsDestination={directionsDestination}
         currentVisibility={visibilityOverride ?? listing.visibility}
         dialogActionsRef={dialogActionsRef}
       />
@@ -71,7 +71,7 @@ type ListingPostCardArticleProps = {
   listing: SearchListing
   currentUserId?: string
   canCreateListing: boolean
-  directions?: DirectionsDestination | null
+  directionsDestination?: DirectionsDestination | null
   currentVisibility: ListingVisibility
   dialogActionsRef: React.RefObject<ListingPostCardDialogActions | null>
 }
@@ -80,7 +80,7 @@ function ListingPostCardArticle({
   listing,
   currentUserId,
   canCreateListing,
-  directions,
+  directionsDestination,
   currentVisibility,
   dialogActionsRef,
 }: ListingPostCardArticleProps) {
@@ -180,7 +180,7 @@ function ListingPostCardArticle({
               }
             : undefined
         }
-        directions={directions}
+        directionsDestination={directionsDestination}
         leadingAction={saveButton}
         className="mt-2 px-3"
       />
