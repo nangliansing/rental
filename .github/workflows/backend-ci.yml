@@ -7,10 +7,6 @@ on:
       - "package.json"
       - ".github/workflows/backend-ci.yml"
   pull_request:
-    paths:
-      - "rental-be/**"
-      - "package.json"
-      - ".github/workflows/backend-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -38,8 +34,32 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Detect backend changes
+        id: changes
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if git diff --name-only \
+              "${{ github.event.pull_request.base.sha }}" \
+              "${{ github.event.pull_request.head.sha }}" \
+              | grep -Eq '^(rental-be/|package\.json|\.github/workflows/backend-ci\.yml)'; then
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "backend=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip backend validation
+        if: steps.changes.outputs.backend != 'true'
+        working-directory: .
+        run: echo "No backend changes in this pull request."
 
       - name: Set up Node.js
+        if: steps.changes.outputs.backend == 'true'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: rental-be/.nvmrc
@@ -47,15 +67,19 @@ jobs:
           cache-dependency-path: rental-be/package-lock.json
 
       - name: Install locked dependencies
+        if: steps.changes.outputs.backend == 'true'
         run: npm ci
 
       - name: Validate repository contracts
+        if: steps.changes.outputs.backend == 'true'
         run: npm run ci:contracts
 
       - name: Audit production dependencies
+        if: steps.changes.outputs.backend == 'true'
         run: npm run ci:audit
 
       - name: Build production container
+        if: steps.changes.outputs.backend == 'true'
         run: >-
           docker build
           --build-arg BUILD_REVISION=${{ github.sha }}
@@ -63,4 +87,5 @@ jobs:
           .
 
       - name: Run test suite
+        if: steps.changes.outputs.backend == 'true'
         run: npm test

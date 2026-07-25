@@ -686,6 +686,12 @@ describe("MapSearchPage integration", () => {
     expect(panel.getByText("1 building along line")).toBeInTheDocument()
     expect(panel.getByText("Line Corridor Residence")).toBeInTheDocument()
     expect(panel.getByText("303 Route Street, Bangkok")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Exit line search mode" }),
+    ).toHaveAttribute("aria-pressed", "true")
+    expect(
+      screen.getByRole("button", { name: "Line search distance: 500 m" }),
+    ).toBeVisible()
   })
 
   it("draws a line and commits a search from the idle map", async () => {

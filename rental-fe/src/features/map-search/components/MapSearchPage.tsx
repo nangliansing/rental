@@ -44,7 +44,10 @@ export function MapSearchPage() {
   )
 
   return (
-    <MapInteractionProvider initialPosition={initialUrlState.position}>
+    <MapInteractionProvider
+      initialPosition={initialUrlState.position}
+      initialLineMode={initialUrlState.source === "line"}
+    >
       <MapSearchPageContent initialUrlState={initialUrlState} />
     </MapInteractionProvider>
   )

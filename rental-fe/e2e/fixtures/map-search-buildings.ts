@@ -21,8 +21,45 @@ export const smokeNearbyBuilding = {
   distanceMeters: 120,
 }
 
+export const smokeRefreshedNearbyBuilding = {
+  ...smokeNearbyBuilding,
+  _id: "building-smoke-nearby-500m-1",
+  name: "Smoke 500m Nearby Residence",
+  address: "789 Radius Road, Bangkok",
+  distanceMeters: 80,
+}
+
+export const smokePannedAreaBuilding = {
+  ...smokeAreaBuilding,
+  _id: "building-smoke-panned-1",
+  name: "Smoke Panned Area Residence",
+  address: "789 Panned View Road, Bangkok",
+  location: { type: "Point", coordinates: [100.55, 13.55] },
+  distanceMeters: 650,
+}
+
+export const smokeLineBuilding = {
+  ...smokeAreaBuilding,
+  _id: "building-smoke-line-1",
+  name: "Smoke Line Corridor Residence",
+  address: "101 Line Route, Bangkok",
+  location: { type: "Point", coordinates: [100.6421, 13.76531] },
+  distanceMeters: 250,
+}
+
+export const smokeRefreshedLineBuilding = {
+  ...smokeLineBuilding,
+  _id: "building-smoke-line-750m-1",
+  name: "Smoke 750m Line Residence",
+  address: "202 Wider Line Route, Bangkok",
+  distanceMeters: 180,
+}
+
 export const areaSearchUrl =
   "/?search=area&neLat=14&neLng=101&swLat=13&swLng=100"
 
 export const nearbySearchUrl =
   "/?search=nearby&lat=13.75630&lng=100.50180&radius=1000"
+
+export const lineSearchUrl =
+  "/?search=line&line=100.64210,13.76531;100.65200,13.77500&radius=500"
