@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "rental-fe/**"
+      - "package.json"
       - ".github/workflows/e2e-smoke.yml"
   pull_request:
     paths:
       - "rental-fe/**"
+      - "package.json"
       - ".github/workflows/e2e-smoke.yml"
   workflow_dispatch:
 

@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - "rental-fe/**"
+      - "package.json"
       - ".github/workflows/frontend-ci.yml"
   pull_request:
     paths:
       - "rental-fe/**"
+      - "package.json"
       - ".github/workflows/frontend-ci.yml"
   workflow_dispatch:
 
