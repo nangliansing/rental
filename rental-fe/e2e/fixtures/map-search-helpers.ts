@@ -12,13 +12,6 @@ export async function waitForAreaSearchResults(
   page: Page,
   buildingName: string,
 ) {
-  await page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/v1/search/buildings/map") &&
-      response.ok(),
-    { timeout: 20_000 },
-  )
-
   const mobilePanel = getMobileResultsPanel(page)
   await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
   await expect(mobilePanel.getByText(buildingName)).toBeVisible({

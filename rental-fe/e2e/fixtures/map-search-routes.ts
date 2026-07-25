@@ -32,6 +32,24 @@ export async function installMapSearchApiMocks(
     ? INITIAL_AREA_SEARCH_ATTEMPTS
     : 0
 
+  await page.route("**/api/v1/users/me", async (route: Route) => {
+    await route.fulfill(
+      jsonRoute(
+        { success: false, code: "UNAUTHORIZED", message: "Not authenticated" },
+        401,
+      ),
+    )
+  })
+
+  await page.route("**/api/v1/users/token/refresh", async (route: Route) => {
+    await route.fulfill(
+      jsonRoute(
+        { success: false, code: "INVALID_REFRESH_TOKEN", message: "Invalid refresh token" },
+        401,
+      ),
+    )
+  })
+
   await page.route("**/api/v1/search/buildings/map", async (route: Route) => {
     areaSearchCalls += 1
 
