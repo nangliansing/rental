@@ -35,19 +35,29 @@ export function ProfilePageError({
   )
 }
 
-export function ProfileSetupRequired() {
+type ProfileSetupRequiredProps = {
+  title?: string
+  description?: string
+  actionLabel?: string
+  actionHref?: string
+}
+
+export function ProfileSetupRequired({
+  title = "Create your profile first",
+  description = "You need a contact profile before you can edit it.",
+  actionLabel = "Go to profile setup",
+  actionHref = "/profile",
+}: ProfileSetupRequiredProps) {
   return (
     <div className="flex min-h-[60vh] flex-col justify-center">
-      <h1 className="text-2xl font-semibold">Create your profile first</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-500">
-        You need a contact profile before you can edit it.
-      </p>
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
 
       <Link
-        to="/profile"
+        to={actionHref}
         className="mt-6 flex h-11 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-medium text-white"
       >
-        Go to profile setup
+        {actionLabel}
       </Link>
     </div>
   )

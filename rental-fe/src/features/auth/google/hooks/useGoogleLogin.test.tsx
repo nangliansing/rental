@@ -23,13 +23,13 @@ const userResponse = {
   updatedAt: "2026-07-21T00:00:00.000Z",
 }
 
-function GoogleLoginProbe() {
-  const login = useGoogleLogin("/profile")
+function GoogleLoginProbe({ redirectTo = "/profile" }: { redirectTo?: string }) {
+  const login = useGoogleLogin(redirectTo)
   const location = useLocation()
 
   return (
     <div>
-      <span>{location.pathname}</span>
+      <span>{`${location.pathname}${location.search}`}</span>
       <span>{login.error ? "error" : "ready"}</span>
       <button type="button" onClick={() => login.login("google-id-token")}>Continue</button>
     </div>
@@ -78,6 +78,56 @@ describe("useGoogleLogin", () => {
       queryClient.getQueryData(queryKeys.savedListings.list({ limit: 20 })),
     ).toBeUndefined()
     expect(cancel).toHaveBeenCalledWith()
+  })
+
+  it("sends new users to profile setup even when a different redirect is requested", async () => {
+    server.use(
+      http.post("/api/v1/users/login/google", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user: userResponse,
+            accessToken: "google-access-token",
+            isNewUser: true,
+          },
+        }),
+      ),
+    )
+
+    const { user } = renderWithProviders(
+      <GoogleLoginProbe redirectTo="/listings/new?buildingId=building-1" />,
+      { initialEntries: ["/login"] },
+    )
+
+    await user.click(screen.getByRole("button", { name: "Continue" }))
+
+    expect(await screen.findByText("/profile")).toBeInTheDocument()
+  })
+
+  it("honors safe redirects for returning users", async () => {
+    server.use(
+      http.post("/api/v1/users/login/google", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user: userResponse,
+            accessToken: "google-access-token",
+            isNewUser: false,
+          },
+        }),
+      ),
+    )
+
+    const { user } = renderWithProviders(
+      <GoogleLoginProbe redirectTo="/listings/new?buildingId=building-1" />,
+      { initialEntries: ["/login"] },
+    )
+
+    await user.click(screen.getByRole("button", { name: "Continue" }))
+
+    expect(
+      await screen.findByText("/listings/new?buildingId=building-1"),
+    ).toBeInTheDocument()
   })
 
   it("preserves the existing session and cache when authentication fails", async () => {

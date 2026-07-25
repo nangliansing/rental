@@ -10,6 +10,7 @@ import {
   type MyProfileContextValue,
 } from "../context/MyProfileContext"
 import { MyProfileActions } from "./MyProfileActions"
+import { MyProfileFirstListingPrompt } from "./MyProfileFirstListingPrompt"
 import { MyProfileHeader } from "./MyProfileHeader"
 import { MyProfileListingsPanel } from "./MyProfileListingsPanel"
 import { MyProfilePendingPanel } from "./MyProfilePendingPanel"
@@ -60,6 +61,8 @@ function MyProfileOverviewSection() {
     pendingCount: 0,
     rejectedCount: 0,
   }
+  const showFirstListingPrompt =
+    listingSummary.activeCount === 0 && listingSummary.pendingCount === 0
 
   return (
     <section className="pt-4 md:pt-8">
@@ -72,6 +75,8 @@ function MyProfileOverviewSection() {
           rejectedCount={listingSummary.rejectedCount}
           reviewSummary={profile.reviewSummary}
         />
+
+        {showFirstListingPrompt && <MyProfileFirstListingPrompt />}
 
         <MyProfileActions />
       </div>
