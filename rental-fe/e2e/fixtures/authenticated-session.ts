@@ -154,6 +154,7 @@ function jsonRoute(body: unknown, status = 200) {
 export type AuthenticatedSessionMockOptions = {
   hasAgentProfile?: boolean
   withPendingPost?: boolean
+  role?: "USER" | "ADMIN" | "OWNER"
 }
 
 function buildSeedPendingPost(): SmokePendingPost {
@@ -313,6 +314,11 @@ export async function installAuthenticatedSessionMocks(
   page: Page,
   options: AuthenticatedSessionMockOptions = {},
 ) {
+  const sessionRole = options.role ?? "USER"
+  const sessionUser = {
+    ...smokeAuthUser,
+    role: sessionRole,
+  }
   let hasAgentProfile = options.hasAgentProfile ?? true
   let createdAgentProfile = hasAgentProfile
     ? { ...smokeAgentProfile }
@@ -390,7 +396,7 @@ export async function installAuthenticatedSessionMocks(
     await route.fulfill(
       jsonRoute({
         success: true,
-        data: { user: smokeAuthUser },
+        data: { user: sessionUser },
       }),
     )
   })
