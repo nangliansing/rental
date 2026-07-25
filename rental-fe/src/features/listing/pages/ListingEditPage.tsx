@@ -14,7 +14,6 @@ import {
 import {
   ListingForm,
   type ListingFormSubmitValues,
-  type ListingFormValues,
 } from "../components/ListingForm"
 import { mapListingToFormValues } from "../utils/mapListingToFormValues"
 

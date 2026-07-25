@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { listingPhoto, createSearchListing } from "@/test/fixtures/listings"
+import { listingPhoto, createSearchBuilding, createSearchListing } from "@/test/fixtures/listings"
 
 import type { SearchSavedListing } from "../api"
+import type { SavedListingLiveListing } from "../api/searchSavedListings"
 import {
   getSavedListingBuildingName,
   getSavedListingCover,
@@ -33,15 +34,14 @@ function createSavedListing(
 
 describe("savedListingDisplay", () => {
   it("prefers live listing media and rent over snapshot values", () => {
+    const liveListing: SavedListingLiveListing = {
+      ...createSearchListing({ rent: 16000 }),
+      media: [{ ...listingPhoto, secureUrl: "https://example.com/live.jpg" }],
+      building: createSearchBuilding({ name: "Live Building" }),
+    }
+
     const savedListing = createSavedListing({
-      listing: {
-        ...createSearchListing({ rent: 16000 }),
-        media: [{ ...listingPhoto, secureUrl: "https://example.com/live.jpg" }],
-        building: {
-          ...createSearchListing().building!,
-          name: "Live Building",
-        },
-      },
+      listing: liveListing,
     })
 
     expect(getSavedListingCover(savedListing)?.secureUrl).toBe(

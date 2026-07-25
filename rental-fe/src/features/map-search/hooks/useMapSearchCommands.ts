@@ -109,7 +109,6 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
     linePoints,
     submittedFilters,
     activeSelectedBuilding,
-    pendingBuildingId,
     setSearchSource,
     setSubmittedBounds,
     setSubmittedNearbyPosition,

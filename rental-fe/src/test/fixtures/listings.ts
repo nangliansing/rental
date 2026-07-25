@@ -1,4 +1,5 @@
 import type {
+  ListingAgentProfile,
   ListingMedia,
   SearchListing,
   SearchListingsBuilding,
@@ -11,6 +12,26 @@ export const listingPhoto: ListingMedia = {
   position: 0,
   alt: "Bright rental room",
   isCover: true,
+}
+
+export function createListingAgentProfile(
+  overrides: Partial<ListingAgentProfile> = {},
+): ListingAgentProfile {
+  return {
+    _id: "agent-1",
+    userId: "user-1",
+    displayName: "Nang Lian Sing",
+    profilePhoto: null,
+    phone: "0812345678",
+    lineUrl: null,
+    whatsappPhone: null,
+    telegramUrl: null,
+    viberPhone: null,
+    supportLanguages: ["English", "Thai"],
+    isVerified: true,
+    isOnline: true,
+    ...overrides,
+  }
 }
 
 export function createSearchListing(

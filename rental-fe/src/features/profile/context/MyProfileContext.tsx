@@ -11,7 +11,7 @@ type MyProfileLogoutState = {
   reset?: () => void
 }
 
-type MyProfileContextValue = {
+export type MyProfileContextValue = {
   user: AuthUser | null
   profile: AgentProfile
   onProfileChange: (profile: AgentProfile) => void

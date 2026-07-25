@@ -9,6 +9,7 @@ import { MyProfileSavedPanel } from "@/features/profile/components/MyProfileSave
 import { clearAccessToken, setAccessToken } from "@/lib/api-client"
 import { AppNavigation } from "@/shared/components/navigation/AppNavigation"
 import {
+  createListingAgentProfile,
   createSearchBuilding,
   createSearchListing,
   listingPhoto,
@@ -184,15 +185,7 @@ describe("Saved listings authenticated smoke (integration)", () => {
     const listing = {
       ...createSearchListing(),
       isSavedByMe: false,
-      agentProfile: {
-        _id: "agent-1",
-        displayName: "Nang Lian Sing",
-        phone: "0812345678",
-        lineUrl: null,
-        whatsappPhone: null,
-        telegramUrl: null,
-        viberPhone: null,
-      },
+      agentProfile: createListingAgentProfile(),
     }
 
     renderWithProviders(
@@ -216,15 +209,7 @@ describe("Saved listings authenticated smoke (integration)", () => {
     const listing = {
       ...createSearchListing(),
       isSavedByMe: false,
-      agentProfile: {
-        _id: "agent-1",
-        displayName: "Nang Lian Sing",
-        phone: "0812345678",
-        lineUrl: null,
-        whatsappPhone: null,
-        telegramUrl: null,
-        viberPhone: null,
-      },
+      agentProfile: createListingAgentProfile(),
     }
 
     renderWithProviders(

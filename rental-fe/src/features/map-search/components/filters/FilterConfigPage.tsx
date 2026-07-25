@@ -1,5 +1,5 @@
 // src/features/map-search/components/filters/FilterConfigPage.tsx
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { ChevronDown, ChevronLeft } from "lucide-react"
 

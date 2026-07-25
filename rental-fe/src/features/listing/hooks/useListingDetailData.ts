@@ -26,7 +26,7 @@ function mergeOwnerListing(
 export function useListingDetailData({
   listingId,
 }: UseListingDetailDataOptions): ListingDetailDataState {
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth()
+  const { user, isLoading: isAuthLoading } = useAuth()
   const publicListingQuery = usePublicListingById({
     listingId: listingId ?? undefined,
     viewerKey: user?._id ?? null,
