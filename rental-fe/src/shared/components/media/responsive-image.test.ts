@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildCloudinaryImageUrl,
+  buildCloudinaryPlaceholderUrl,
   buildResponsiveImageSrcSet,
+  resolveGalleryFullWidth,
 } from "./responsive-image"
 
 describe("responsive Cloudinary images", () => {
@@ -29,5 +31,17 @@ describe("responsive Cloudinary images", () => {
 
     expect(buildCloudinaryImageUrl(externalSource, 640)).toBe(externalSource)
     expect(buildResponsiveImageSrcSet(externalSource)).toBeUndefined()
+    expect(buildCloudinaryPlaceholderUrl(externalSource)).toBe(externalSource)
+  })
+
+  it("builds a tiny blurred placeholder transformation", () => {
+    expect(buildCloudinaryPlaceholderUrl(source)).toBe(
+      "https://res.cloudinary.com/demo/image/upload/c_limit,w_48,q_10,e_blur:200,f_auto/v123/listing/photo.jpg",
+    )
+  })
+
+  it("caps gallery width to the device viewport", () => {
+    expect(resolveGalleryFullWidth(390, 2, 1600)).toBe(780)
+    expect(resolveGalleryFullWidth(1200, 2, 1600)).toBe(1600)
   })
 })

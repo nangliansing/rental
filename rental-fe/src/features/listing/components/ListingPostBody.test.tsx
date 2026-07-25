@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { createSearchListing } from "@/test/fixtures/listings"
@@ -52,6 +52,55 @@ describe("ListingPostBody", () => {
     expect(screen.getByText("Wifi · Balcony")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Helpful/ })).toBeInTheDocument()
     expect(screen.getByText(/month with electricity and water/)).toBeInTheDocument()
+  })
+
+  it("keeps review badges visible after the carousel photo loads", async () => {
+    const onReviewsRequest = vi.fn()
+    const listing = createSearchListing({
+      agentProfile: {
+        _id: "agent-1",
+        userId: "user-1",
+        displayName: "Test Lister",
+        profilePhoto: null,
+        phone: null,
+        lineUrl: null,
+        whatsappPhone: null,
+        telegramUrl: null,
+        viberPhone: null,
+        supportLanguages: ["English"],
+        reviewSummary: {
+          averageRating: 5,
+          reviewCount: 1,
+          ratingCounts: {
+            oneStar: 0,
+            twoStars: 0,
+            threeStars: 0,
+            fourStars: 0,
+            fiveStars: 1,
+          },
+          tagCounts: [{ tag: "HELPFUL", count: 1 }],
+        },
+        isVerified: false,
+        isOnline: true,
+      },
+    })
+
+    render(
+      <ListingPostBody
+        listing={listing}
+        onReviewsRequest={onReviewsRequest}
+      />,
+    )
+
+    fireEvent.load(screen.getByRole("img", { name: "Bright rental room" }))
+
+    await waitFor(() => {
+      expect(screen.getByRole("img", { name: "Bright rental room" })).toHaveClass(
+        "opacity-100",
+      )
+    })
+
+    expect(screen.getByRole("button", { name: /Helpful/ })).toBeVisible()
   })
 
   it("normalizes malformed optional presentation data", () => {

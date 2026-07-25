@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { PhotoViewer, type PhotoViewerPhoto } from "./PhotoViewer"
+import { resetProgressiveGalleryCacheForTests } from "./ProgressiveGalleryImage"
 
 const photos: PhotoViewerPhoto[] = [
   { id: "one", src: "https://example.com/one.jpg", alt: "First room" },
@@ -10,16 +11,17 @@ const photos: PhotoViewerPhoto[] = [
 ]
 
 describe("PhotoViewer", () => {
+  afterEach(() => {
+    resetProgressiveGalleryCacheForTests()
+  })
+
   it("shows the selected photo and synchronizes thumbnail selection", () => {
     render(
       <PhotoViewer photos={photos} initialIndex={1} onClose={vi.fn()} />,
     )
 
     const dialog = screen.getByRole("dialog", { name: "Photo viewer" })
-    expect(within(dialog).getByRole("img", { name: "Second room" })).toHaveAttribute(
-      "src",
-      "https://example.com/two.jpg",
-    )
+    expect(within(dialog).getByRole("img", { name: "Second room" })).toBeInTheDocument()
     expect(within(dialog).getByText("2 / 3")).toBeInTheDocument()
 
     const secondThumbnail = within(dialog).getByRole("button", {
@@ -149,10 +151,7 @@ describe("PhotoViewer", () => {
     )
 
     expect(screen.getByRole("dialog", { name: "Photo viewer" })).toBeInTheDocument()
-    expect(screen.getByRole("img", { name: "Photo 2" })).toHaveAttribute(
-      "src",
-      "https://example.com/valid.jpg",
-    )
+    expect(screen.getByRole("img", { name: "Photo 2" })).toBeInTheDocument()
     expect(screen.getAllByRole("button", { name: /Show photo/ })).toHaveLength(1)
 
     rerender(<PhotoViewer photos={null} onClose={vi.fn()} />)
