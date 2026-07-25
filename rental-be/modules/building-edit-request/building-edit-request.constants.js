@@ -1,0 +1,5 @@
+export const BUILDING_EDIT_REQUEST_STATUSES = Object.freeze({
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+});

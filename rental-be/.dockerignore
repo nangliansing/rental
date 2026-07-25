@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.env.*
+.git
+.github
+.dockerignore
+Dockerfile
+backups
+coverage
+docs
+node_modules
+test
+tmp
+*.log
+npm-debug.log*

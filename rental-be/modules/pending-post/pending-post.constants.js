@@ -1,0 +1,6 @@
+export const PENDING_POST_STATUSES = Object.freeze({
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  CANCELED: "CANCELED",
+});

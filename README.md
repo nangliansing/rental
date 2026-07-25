@@ -1,75 +1,59 @@
-# React + TypeScript + Vite
+# Rental
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Monorepo for the rental marketplace application: a React frontend and a Node.js API backend.
 
-Currently, two official plugins are available:
+## Packages
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Directory | Description |
+| --- | --- |
+| [`rental-fe/`](./rental-fe) | React + Vite frontend (map search, listings, profiles) |
+| [`rental-be/`](./rental-be) | Express + MongoDB backend API |
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 22.x (see `rental-be/.nvmrc`)
+- npm 10.x
+- MongoDB and Redis for local backend development
+- Google Maps API key for map search (`rental-fe/.env.example`)
 
-## Expanding the ESLint configuration
+## Local development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Backend
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+cd rental-be
+cp .env.example .env
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Frontend
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+cd rental-fe
+cp .env.example .env
+npm ci
+npm run dev
 ```
+
+The frontend dev server proxies API requests to the backend configured in `.env`.
+
+## Testing
+
+```bash
+# Frontend unit tests
+cd rental-fe && npm test
+
+# Frontend E2E smoke (requires Chromium + Google Maps key)
+cd rental-fe && npm run test:e2e:install && npm run test:e2e
+
+# Backend tests
+cd rental-be && npm test
+```
+
+## CI
+
+GitHub Actions workflows in [`.github/workflows/`](./.github/workflows) run on push and pull request:
+
+- **Frontend CI** — lint, unit tests, production build
+- **Backend CI** — contract validation, audit, Docker build, tests

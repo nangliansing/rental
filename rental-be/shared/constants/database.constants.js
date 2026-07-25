@@ -1,0 +1,32 @@
+// src/shared/constants/database.constants.js
+export const MODEL_NAMES = Object.freeze({
+  Building: "Building",
+  User: "User",
+  Listing: "Listing",
+  AgentProfile: "AgentProfile",
+  PendingPost: "PendingPost",
+  BuildingEditRequest: "BuildingEditRequest",
+  Report: "Report",
+  Suspension: "Suspension",
+  Notification: "Notification",
+  SavedListing: "SavedListing",
+  ListerReview: "ListerReview",
+  ReviewReport: "ReviewReport",
+  AuthIdentity: "AuthIdentity",
+});
+
+export const COLLECTION_NAMES = Object.freeze({
+  Buildings: "buildings",
+  Users: "users",
+  Listings: "listings",
+  AgentProfiles: "agent_profiles",
+  PendingPosts: "pending_posts",
+  BuildingEditRequests: "building_edit_requests",
+  Reports: "reports",
+  Suspensions: "suspensions",
+  Notifications: "notifications",
+  SavedListings: "saved_listings",
+  ListerReviews: "lister_reviews",
+  ReviewReports: "review_reports",
+  AuthIdentities: "auth_identities",
+});
