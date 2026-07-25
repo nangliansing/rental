@@ -47,6 +47,14 @@ export const smokeLineBuilding = {
   distanceMeters: 250,
 }
 
+export const smokeRefreshedLineBuilding = {
+  ...smokeLineBuilding,
+  _id: "building-smoke-line-750m-1",
+  name: "Smoke 750m Line Residence",
+  address: "202 Wider Line Route, Bangkok",
+  distanceMeters: 180,
+}
+
 export const areaSearchUrl =
   "/?search=area&neLat=14&neLng=101&swLat=13&swLng=100"
 

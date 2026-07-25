@@ -8,10 +8,10 @@ import {
   smokeAreaBuilding,
   smokeLineBuilding,
   smokeNearbyBuilding,
+  smokeRefreshedLineBuilding,
   smokeRefreshedNearbyBuilding,
 } from "./fixtures/map-search-buildings"
 import {
-  clickMapAt,
   getMobileResultsPanel,
   waitForAreaSearchError,
   waitForAreaSearchResults,
@@ -175,35 +175,43 @@ test.describe("Map search smoke", () => {
     await expect(page).toHaveURL(/search=nearby/)
   })
 
-  test("enters line mode and places two points on the map", async ({
+  test("commits a refreshed line search after distance changes", async ({
     page,
   }) => {
-    await installMapSearchApiMocks(page)
-    await page.goto("/")
+    await installMapSearchApiMocks(page, {
+      refreshedLineOnSecondSearch: true,
+    })
+    await page.goto(lineSearchUrl)
 
     await waitForMapReady(page)
 
-    await page.getByRole("button", { name: "Draw search line" }).click()
+    const mobilePanel = getMobileResultsPanel(page)
+    await expect(mobilePanel.getByText(smokeLineBuilding.name)).toBeVisible({
+      timeout: 20_000,
+    })
     await expect(
-      page.getByRole("button", { name: "Exit line search mode" }),
-    ).toHaveAttribute("aria-pressed", "true")
+      page.getByRole("button", { name: "Search within 500 m of line" }),
+    ).toHaveCount(0)
 
-    await clickMapAt(page, { x: -70, y: -40 })
-    await page.waitForTimeout(400)
-    await clickMapAt(page, { x: 80, y: 50 })
+    await page
+      .getByRole("button", { name: "Line search distance: 500 m" })
+      .click()
+    await page.getByRole("button", { name: "750 m", exact: true }).click()
 
     const searchButton = page.getByRole("button", {
-      name: "Search within 500 m of line",
+      name: "Search within 750 m of line",
     })
-    await expect(searchButton).toBeEnabled({ timeout: 20_000 })
+    await expect(searchButton).toBeVisible({ timeout: 20_000 })
+    await expect(searchButton).toBeEnabled()
     await searchButton.click()
 
-    const mobilePanel = getMobileResultsPanel(page)
     await expect(mobilePanel.getByText("1 building along line")).toBeVisible({
       timeout: 20_000,
     })
-    await expect(mobilePanel.getByText(smokeLineBuilding.name)).toBeVisible()
-    await expect(page).toHaveURL(/search=line/)
+    await expect(mobilePanel.getByText(smokeRefreshedLineBuilding.name)).toBeVisible({
+      timeout: 20_000,
+    })
+    await expect(page).toHaveURL(/radius=750/)
   })
 
   test("applies filters, syncs them to the URL, and refetches results", async ({

@@ -5,6 +5,7 @@ import {
   smokeLineBuilding,
   smokeNearbyBuilding,
   smokePannedAreaBuilding,
+  smokeRefreshedLineBuilding,
   smokeRefreshedNearbyBuilding,
 } from "./map-search-buildings"
 
@@ -23,6 +24,7 @@ export type MapSearchMockOptions = {
   failAreaSearchOnce?: boolean
   pannedAreaOnSecondSearch?: boolean
   refreshedNearbyOnSecondSearch?: boolean
+  refreshedLineOnSecondSearch?: boolean
 }
 
 // Matches `areaSearchUrl` bounds used in smoke tests.
@@ -121,10 +123,21 @@ export async function installMapSearchApiMocks(
   await page.route(
     "**/api/v1/search/buildings/near-lines",
     async (route: Route) => {
+      const requestBody = route.request().postDataJSON() as {
+        distanceMeters?: number
+      } | null
+      const useRefreshedBuilding =
+        options.refreshedLineOnSecondSearch &&
+        requestBody?.distanceMeters === 750
+
+      const building = useRefreshedBuilding
+        ? smokeRefreshedLineBuilding
+        : smokeLineBuilding
+
       await route.fulfill(
         jsonRoute({
           success: true,
-          data: [smokeLineBuilding],
+          data: [building],
           pagination: { page: 1, limit: 20, total: 1 },
         }),
       )
