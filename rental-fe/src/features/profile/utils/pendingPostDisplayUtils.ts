@@ -77,7 +77,19 @@ export function formatPendingPostSubmittedAt(value: string | null | undefined) {
   }).format(submittedAt)
 }
 
-export const PENDING_EMPTY_COPY = {
+export type PendingEmptyCopyEntry = {
+  title: string
+  description: string
+  action?: {
+    label: string
+    href: string
+  }
+}
+
+export const PENDING_EMPTY_COPY: Record<
+  "all" | "pending" | "approved" | "rejected",
+  PendingEmptyCopyEntry
+> = {
   all: {
     title: "No submissions yet",
     description:
@@ -104,7 +116,7 @@ export const PENDING_EMPTY_COPY = {
     title: "No rejected submissions",
     description: "Rejected listing submissions will appear here.",
   },
-} as const
+}
 
 export const OWNER_PENDING_STATUS_BY_PROFILE_FILTER = {
   all: "all",
