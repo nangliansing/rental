@@ -5,11 +5,8 @@ import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid
 import { ListingCollectionSkeleton } from "@/shared/components/collections/ListingCollectionState"
 import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 
-import {
-  ListingDetailProvider,
-  useListingDetail,
-  type ListingDetailListing,
-} from "../context/ListingDetailContext"
+import type { ListingDetailListing } from "../types"
+import { buildListingDirectionsDestination } from "../utils/buildListingDirectionsDestination"
 import { ListingGridCard } from "./ListingGridCard"
 import { ListingPostCard } from "./ListingPostCard"
 
@@ -23,6 +20,14 @@ type ListingDetailContentProps = {
   onListingSelect?: (listingId: string) => void
 }
 
+type ListingDetailSectionProps = {
+  listing: ListingDetailListing
+  currentUserId?: string
+  canCreateListing: boolean
+  onDeleted?: () => void
+  onListingSelect?: (listingId: string) => void
+}
+
 export function ListingDetailContent({
   listing,
   currentUserId,
@@ -30,50 +35,50 @@ export function ListingDetailContent({
   onDeleted,
   onListingSelect,
 }: ListingDetailContentProps) {
+  const sectionProps: ListingDetailSectionProps = {
+    listing,
+    currentUserId,
+    canCreateListing,
+    onDeleted,
+    onListingSelect,
+  }
+
   return (
-    <ListingDetailProvider
-      value={{
-        listing,
-        currentUserId,
-        canCreateListing,
-        onDeleted,
-        onListingSelect,
-      }}
-    >
-      <ListingDetailPostSection />
-      <ListingDetailBuildingSection />
-      <ListingDetailMoreListingsSection />
-    </ListingDetailProvider>
+    <>
+      <ListingDetailPostSection {...sectionProps} />
+      <ListingDetailBuildingSection listing={listing} />
+      <ListingDetailMoreListingsSection
+        listing={listing}
+        onListingSelect={onListingSelect}
+      />
+    </>
   )
 }
 
-function ListingDetailPostSection() {
-  const { listing, currentUserId, canCreateListing, onDeleted } =
-    useListingDetail()
-
+function ListingDetailPostSection({
+  listing,
+  currentUserId,
+  canCreateListing,
+  onDeleted,
+}: ListingDetailSectionProps) {
   return (
     <div className="overflow-hidden border-t border-slate-100 bg-white">
       <ListingPostCard
         listing={listing}
         currentUserId={currentUserId}
         canCreateListing={canCreateListing}
-        directions={
-          listing.building
-            ? {
-                name: listing.building.name,
-                coordinates: listing.building.location?.coordinates,
-              }
-            : null
-        }
+        directionsDestination={buildListingDirectionsDestination(listing.building)}
         onDeleted={onDeleted}
       />
     </div>
   )
 }
 
-function ListingDetailBuildingSection() {
-  const { listing } = useListingDetail()
-
+function ListingDetailBuildingSection({
+  listing,
+}: {
+  listing: ListingDetailListing
+}) {
   if (!listing.building) return null
 
   return (
@@ -85,9 +90,13 @@ function ListingDetailBuildingSection() {
   )
 }
 
-function ListingDetailMoreListingsSection() {
-  const { listing, onListingSelect } = useListingDetail()
-
+function ListingDetailMoreListingsSection({
+  listing,
+  onListingSelect,
+}: {
+  listing: ListingDetailListing
+  onListingSelect?: (listingId: string) => void
+}) {
   return (
     <MoreListingsInBuilding
       building={listing.building}
