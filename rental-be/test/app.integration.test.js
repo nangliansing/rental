@@ -329,6 +329,87 @@ describe("near-lines search boundary", () => {
   });
 });
 
+describe("building neighbourhood boundary", () => {
+  test("returns neighbourhood data for an existing building", async () => {
+    const building = await Building.create({
+      name: "HTTP neighbourhood building",
+      location: { type: "Point", coordinates: [100.6051, 13.6963] },
+      createdBy: new mongoose.Types.ObjectId(),
+    });
+
+    const response = await request(
+      `/api/v1/buildings/${building._id.toString()}/neighbourhood?radiusM=1500&fetchRadiusM=2000`,
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.buildingId, building._id.toString());
+    assert.equal(response.body.data.radiusMeters, 1500);
+    assert.equal(response.body.data.fetchRadiusMeters, 2000);
+    assert.equal(response.body.data.source, "openstreetmap");
+    assert.ok(Array.isArray(response.body.data.categories));
+    assert.ok(Array.isArray(response.body.data.places));
+    assert.ok(response.body.data.summary.all >= 0);
+  });
+
+  test("returns standard not-found and validation errors", async () => {
+    const missingBuildingId = new mongoose.Types.ObjectId().toString();
+    const building = await Building.create({
+      name: "Validation neighbourhood building",
+      location: { type: "Point", coordinates: [100.6051, 13.6963] },
+      createdBy: new mongoose.Types.ObjectId(),
+    });
+
+    const [notFound, invalidId, invalidRadius, radiusTooSmall] =
+      await Promise.all([
+        request(`/api/v1/buildings/${missingBuildingId}/neighbourhood`),
+        request("/api/v1/buildings/not-a-valid-id/neighbourhood"),
+        request(
+          `/api/v1/buildings/${building._id.toString()}/neighbourhood?radiusM=1500&fetchRadiusM=1000`,
+        ),
+        request(
+          `/api/v1/buildings/${building._id.toString()}/neighbourhood?radiusM=499`,
+        ),
+      ]);
+
+    assert.equal(notFound.status, 404);
+    assert.equal(notFound.body.code, "BUILDING_NOT_FOUND");
+    assert.equal(invalidId.status, 422);
+    assert.equal(invalidId.body.code, "VALIDATION_ERROR");
+    assert.equal(invalidRadius.status, 422);
+    assert.equal(invalidRadius.body.code, "VALIDATION_ERROR");
+    assert.equal(radiusTooSmall.status, 422);
+    assert.equal(radiusTooSmall.body.code, "VALIDATION_ERROR");
+
+    for (const response of [notFound, invalidId, invalidRadius, radiusTooSmall]) {
+      assertRequestId(response);
+    }
+  });
+
+  test("supports anonymous requests and hides zero-count categories", async () => {
+    const building = await Building.create({
+      name: "Anonymous neighbourhood building",
+      location: { type: "Point", coordinates: [100.6051, 13.6963] },
+      createdBy: new mongoose.Types.ObjectId(),
+    });
+
+    const response = await request(
+      `/api/v1/buildings/${building._id.toString()}/neighbourhood`,
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.success, true);
+    assert.ok(
+      response.body.data.categories.every((category) => category.count > 0),
+    );
+    assert.ok(
+      response.body.data.places.every(
+        (place) => place.distanceMeters <= response.body.data.radiusMeters,
+      ),
+    );
+  });
+});
+
 describe("Google authentication boundary", () => {
   const googleLogin = (body, origin = "http://localhost:5173") =>
     request("/api/v1/users/login/google", {

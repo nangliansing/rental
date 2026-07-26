@@ -55,6 +55,17 @@ export const queryKeys = {
   buildings: {
     detail: (buildingId: string | undefined) =>
       ["building", buildingId] as const,
+    neighbourhood: (
+      buildingId: string | undefined,
+      {
+        radiusM,
+        fetchRadiusM,
+      }: {
+        radiusM: number
+        fetchRadiusM: number
+      },
+    ) =>
+      ["building", buildingId, "neighbourhood", radiusM, fetchRadiusM] as const,
   },
   mapSearch: {
     buildings: ["building-search"] as const,

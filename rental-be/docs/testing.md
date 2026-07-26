@@ -70,7 +70,18 @@ MongoDB version.
 - suspended and inactive accounts;
 - token subjects whose users no longer exist;
 - all documented dormant admin routes returning `404`; and
-- the neighboring admin listing-deletion route remaining active.
+- the neighboring admin listing-deletion route remaining active; and
+- building neighbourhood HTTP success and validation boundaries.
+
+Neighbourhood-specific automated coverage lives in:
+
+```txt
+test/neighbourhood.test.js
+test/neighbourhood.integration.test.js
+```
+
+See `docs/building/get-building-neighbourhood.md` for the API contract and
+Postman checklist.
 
 The security and observability suites additionally cover security headers,
 request limits, Redis-ready production configuration, lifecycle behavior,

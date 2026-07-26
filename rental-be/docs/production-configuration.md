@@ -48,6 +48,9 @@ headers. Redis shares quotas across application instances and restarts.
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent` |
 | `METRICS_ENABLED` | `true` | Enables the private Prometheus endpoint at `/metrics` |
 | `METRICS_TOKEN` | unset locally | Required with enabled production metrics; minimum 32 characters |
+| `NEIGHBOURHOOD_OVERPASS_ENABLED` | `true` except in test | Enables OpenStreetMap Overpass fetches for neighbourhood POIs |
+| `OVERPASS_API_URL` | `https://overpass-api.de/api/interpreter` | Overpass interpreter endpoint |
+| `NEIGHBOURHOOD_CACHE_TTL_DAYS` | `14` | Mongo TTL for neighbourhood POI cache entries, 1–90 days |
 
 Rate-limit maximums can be tuned with the `RATE_LIMIT_*_MAX` values shown in
 `.env.example`. Windows and baseline defaults are documented in

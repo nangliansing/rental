@@ -4,6 +4,7 @@ import type React from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
 
 import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
+import { BuildingNeighbourhoodSection } from "@/features/buildings/components/BuildingNeighbourhoodSection"
 import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
@@ -103,6 +104,8 @@ export function BuildingDetailPage({
           hideEmptyRent={isListingSearch}
         />
       </div>
+
+      <BuildingNeighbourhoodSection buildingId={building._id} className="mb-4" />
 
       <div>
         <p className="mb-3 px-4 text-sm font-semibold">

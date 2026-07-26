@@ -1,0 +1,146 @@
+[
+  {
+    "id": "bts-bang-chak",
+    "name": "BTS Bang Chak",
+    "lat": 13.6963,
+    "lng": 100.6051,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-punnawithi",
+    "name": "BTS Punnawithi",
+    "lat": 13.6893,
+    "lng": 100.6081,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-udom-suk",
+    "name": "BTS Udom Suk",
+    "lat": 13.6799,
+    "lng": 100.6099,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-on-nut",
+    "name": "BTS On Nut",
+    "lat": 13.7057,
+    "lng": 100.6011,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-phra-khanong",
+    "name": "BTS Phra Khanong",
+    "lat": 13.7152,
+    "lng": 100.5912,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-ekkamai",
+    "name": "BTS Ekkamai",
+    "lat": 13.7195,
+    "lng": 100.5852,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-thong-lo",
+    "name": "BTS Thong Lo",
+    "lat": 13.7243,
+    "lng": 100.5784,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-phrom-phong",
+    "name": "BTS Phrom Phong",
+    "lat": 13.7304,
+    "lng": 100.5693,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-asok",
+    "name": "BTS Asok",
+    "lat": 13.737,
+    "lng": 100.5603,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "mrt-sukhumvit",
+    "name": "MRT Sukhumvit",
+    "lat": 13.7378,
+    "lng": 100.5615,
+    "mode": "mrt",
+    "line": "Blue Line"
+  },
+  {
+    "id": "bts-nana",
+    "name": "BTS Nana",
+    "lat": 13.7405,
+    "lng": 100.5554,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-chit-lom",
+    "name": "BTS Chit Lom",
+    "lat": 13.744,
+    "lng": 100.5431,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "bts-siam",
+    "name": "BTS Siam",
+    "lat": 13.7456,
+    "lng": 100.5347,
+    "mode": "bts",
+    "line": "Sukhumvit Line"
+  },
+  {
+    "id": "mrt-silom",
+    "name": "MRT Silom",
+    "lat": 13.7253,
+    "lng": 100.5341,
+    "mode": "mrt",
+    "line": "Blue Line"
+  },
+  {
+    "id": "mrt-lumphini",
+    "name": "MRT Lumphini",
+    "lat": 13.7259,
+    "lng": 100.5457,
+    "mode": "mrt",
+    "line": "Blue Line"
+  },
+  {
+    "id": "mrt-phetchaburi",
+    "name": "MRT Phetchaburi",
+    "lat": 13.7485,
+    "lng": 100.5632,
+    "mode": "mrt",
+    "line": "Blue Line"
+  },
+  {
+    "id": "mrt-queen-sirikit",
+    "name": "MRT Queen Sirikit National Convention Centre",
+    "lat": 13.7235,
+    "lng": 100.5601,
+    "mode": "mrt",
+    "line": "Blue Line"
+  },
+  {
+    "id": "arl-makkasan",
+    "name": "ARL Makkasan",
+    "lat": 13.751,
+    "lng": 100.5614,
+    "mode": "rail",
+    "line": "Airport Rail Link"
+  }
+]
