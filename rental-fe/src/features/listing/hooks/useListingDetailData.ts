@@ -41,10 +41,17 @@ export function useListingDetailData({
       publicListingQuery.isError,
   })
 
+  const isPublicQueryActive = Boolean(listingId) && !isAuthLoading
+  const isOwnerQueryActive =
+    Boolean(listingId) &&
+    !isAuthLoading &&
+    Boolean(user) &&
+    publicListingQuery.isError
+
   const isLoading =
-    publicListingQuery.isLoading ||
-    (publicListingQuery.isError && isAuthLoading) ||
-    ownerListingQuery.isLoading
+    isAuthLoading ||
+    (isPublicQueryActive && publicListingQuery.isPending) ||
+    (isOwnerQueryActive && ownerListingQuery.isPending)
 
   const listing = publicListingQuery.data
     ? publicListingQuery.data
