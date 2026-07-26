@@ -47,6 +47,21 @@ npm run dev
 
 The frontend dev server proxies API requests to the backend configured in `.env`.
 
+### Cloudflare Pages
+
+Production builds need the public Vite env vars from [`rental-fe/.env.example`](./rental-fe/.env.example). At minimum:
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_GOOGLE_CLIENT_ID` | Google sign-in button |
+| `VITE_GOOGLE_MAPS_API_KEY` | Map search |
+| `VITE_GOOGLE_MAPS_MAP_ID` | Optional custom map style |
+| `VITE_SOCKET_URL` | Real-time notifications (`https://rental-be.fly.dev`) |
+
+`rental-fe/.env.production` commits the production socket URL. Other secrets should be configured in the Cloudflare Pages project environment or your local `.env` before running `npm run build`.
+
+API requests are proxied through `rental-fe/functions/_middleware.js`. Socket.IO connects directly to `VITE_SOCKET_URL`, not through Pages.
+
 ## Testing
 
 ```bash
