@@ -5,6 +5,7 @@ import { ChevronLeft, X } from "lucide-react"
 import type { SearchAgentProfile } from "@/features/agent"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
+import { useBrowserBackDismiss } from "@/shared/hooks/useBrowserBackDismiss"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import {
   useMapSearchResults,
@@ -228,6 +229,16 @@ export function BuildingResultsPanel() {
     restoreFocus,
   } = useResultsPanelFocus({ activePage, isDesktop })
 
+  const closeFiltersRef = useRef<() => void>(() => {})
+  closeFiltersRef.current = () => {
+    restoreFocus()
+    setPage(returnPage)
+  }
+
+  useBrowserBackDismiss(searchStatus !== "idle" && page === "filters", () => {
+    closeFiltersRef.current()
+  })
+
   if (searchStatus === "idle") return null
 
   const openFilters = () => {
@@ -239,8 +250,7 @@ export function BuildingResultsPanel() {
   }
 
   const closeFilters = () => {
-    restoreFocus()
-    setPage(returnPage)
+    closeFiltersRef.current()
   }
 
   const handleBuildingSelect = (building: SearchBuilding | null) => {

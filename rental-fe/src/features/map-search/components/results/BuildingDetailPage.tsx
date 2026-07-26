@@ -176,6 +176,7 @@ export function BuildingDetailPage({
         onListingSelect={openListing}
         mobileBackLabel={building.name}
         desktopBackLabel="Back to building"
+        trackBrowserHistory={false}
       />
     </>
   )

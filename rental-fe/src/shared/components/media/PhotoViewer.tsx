@@ -65,7 +65,7 @@ export function PhotoViewer({
   onClose,
   title = "Photo viewer",
 }: PhotoViewerProps) {
-  const { containerRef } = useAccessibleModal<HTMLDivElement>({
+  const { containerRef, requestClose } = useAccessibleModal<HTMLDivElement>({
     isOpen: true,
     onClose,
   })
@@ -232,7 +232,7 @@ export function PhotoViewer({
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Close photo viewer"
             autoFocus
           >

@@ -67,6 +67,33 @@ describe("useAccessibleModal", () => {
     expect(opener).toHaveFocus()
   })
 
+  it("closes from browser back when history tracking is enabled", async () => {
+    const onClose = vi.fn()
+    const pushState = vi.spyOn(window.history, "pushState")
+
+    function Harness() {
+      const [open, setOpen] = useState(true)
+      return open ? (
+        <TestModal
+          onClose={() => {
+            onClose()
+            setOpen(false)
+          }}
+        />
+      ) : null
+    }
+
+    render(<Harness />)
+    expect(pushState).toHaveBeenCalled()
+
+    window.dispatchEvent(new PopStateEvent("popstate"))
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce()
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
   it("only closes from a direct backdrop click", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

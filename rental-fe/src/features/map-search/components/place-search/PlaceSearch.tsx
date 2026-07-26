@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { cn } from "@/lib/utils"
+import { useBrowserBackDismiss } from "@/shared/hooks/useBrowserBackDismiss"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchPlace } from "../../context/MapSearchSessionContext"
 import {
@@ -100,6 +101,8 @@ export const PlaceSearch = memo(function PlaceSearch() {
     setDesktopSuggestionsOpen(false)
     onPlaceSearchOpenChange(false)
   }
+
+  useBrowserBackDismiss(isMobileSearchOpen, closeSearchUi)
 
   const searchPlaces = async (value: string) => {
     const query = value.trim()

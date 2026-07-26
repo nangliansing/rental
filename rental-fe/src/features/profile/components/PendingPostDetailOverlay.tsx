@@ -53,7 +53,7 @@ export function PendingPostDetailOverlay({
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false)
   const [deleteError, setDeleteError] = useState("")
   const deleteMutation = useDeleteOwnerPendingPost()
-  const { containerRef } = useAccessibleModal<HTMLElement>({
+  const { containerRef, requestClose } = useAccessibleModal<HTMLElement>({
     isOpen: Boolean(post),
     onClose,
   })
@@ -79,7 +79,7 @@ export function PendingPostDetailOverlay({
           type="button"
           className="absolute inset-0 hidden cursor-default sm:block"
           aria-label="Close pending submission details"
-          onClick={onClose}
+          onClick={requestClose}
         />
 
         <article
@@ -92,7 +92,7 @@ export function PendingPostDetailOverlay({
               type="button"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 hover:text-slate-950 sm:hidden"
               aria-label="Back to pending submissions"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -127,7 +127,7 @@ export function PendingPostDetailOverlay({
               type="button"
               className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 sm:flex"
               aria-label="Close pending submission details"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <X className="h-4 w-4" />
             </button>
@@ -334,7 +334,7 @@ export function PendingPostDetailOverlay({
                   <Link
                     to={`/listings/${post.approvedListingId}`}
                     className="flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-                    onClick={onClose}
+                    onClick={requestClose}
                   >
                     View listing
                   </Link>

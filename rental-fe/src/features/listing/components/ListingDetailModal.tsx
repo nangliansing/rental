@@ -14,6 +14,7 @@ type ListingDetailModalProps = {
   onListingSelect?: (listingId: string) => void
   mobileBackLabel?: string
   desktopBackLabel?: string
+  trackBrowserHistory?: boolean
 }
 
 export function ListingDetailModal({
@@ -22,10 +23,12 @@ export function ListingDetailModal({
   onListingSelect,
   mobileBackLabel = "Back",
   desktopBackLabel = "Back",
+  trackBrowserHistory = true,
 }: ListingDetailModalProps) {
-  const { containerRef, onBackdropClick } = useAccessibleModal<HTMLElement>({
+  const { containerRef, onBackdropClick, requestClose } = useAccessibleModal<HTMLElement>({
     isOpen: Boolean(listingId),
     onClose,
+    trackBrowserHistory,
   })
   const { isAuthenticated } = useAuth()
   const agentProfileQuery = useMyAgentProfile({
@@ -55,7 +58,7 @@ export function ListingDetailModal({
             <button
               type="button"
               className="inline-flex h-10 items-center gap-2 rounded-full px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <ArrowLeft className="h-5 w-5 md:h-4 md:w-4" />
               <span className="md:hidden">{mobileBackLabel}</span>
@@ -66,7 +69,7 @@ export function ListingDetailModal({
               type="button"
               className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 md:flex"
               aria-label="Close listing details"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <X className="h-5 w-5" />
             </button>
