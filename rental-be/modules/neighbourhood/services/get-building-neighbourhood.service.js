@@ -27,12 +27,15 @@ export const getBuildingNeighbourhoodService = async ({
       fetchRadiusMeters: params.fetchRadiusMeters,
       session,
     });
-  const places = filterPlacesByRadius({
+  const { places, truncated, totalWithinRadius } = filterPlacesByRadius({
     origin,
     places: cachedPlaces,
     radiusMeters: params.radiusMeters,
   });
-  const { summary, categories } = buildNeighbourhoodSummary(places);
+  const { summary, categories } = buildNeighbourhoodSummary(places, {
+    truncated,
+    totalWithinRadius,
+  });
 
   return {
     buildingId: building._id.toString(),

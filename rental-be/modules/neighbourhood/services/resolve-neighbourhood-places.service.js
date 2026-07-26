@@ -8,8 +8,10 @@ import {
   findStaleNeighbourhoodCacheByKey,
   upsertNeighbourhoodCache,
 } from "../cache/neighbourhood-cache.repository.js";
+import { MAX_CACHED_PLACES } from "../neighbourhood.constants.js";
 import { queryOverpass } from "../providers/overpass.provider.js";
 import { dedupeTransitPlaces } from "./dedupe-transit-places.service.js";
+import { filterPlacesByRadius } from "./filter-places-by-radius.service.js";
 import { loadStaticTransitPlaces } from "./load-static-transit-places.service.js";
 
 const buildCacheExpiry = (cacheTtlDays) => {
@@ -45,6 +47,23 @@ const mergeWithStaticTransitPlaces = ({
       }),
     ]),
   );
+
+const stripDistanceMeters = (place) => {
+  const { distanceMeters: _distanceMeters, ...placeWithoutDistance } = place;
+
+  return placeWithoutDistance;
+};
+
+const capPlacesForCache = ({ places, origin, fetchRadiusMeters }) => {
+  const { places: cappedPlaces } = filterPlacesByRadius({
+    origin,
+    places,
+    radiusMeters: fetchRadiusMeters,
+    maxPlaces: MAX_CACHED_PLACES,
+  });
+
+  return cappedPlaces.map(stripDistanceMeters);
+};
 
 export const resolveNeighbourhoodPlaces = async ({
   origin,
@@ -119,12 +138,17 @@ export const resolveNeighbourhoodPlaces = async ({
 
   if (!overpassFetchFailed) {
     const expiresAt = buildCacheExpiry(cacheTtlDays);
+    const placesForCache = capPlacesForCache({
+      places,
+      origin,
+      fetchRadiusMeters,
+    });
 
     await upsertNeighbourhoodCache({
       cacheKey,
       origin,
       fetchRadiusMeters,
-      places,
+      places: placesForCache,
       fetchedAt,
       expiresAt,
       session,

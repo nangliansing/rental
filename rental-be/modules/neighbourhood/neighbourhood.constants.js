@@ -8,6 +8,7 @@ export const MIN_RADIUS_METERS = 500;
 export const MAX_RADIUS_METERS = 2000;
 export const MAX_FETCH_RADIUS_METERS = 2000;
 export const MAX_RETURNED_PLACES = 200;
+export const MAX_CACHED_PLACES = 500;
 export const CACHE_COORDINATE_DECIMALS = 3;
 export const NEIGHBOURHOOD_CACHE_VERSION = 3;
 
