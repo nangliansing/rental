@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 
+import { cn } from "@/lib/utils"
+
+import {
+  GOOGLE_SIGN_IN_BUTTON_OPTIONS,
+  GOOGLE_SIGN_IN_SLOT_HEIGHT_PX,
+  GOOGLE_SIGN_IN_STABLE_MS,
+  clampGoogleSignInButtonWidth,
+} from "../lib/googleSignInButtonLayout"
 import {
   initializeGoogleIdentity,
   setGoogleCredentialHandler,
@@ -11,8 +19,6 @@ type GoogleSignInButtonProps = {
   onError: (message: string) => void
 }
 
-const GOOGLE_BUTTON_MAX_WIDTH = 400
-
 export function GoogleSignInButton({
   disabled = false,
   onCredential,
@@ -21,7 +27,7 @@ export function GoogleSignInButton({
   const containerRef = useRef<HTMLDivElement>(null)
   const onCredentialRef = useRef(onCredential)
   const onErrorRef = useRef(onError)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
     onCredentialRef.current = onCredential
@@ -32,13 +38,23 @@ export function GoogleSignInButton({
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? ""
     let disposed = false
     let resizeObserver: ResizeObserver | null = null
+    let stableTimer: ReturnType<typeof setTimeout> | null = null
     let renderedWidth = 0
+
+    const scheduleReady = () => {
+      if (stableTimer) clearTimeout(stableTimer)
+
+      stableTimer = setTimeout(() => {
+        if (!disposed) setIsReady(true)
+      }, GOOGLE_SIGN_IN_STABLE_MS)
+    }
 
     const setup = async () => {
       try {
         const api = await initializeGoogleIdentity(clientId)
+        const container = containerRef.current
 
-        if (disposed || !containerRef.current) return
+        if (disposed || !container) return
 
         setGoogleCredentialHandler((response) => {
           const credential = response.credential?.trim()
@@ -51,39 +67,39 @@ export function GoogleSignInButton({
           onCredentialRef.current(credential)
         })
 
-        const renderButton = () => {
-          const container = containerRef.current
-
-          if (!container) return
-
-          const width = Math.min(
-            GOOGLE_BUTTON_MAX_WIDTH,
-            Math.max(1, Math.floor(container.getBoundingClientRect().width)),
-          )
-
-          if (width === renderedWidth) return
+        const renderButton = (width: number) => {
+          if (!containerRef.current) return
 
           renderedWidth = width
-          container.replaceChildren()
-          api.renderButton(container, {
-            type: "standard",
-            theme: "outline",
-            size: "large",
-            text: "continue_with",
-            shape: "rectangular",
-            logo_alignment: "left",
+          containerRef.current.replaceChildren()
+          api.renderButton(containerRef.current, {
+            ...GOOGLE_SIGN_IN_BUTTON_OPTIONS,
             width,
           })
-          setIsLoading(false)
         }
 
-        renderButton()
-        resizeObserver = new ResizeObserver(renderButton)
-        resizeObserver.observe(containerRef.current)
+        const syncButtonWidth = (width: number) => {
+          const nextWidth = clampGoogleSignInButtonWidth(width)
+
+          if (nextWidth !== renderedWidth) {
+            renderButton(nextWidth)
+          }
+
+          scheduleReady()
+        }
+
+        syncButtonWidth(container.getBoundingClientRect().width)
+
+        resizeObserver = new ResizeObserver(([entry]) => {
+          if (!entry) return
+
+          syncButtonWidth(entry.contentRect.width)
+        })
+        resizeObserver.observe(container)
       } catch {
         if (disposed) return
 
-        setIsLoading(false)
+        setIsReady(true)
         onErrorRef.current(
           "Google sign-in is unavailable right now. Please try again.",
         )
@@ -94,20 +110,33 @@ export function GoogleSignInButton({
 
     return () => {
       disposed = true
+      if (stableTimer) clearTimeout(stableTimer)
       resizeObserver?.disconnect()
       setGoogleCredentialHandler(null)
     }
   }, [])
 
+  const isBusy = !isReady || disabled
+
   return (
     <div
-      className="relative min-h-11 w-full"
-      aria-busy={isLoading || disabled}
+      className="relative w-full overflow-hidden"
+      style={{ height: GOOGLE_SIGN_IN_SLOT_HEIGHT_PX }}
+      aria-busy={isBusy}
     >
-      <div ref={containerRef} className="w-full" />
+      <div
+        ref={containerRef}
+        className={cn(
+          "w-full transition-opacity duration-200 ease-out",
+          isReady ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
 
-      {isLoading && (
-        <div className="absolute inset-0 h-11 animate-pulse border border-slate-200 bg-slate-50" />
+      {!isReady && (
+        <div
+          className="absolute inset-0 border border-slate-200 bg-slate-50 motion-safe:animate-pulse"
+          aria-hidden="true"
+        />
       )}
 
       {disabled && (
@@ -119,4 +148,3 @@ export function GoogleSignInButton({
     </div>
   )
 }
-
