@@ -37,10 +37,6 @@ try {
 
   configureCloudinary(config.cloudinary);
   rateLimitStore = await initializeRateLimitStore(config.rateLimit, { logger });
-  await connectDB(config.mongodbUri, {
-    autoIndex: !config.isProduction,
-    logger,
-  });
 
   runtimeHealth = createRuntimeHealth({
     isDatabaseReady: isDBReady,
@@ -68,8 +64,14 @@ try {
   });
 
   await listen(server, config.port);
-  runtimeHealth.markReady();
   registerProcessHandlers({ logger, shutdown });
+
+  await connectDB(config.mongodbUri, {
+    autoIndex: !config.isProduction,
+    logger,
+  });
+
+  runtimeHealth.markReady();
 
   logger.info(
     { event: "server_started", port: config.port },

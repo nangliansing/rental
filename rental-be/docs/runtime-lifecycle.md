@@ -18,11 +18,12 @@ network or load balancer rather than public application quotas.
 
 ## Startup
 
-The process validates configuration, connects the rate-limit store, connects
-MongoDB, creates HTTP and Socket.IO transports, and binds the port. It reports
-ready only after every step succeeds. A startup failure closes any resources
-opened by earlier steps and exits unsuccessfully without opening a partial
-service.
+The process validates configuration, connects the rate-limit store, creates
+HTTP and Socket.IO transports, and binds the port on `0.0.0.0`. It connects
+MongoDB after the port is open so orchestrators can reach liveness probes while
+startup continues. It reports ready only after MongoDB and the rate-limit store
+are healthy. A startup failure closes any resources opened by earlier steps and
+exits unsuccessfully without opening a partial service.
 
 ## Shutdown
 
