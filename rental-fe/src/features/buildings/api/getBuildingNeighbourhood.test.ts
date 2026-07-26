@@ -21,6 +21,8 @@ const sampleNeighbourhoodResponse = {
     source: "openstreetmap",
     summary: {
       all: 2,
+      truncated: false,
+      totalWithinRadius: 2,
       public_transport: 0,
       convenience: 1,
       supermarket: 0,
@@ -98,7 +100,11 @@ describe("getBuildingNeighbourhood", () => {
         radiusMeters: 1000,
         fetchRadiusMeters: 2000,
         cacheStatus: "hit",
-        summary: expect.objectContaining({ all: 2, convenience: 1 }),
+        summary: expect.objectContaining({
+          all: 2,
+          totalWithinRadius: 2,
+          convenience: 1,
+        }),
         categories: [
           expect.objectContaining({ key: "convenience", count: 1 }),
           expect.objectContaining({ key: "restaurant", count: 1 }),
@@ -116,6 +122,35 @@ describe("getBuildingNeighbourhood", () => {
             line: "Sukhumvit Line",
           }),
         ],
+      }),
+    )
+  })
+
+  it("parses truncation metadata when present", async () => {
+    server.use(
+      http.get("/api/v1/buildings/:buildingId/neighbourhood", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            ...sampleNeighbourhoodResponse.data,
+            summary: {
+              ...sampleNeighbourhoodResponse.data.summary,
+              all: 215,
+              truncated: true,
+              totalWithinRadius: 347,
+            },
+          },
+        }),
+      ),
+    )
+
+    const result = await getBuildingNeighbourhood({ buildingId: "building-1" })
+
+    expect(result.summary).toEqual(
+      expect.objectContaining({
+        all: 215,
+        truncated: true,
+        totalWithinRadius: 347,
       }),
     )
   })
