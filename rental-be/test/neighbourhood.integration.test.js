@@ -337,6 +337,31 @@ describe("resolveNeighbourhoodPlaces", () => {
     assert.ok(cached.places.some((place) => place.id === "osm-node-99"));
   });
 
+  test("deduplicates nearby OSM transit stations when static data exists", async () => {
+    const origin = { lat: 13.6963, lng: 100.6051 };
+
+    const result = await resolveNeighbourhoodPlaces({
+      origin,
+      fetchRadiusMeters: 2000,
+      overpassEnabled: true,
+      queryOverpassFn: async () => [
+        {
+          id: "osm-node-501",
+          name: "BTS Bang Chak",
+          lat: 13.6963,
+          lng: 100.6051,
+          category: "public_transport",
+          mode: "bts",
+        },
+      ],
+    });
+
+    assert.ok(result.places.some((place) => place.id === "bts-bang-chak"));
+    assert.ok(
+      result.places.every((place) => place.id !== "osm-node-501"),
+    );
+  });
+
   test("deduplicates places with the same id when merging sources", async () => {
     const origin = { lat: 13.6963, lng: 100.6051 };
 

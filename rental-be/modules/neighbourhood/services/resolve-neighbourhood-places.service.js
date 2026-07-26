@@ -9,6 +9,7 @@ import {
   upsertNeighbourhoodCache,
 } from "../cache/neighbourhood-cache.repository.js";
 import { queryOverpass } from "../providers/overpass.provider.js";
+import { dedupeTransitPlaces } from "./dedupe-transit-places.service.js";
 import { loadStaticTransitPlaces } from "./load-static-transit-places.service.js";
 
 const buildCacheExpiry = (cacheTtlDays) => {
@@ -35,13 +36,15 @@ const mergeWithStaticTransitPlaces = ({
   origin,
   fetchRadiusMeters,
 }) =>
-  dedupePlaces([
-    ...places,
-    ...loadStaticTransitPlaces({
-      origin,
-      fetchRadiusMeters,
-    }),
-  ]);
+  dedupePlaces(
+    dedupeTransitPlaces([
+      ...places,
+      ...loadStaticTransitPlaces({
+        origin,
+        fetchRadiusMeters,
+      }),
+    ]),
+  );
 
 export const resolveNeighbourhoodPlaces = async ({
   origin,

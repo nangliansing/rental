@@ -98,7 +98,7 @@ Supported categories, in importance order:
 
 | Priority | Key | Label | Source |
 | ---: | --- | --- | --- |
-| 1 | `public_transport` | Public Transport | Static BTS/MRT station list |
+| 1 | `public_transport` | Public Transport | OpenStreetMap + static enrichment |
 | 2 | `convenience` | Convenience Stores | OpenStreetMap |
 | 3 | `supermarket` | Supermarkets | OpenStreetMap |
 | 4 | `restaurant` | Restaurants | OpenStreetMap |
@@ -134,6 +134,7 @@ Examples of mapped tags:
 
 | Category | OSM tags |
 | --- | --- |
+| Public Transport | `station=subway`, `station=light_rail`, `railway=station` with BTS/MRT/SRT/ARL `network` |
 | Convenience Stores | `shop=convenience` |
 | Supermarkets | `shop=supermarket` |
 | Restaurants | `amenity=restaurant`, `amenity=fast_food` |
@@ -146,19 +147,22 @@ Examples of mapped tags:
 
 Overpass is called **server-side only**. Never call it from the browser.
 
-### Static public transport
+### Static public transport enrichment
 
-BTS/MRT stations are loaded from:
+A curated BTS/MRT station list lives at:
 
 ```txt
 modules/neighbourhood/data/public-transport.stations.json
 ```
 
-Static stations are merged on every response so transit data stays available
-even on cache hits.
+This list is merged on every response to:
 
-If no static station falls within `fetchRadiusM`, `public_transport` count
-remains `0` and the tab is omitted.
+- enrich OSM stations with reliable `mode` and `line` metadata
+- deduplicate nearby OSM/static duplicates (within 150 m)
+- provide fallback transit results when Overpass is unavailable
+
+OpenStreetMap is the primary source for transit coverage. The static list no
+longer limits which areas can return public transport.
 
 ## Caching
 
@@ -166,7 +170,7 @@ Neighbourhood POIs are cached in MongoDB collection `neighbourhood_caches`.
 
 | Setting | Value |
 | --- | --- |
-| Cache key | rounded origin lat/lng to 3 decimals + `fetchRadiusM` |
+| Cache key | cache version + rounded origin lat/lng to 3 decimals + `fetchRadiusM` |
 | Default TTL | 14 days |
 | Shared entries | nearby buildings with the same rounded origin reuse cache |
 

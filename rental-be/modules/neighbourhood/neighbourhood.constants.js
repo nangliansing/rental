@@ -9,13 +9,20 @@ export const MAX_RADIUS_METERS = 2000;
 export const MAX_FETCH_RADIUS_METERS = 2000;
 export const MAX_RETURNED_PLACES = 200;
 export const CACHE_COORDINATE_DECIMALS = 3;
+export const NEIGHBOURHOOD_CACHE_VERSION = 2;
 
 export const NEIGHBOURHOOD_CATEGORIES = Object.freeze([
   {
     key: "public_transport",
     label: "Public Transport",
     priority: 1,
-    source: "static",
+    source: "hybrid",
+    osmTagRules: [
+      { key: "station", value: "subway" },
+      { key: "station", value: "light_rail" },
+      { key: "station", value: "monorail" },
+      { key: "amenity", value: "ferry_terminal" },
+    ],
   },
   {
     key: "convenience",
@@ -82,6 +89,42 @@ export const NEIGHBOURHOOD_CATEGORIES = Object.freeze([
 export const OSM_NEIGHBOURHOOD_CATEGORIES = NEIGHBOURHOOD_CATEGORIES.filter(
   (category) => Array.isArray(category.osmTagRules),
 );
+
+export const TRANSIT_OVERPASS_QUERIES = Object.freeze([
+  {
+    elementTypes: ["node", "way"],
+    tagRules: [
+      { key: "public_transport", value: "station" },
+      { key: "railway", value: "station" },
+      { key: "network", pattern: "^(BTS|MRT|SRT|Airport Rail Link)" },
+    ],
+  },
+  {
+    elementTypes: ["node", "way"],
+    tagRules: [
+      { key: "railway", value: "station" },
+      { key: "network", pattern: "^(BTS|MRT|SRT|Airport Rail Link)" },
+    ],
+  },
+  {
+    elementTypes: ["node", "way"],
+    tagRules: [
+      { key: "public_transport", value: "station" },
+      { key: "station", value: "monorail" },
+    ],
+  },
+  {
+    elementTypes: ["node", "way"],
+    tagRules: [{ key: "amenity", value: "ferry_terminal" }],
+  },
+  {
+    elementTypes: ["node"],
+    tagRules: [
+      { key: "public_transport", value: "stop_position" },
+      { key: "ferry", value: "yes" },
+    ],
+  },
+]);
 
 export const NEIGHBOURHOOD_CATEGORY_BY_KEY = Object.freeze(
   Object.fromEntries(

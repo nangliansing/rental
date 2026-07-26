@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { haversineDistanceMeters } from "../../../shared/geo/index.js";
 
-const PUBLIC_TRANSPORT_STATIONS = JSON.parse(
+export const PUBLIC_TRANSPORT_STATIONS = JSON.parse(
   readFileSync(
     fileURLToPath(
       new URL("../data/public-transport.stations.json", import.meta.url),
@@ -11,6 +11,34 @@ const PUBLIC_TRANSPORT_STATIONS = JSON.parse(
     "utf8",
   ),
 );
+
+const STATIC_TRANSIT_MATCH_RADIUS_METERS = 150;
+
+export const findNearbyStaticTransitStation = ({
+  lat,
+  lng,
+  maxDistanceMeters = STATIC_TRANSIT_MATCH_RADIUS_METERS,
+}) => {
+  let nearestStation = null;
+  let nearestDistanceMeters = Number.POSITIVE_INFINITY;
+
+  for (const station of PUBLIC_TRANSPORT_STATIONS) {
+    const distanceMeters = haversineDistanceMeters(
+      { lat, lng },
+      { lat: station.lat, lng: station.lng },
+    );
+
+    if (
+      distanceMeters <= maxDistanceMeters &&
+      distanceMeters < nearestDistanceMeters
+    ) {
+      nearestStation = station;
+      nearestDistanceMeters = distanceMeters;
+    }
+  }
+
+  return nearestStation;
+};
 
 export const loadStaticTransitPlaces = ({ origin, fetchRadiusMeters }) =>
   PUBLIC_TRANSPORT_STATIONS.filter((station) => {
