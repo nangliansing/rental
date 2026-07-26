@@ -1,12 +1,11 @@
-import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import { MemoryRouter } from "react-router-dom"
+import { screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createSearchBuilding,
   createSearchListing,
 } from "@/test/fixtures/listings"
+import { renderWithProviders } from "@/test/renderWithProviders"
 
 import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuilding"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
@@ -29,6 +28,9 @@ vi.mock("@/features/buildings/components/BuildingSummaryCard", () => ({
   BuildingSummaryCard: ({ building }: { building: { name: string } }) => (
     <h1>{building.name}</h1>
   ),
+}))
+vi.mock("@/features/buildings/components/BuildingNeighbourhoodSection", () => ({
+  BuildingNeighbourhoodSection: () => null,
 }))
 vi.mock("@/features/listing/components/ListingDetailModal", () => ({
   ListingDetailModal: ({
@@ -59,11 +61,14 @@ describe("BuildingDetailPage", () => {
           pagination: { total: 1 },
         }],
       },
-      isLoading: false,
+      isPending: false,
       isError: false,
-      hasNextPage: false,
+      isFetching: false,
       isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      hasNextPage: false,
       fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
     } as never)
   })
 
@@ -90,21 +95,14 @@ describe("BuildingDetailPage", () => {
         }) as never,
     )
 
-    const user = userEvent.setup()
-    const { rerender } = render(
-      <MemoryRouter>
-        <BuildingDetailPage onBack={vi.fn()} />
-      </MemoryRouter>,
+    const { rerender, user } = renderWithProviders(
+      <BuildingDetailPage onBack={vi.fn()} />,
     )
 
     const preview = screen.getByRole("button", { name: "Open listing ฿14k" })
 
     await user.click(preview)
-    rerender(
-      <MemoryRouter>
-        <BuildingDetailPage onBack={vi.fn()} />
-      </MemoryRouter>,
-    )
+    rerender(<BuildingDetailPage onBack={vi.fn()} />)
 
     expect(
       screen.getByRole("dialog", { name: "Listing details" }),
@@ -112,11 +110,7 @@ describe("BuildingDetailPage", () => {
     expect(screen.getByText("Selected listing-1")).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Close details" }))
-    rerender(
-      <MemoryRouter>
-        <BuildingDetailPage onBack={vi.fn()} />
-      </MemoryRouter>,
-    )
+    rerender(<BuildingDetailPage onBack={vi.fn()} />)
 
     expect(screen.queryByRole("dialog", { name: "Listing details" })).not.toBeInTheDocument()
     expect(preview).toHaveFocus()
