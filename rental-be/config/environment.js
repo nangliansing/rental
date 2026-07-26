@@ -304,7 +304,7 @@ export const validateEnvironment = (env = process.env) => {
       globalMax: parseInteger(env, "RATE_LIMIT_GLOBAL_MAX", 300, 1, 100000, issues),
       readMax: parseInteger(env, "RATE_LIMIT_READ_MAX", 180, 1, 100000, issues),
       searchMax: parseInteger(env, "RATE_LIMIT_SEARCH_MAX", 60, 1, 100000, issues),
-      authMax: parseInteger(env, "RATE_LIMIT_AUTH_MAX", 10, 1, 100000, issues),
+      authMax: parseInteger(env, "RATE_LIMIT_AUTH_MAX", 30, 1, 100000, issues),
       mutationMax: parseInteger(env, "RATE_LIMIT_MUTATION_MAX", 100, 1, 100000, issues),
       sensitiveActionMax: parseInteger(
         env,

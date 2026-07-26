@@ -149,14 +149,14 @@ describe("HTTP security boundary", () => {
   test("applies the authentication policy before account lookup", async () => {
     await withServer({ RATE_LIMIT_AUTH_MAX: "2" }, async (baseUrl) => {
       const send = () =>
-        fetch(`${baseUrl}/api/v1/users/token/refresh`, {
+        fetch(`${baseUrl}/api/v1/users/login/google`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: "{}",
         });
 
-      assert.equal((await send()).status, 401);
-      assert.equal((await send()).status, 401);
+      assert.equal((await send()).status, 403);
+      assert.equal((await send()).status, 403);
       await expectRateLimited(await send());
     });
   });

@@ -18,11 +18,7 @@ router.post(
   requireTrustedOrigin,
   loginUserWithGoogleController,
 );
-router.post(
-  "/token/refresh",
-  authenticationRateLimit,
-  refreshAccessTokenController,
-);
+router.post("/token/refresh", refreshAccessTokenController);
 router.post("/logout", logoutController);
 
 router.get("/me", authenticate, getCurrentUserController);
