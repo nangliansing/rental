@@ -2,6 +2,7 @@ import { UserRound } from "lucide-react"
 import { useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
+import { AuthSignInSection } from "@/features/auth/components/AuthSignInSection"
 import { GoogleLoginPanel } from "@/features/auth/google"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useLogout } from "@/features/auth/hooks/useLogout"
@@ -43,14 +44,14 @@ export function ProfilePage() {
       {gate.isProfileLoading && <ProfilePageLoading />}
 
       {gate.showLogin && (
-        <div className="mx-auto flex min-h-[70vh] max-w-md items-center">
+        <AuthSignInSection className="min-h-[70vh]">
           <GoogleLoginPanel
             title="Continue to your profile"
             description="Sign in to manage your listings, saved places, and contact profile."
             redirectTo="/profile"
             icon={<UserRound className="h-6 w-6 text-slate-700" />}
           />
-        </div>
+        </AuthSignInSection>
       )}
 
       {!gate.isAuthLoading &&
