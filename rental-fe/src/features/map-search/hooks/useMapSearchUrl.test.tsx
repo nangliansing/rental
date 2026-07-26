@@ -14,6 +14,7 @@ const nearbyUrlState: MapSearchUrlState = {
   radiusMeters: 1_000,
   filters: DEFAULT_MAP_SEARCH_FILTERS,
   buildingId: null,
+  listingId: null,
 }
 
 function SearchParamsReader({
@@ -90,6 +91,7 @@ describe("useMapSearchUrl", () => {
       radiusMeters: 1_250,
       filters: { minRent: 2_000 },
       buildingId: "building-1",
+      listingId: null,
     })
 
     await waitFor(() => {
@@ -105,6 +107,19 @@ describe("useMapSearchUrl", () => {
 
     expect(result.current.searchPurpose).toBe("list")
     expect(result.current.isListingSearch).toBe(true)
+  })
+
+  it("derives the pending listing overlay from the URL", () => {
+    const { result } = renderUrlHook(
+      {
+        ...nearbyUrlState,
+        buildingId: "building-1",
+        listingId: "listing-1",
+      },
+      "/?search=nearby&lat=13.7653&lng=100.642&radius=1000&building=building-1&listing=listing-1",
+    )
+
+    expect(result.current.pendingListingId).toBe("listing-1")
   })
 
   it("clears the listing purpose parameter", async () => {

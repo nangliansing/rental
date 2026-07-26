@@ -37,6 +37,7 @@ describe("map search URL submission helpers", () => {
         radiusMeters: 750,
         filters: {},
         buildingId: null,
+        listingId: null,
       }),
     ).toMatchObject({
       searchSource: "nearby",
@@ -60,6 +61,7 @@ describe("map search URL submission helpers", () => {
         radiusMeters: 750,
         filters: {},
         buildingId: "building-1",
+        listingId: null,
       }),
     ).toMatchObject({
       searchSource: "area",
@@ -85,6 +87,7 @@ describe("map search URL submission helpers", () => {
         nearbyRadiusMeters: 1_000,
         filters: { minRent: 2_000 },
         buildingId: "building-1",
+        listingId: null,
       }),
     ).toEqual({
       source: "line",
@@ -97,6 +100,7 @@ describe("map search URL submission helpers", () => {
       radiusMeters: 500,
       filters: { minRent: 2_000 },
       buildingId: "building-1",
+      listingId: null,
     })
   })
 })

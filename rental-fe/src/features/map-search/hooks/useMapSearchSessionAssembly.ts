@@ -31,6 +31,8 @@ export type MapSearchSessionAssemblyCommands = Pick<
   | "onLineDistanceChange"
   | "onSearchLine"
   | "onBuildingSelect"
+  | "onListingSelect"
+  | "onListingClose"
   | "onSearchAgain"
   | "onExitListingSearch"
   | "onListExistingBuilding"
@@ -53,6 +55,7 @@ export type UseMapSearchSessionAssemblyInput = {
   activeSelectedBuilding: SearchBuilding | null
   hoveredBuildingId: string | null
   pendingBuildingId: string | null
+  pendingListingId: string | null
   isPendingBuildingUnresolved: boolean
   selectedPin: MapPosition | null
   nearbyRadiusMeters: number
@@ -92,6 +95,7 @@ export function useMapSearchSessionAssembly(
     activeSelectedBuilding,
     hoveredBuildingId,
     pendingBuildingId,
+    pendingListingId,
     isPendingBuildingUnresolved,
     selectedPin,
     nearbyRadiusMeters,
@@ -130,6 +134,8 @@ export function useMapSearchSessionAssembly(
     onLineDistanceChange,
     onSearchLine,
     onBuildingSelect,
+    onListingSelect,
+    onListingClose,
     onSearchAgain,
     onExitListingSearch,
     onListExistingBuilding,
@@ -257,6 +263,7 @@ export function useMapSearchSessionAssembly(
         activeSelectedBuilding === null && buildingSearch.isRefreshing,
       isBuildingSearchError: buildingSearch.isError,
       pendingBuildingId,
+      pendingListingId,
       isPendingBuildingUnresolved,
       onBuildingSelect,
       onBuildingHoverChange,
@@ -265,6 +272,8 @@ export function useMapSearchSessionAssembly(
       onExitListingSearch,
       onListExistingBuilding,
       onListNewBuilding,
+      onListingSelect,
+      onListingClose,
     }),
     [
       activeSelectedBuilding,
@@ -279,12 +288,15 @@ export function useMapSearchSessionAssembly(
       isPendingBuildingUnresolved,
       onBuildingHoverChange,
       onBuildingSelect,
+      onListingClose,
+      onListingSelect,
       onExitListingSearch,
       onFetchNextPage,
       onListExistingBuilding,
       onListNewBuilding,
       onSearchAgain,
       pendingBuildingId,
+      pendingListingId,
       resolvedSearchSource,
       searchStatus,
       selectedPin,

@@ -12,6 +12,7 @@ describe("map search URL state", () => {
       radiusMeters: 1_250,
       filters: { minRent: 4_000, isPetAllowed: true },
       buildingId: "building-1",
+      listingId: null,
     })
 
     expect(params.get("purpose")).toBe("list")
@@ -24,6 +25,7 @@ describe("map search URL state", () => {
       radiusMeters: 1_250,
       filters: { minRent: 4_000, isPetAllowed: true },
       buildingId: "building-1",
+      listingId: null,
     })
   })
 
@@ -40,6 +42,7 @@ describe("map search URL state", () => {
       radiusMeters: 1_000,
       filters: { minRent: 1_000 },
       buildingId: null,
+      listingId: null,
     })
   })
 
@@ -55,6 +58,7 @@ describe("map search URL state", () => {
       radiusMeters: 500,
       filters: {},
       buildingId: null,
+      listingId: null,
     })
 
     expect(parseMapSearchUrl(params, {})).toMatchObject({
@@ -65,6 +69,38 @@ describe("map search URL state", () => {
       ],
       radiusMeters: 500,
     })
+  })
+
+  it("round-trips building and listing overlay params", () => {
+    const params = writeMapSearchUrl(new URLSearchParams(), {
+      source: "area",
+      position: null,
+      bounds: {
+        northEast: { lat: 14, lng: 101 },
+        southWest: { lat: 13, lng: 100 },
+      },
+      linePoints: [],
+      radiusMeters: 1_000,
+      filters: {},
+      buildingId: "building-1",
+      listingId: "listing-1",
+    })
+
+    expect(params.get("building")).toBe("building-1")
+    expect(params.get("listing")).toBe("listing-1")
+    expect(parseMapSearchUrl(params, {})).toMatchObject({
+      buildingId: "building-1",
+      listingId: "listing-1",
+    })
+  })
+
+  it("drops listing params when building is missing", () => {
+    expect(
+      parseMapSearchUrl(
+        new URLSearchParams("listing=listing-1"),
+        {},
+      ).listingId,
+    ).toBeNull()
   })
 
   it("sanitizes unsupported filter properties", () => {

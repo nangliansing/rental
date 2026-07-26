@@ -41,6 +41,7 @@ function createCommandsInput(
       submittedFilters: { minRent: 1_000 },
       activeSelectedBuilding: null,
       pendingBuildingId: null,
+      pendingListingId: null,
       setSearchSource: vi.fn(),
       setSubmittedBounds: vi.fn(),
       setSubmittedNearbyPosition: vi.fn(),

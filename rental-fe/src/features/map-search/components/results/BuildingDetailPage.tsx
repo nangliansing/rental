@@ -1,5 +1,5 @@
 // src/features/map-search/components/results/BuildingDetailPage.tsx
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import type React from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
 
@@ -30,13 +30,15 @@ export function BuildingDetailPage({
   showInlineBack = true,
   onBack,
 }: BuildingDetailPageProps) {
-  const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const shouldRestoreFocusRef = useRef(false)
   const {
     selectedBuilding: building,
     buildingDetailFilters,
     isListingSearch,
+    pendingListingId,
+    onListingSelect,
+    onListingClose,
   } = useMapSearchResults()
 
   const listingsQuery = useSearchListingsInBuilding({
@@ -64,20 +66,20 @@ export function BuildingDetailPage({
     hasListings
 
   useEffect(() => {
-    if (selectedListingId || !shouldRestoreFocusRef.current) return
+    if (pendingListingId || !shouldRestoreFocusRef.current) return
 
     shouldRestoreFocusRef.current = false
     listingTriggerRef.current?.focus()
-  }, [selectedListingId])
+  }, [pendingListingId])
 
   const openListing = (listingId: string, trigger?: HTMLButtonElement) => {
     if (trigger) listingTriggerRef.current = trigger
-    setSelectedListingId(listingId)
+    onListingSelect(listingId)
   }
 
   const closeListing = () => {
     shouldRestoreFocusRef.current = true
-    setSelectedListingId(null)
+    onListingClose()
   }
 
   if (!building) return null
@@ -169,7 +171,7 @@ export function BuildingDetailPage({
       </div>
 
       <ListingDetailModal
-        listingId={selectedListingId}
+        listingId={pendingListingId}
         onClose={closeListing}
         onListingSelect={openListing}
         mobileBackLabel={building.name}

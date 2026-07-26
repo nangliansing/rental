@@ -24,6 +24,7 @@ const MAP_SEARCH_PARAMS = [
   "swLng",
   "filters",
   "building",
+  "listing",
 ] as const
 
 const NUMBER_FILTERS = [
@@ -58,6 +59,19 @@ export type MapSearchUrlState = {
   radiusMeters: number
   filters: MapSearchFilters
   buildingId: string | null
+  listingId: string | null
+}
+
+export function getMapSearchRestoreKey(state: MapSearchUrlState): string {
+  return JSON.stringify({
+    source: state.source,
+    bounds: state.bounds,
+    position: state.position,
+    linePoints: state.linePoints,
+    radiusMeters: state.radiusMeters,
+    filters: state.filters,
+    buildingId: state.buildingId,
+  })
 }
 
 export type CommittedMapSearchUrlState = Omit<
@@ -105,6 +119,7 @@ export function buildActiveMapSearchUrlState({
   nearbyRadiusMeters,
   filters,
   buildingId,
+  listingId = null,
 }: {
   searchSource: MapSearchUrlState["source"]
   submittedBounds: SearchBounds | null
@@ -114,6 +129,7 @@ export function buildActiveMapSearchUrlState({
   nearbyRadiusMeters: number
   filters: MapSearchFilters
   buildingId: string | null
+  listingId?: string | null
 }): MapSearchUrlState {
   return {
     source: searchSource,
@@ -124,6 +140,7 @@ export function buildActiveMapSearchUrlState({
       searchSource === "line" ? lineDistanceMeters : nearbyRadiusMeters,
     filters,
     buildingId,
+    listingId: buildingId ? listingId : null,
   }
 }
 
@@ -232,6 +249,8 @@ export function parseMapSearchUrl(
         }
       : null
   const bounds = isValidSearchBounds(rawBounds) ? rawBounds : null
+  const buildingId = params.get("building")?.trim() || null
+  const listingParam = params.get("listing")?.trim() || null
 
   return {
     source:
@@ -247,7 +266,8 @@ export function parseMapSearchUrl(
     linePoints,
     radiusMeters,
     filters: parseFilters(params, fallbackFilters),
-    buildingId: params.get("building")?.trim() || null,
+    buildingId,
+    listingId: buildingId && listingParam ? listingParam : null,
   }
 }
 
@@ -283,7 +303,10 @@ export function writeMapSearchUrl(
   if (Object.keys(state.filters).length > 0) {
     next.set("filters", JSON.stringify(state.filters))
   }
-  if (state.buildingId) next.set("building", state.buildingId)
+  if (state.buildingId) {
+    next.set("building", state.buildingId)
+    if (state.listingId) next.set("listing", state.listingId)
+  }
 
   return next
 }
