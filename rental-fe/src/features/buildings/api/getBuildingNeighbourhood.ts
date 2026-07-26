@@ -55,6 +55,8 @@ export type BuildingNeighbourhood = {
   source: "openstreetmap"
   summary: {
     all: number
+    truncated?: boolean
+    totalWithinRadius?: number
   } & Partial<Record<NeighbourhoodCategoryKey, number>>
   categories: NeighbourhoodCategory[]
   places: NeighbourhoodPlace[]
@@ -185,6 +187,16 @@ function parseNeighbourhoodSummary(value: unknown) {
   }
 
   const parsedSummary: BuildingNeighbourhood["summary"] = { all }
+
+  const truncated = summary.truncated
+  if (truncated === true) {
+    parsedSummary.truncated = true
+  }
+
+  const totalWithinRadius = readNumber(summary.totalWithinRadius)
+  if (totalWithinRadius != null) {
+    parsedSummary.totalWithinRadius = totalWithinRadius
+  }
 
   for (const key of NEIGHBOURHOOD_CATEGORY_KEYS) {
     const count = readNumber(summary[key])

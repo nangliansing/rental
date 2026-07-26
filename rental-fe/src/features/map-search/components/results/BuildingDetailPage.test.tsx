@@ -29,8 +29,8 @@ vi.mock("@/features/buildings/components/BuildingSummaryCard", () => ({
     <h1>{building.name}</h1>
   ),
 }))
-vi.mock("@/features/buildings/components/BuildingNeighbourhoodSection", () => ({
-  BuildingNeighbourhoodSection: () => null,
+vi.mock("@/features/buildings/neighbourhood-explore", () => ({
+  BuildingNeighbourhoodExploreModal: () => null,
 }))
 vi.mock("@/features/listing/components/ListingDetailModal", () => ({
   ListingDetailModal: ({

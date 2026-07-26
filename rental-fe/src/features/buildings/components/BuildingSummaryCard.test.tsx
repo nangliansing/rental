@@ -325,6 +325,32 @@ describe("BuildingSummaryCard", () => {
     })
   })
 
+  describe("explore neighbourhood", () => {
+    it("shows the explore button when a handler is provided", async () => {
+      const user = userEvent.setup()
+      const onExploreNeighbourhood = vi.fn()
+
+      renderCard({
+        building,
+        onExploreNeighbourhood,
+      })
+
+      await user.click(
+        screen.getByRole("button", { name: "Explore neighbourhood" }),
+      )
+
+      expect(onExploreNeighbourhood).toHaveBeenCalledOnce()
+    })
+
+    it("hides the explore button when no handler is provided", () => {
+      renderCard({ building })
+
+      expect(
+        screen.queryByRole("button", { name: "Explore neighbourhood" }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   describe("draft edit action", () => {
     it("supports a draft edit action without management actions", async () => {
       const user = userEvent.setup()

@@ -1,4 +1,4 @@
-import { Building2, MapPin } from "lucide-react"
+import { Building2, Compass, MapPin } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -26,6 +26,7 @@ type BuildingSummaryCardProps = {
   editDraftLabel?: string
   onListHere?: () => void
   onRequestEdit?: () => void
+  onExploreNeighbourhood?: (trigger: HTMLButtonElement) => void
 }
 
 const VARIANT_CLASS_NAME = {
@@ -46,6 +47,7 @@ export function BuildingSummaryCard({
   editDraftLabel = "Edit building",
   onListHere,
   onRequestEdit,
+  onExploreNeighbourhood,
 }: BuildingSummaryCardProps) {
   const summary = normalizeBuildingSummary(building, { showCoordinates })
   const {
@@ -80,18 +82,32 @@ export function BuildingSummaryCard({
           )}
         </div>
 
-        {shouldShowRent && (
-          <div className="shrink-0 text-right">
-            <p
-              className={cn(
-                "text-sm font-semibold",
-                summary.minRent == null ? "text-slate-400" : "text-slate-950",
-              )}
+        <div className="flex shrink-0 items-center gap-2">
+          {onExploreNeighbourhood && (
+            <button
+              type="button"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
+              aria-label="Explore neighbourhood"
+              onClick={(event) => onExploreNeighbourhood(event.currentTarget)}
             >
-              {formatBuildingSummaryRent(summary.minRent, summary.maxRent)}
-            </p>
-          </div>
-        )}
+              <Compass className="h-3.5 w-3.5" aria-hidden="true" />
+              Explore
+            </button>
+          )}
+
+          {shouldShowRent && (
+            <div className="text-right">
+              <p
+                className={cn(
+                  "text-sm font-semibold",
+                  summary.minRent == null ? "text-slate-400" : "text-slate-950",
+                )}
+              >
+                {formatBuildingSummaryRent(summary.minRent, summary.maxRent)}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {summary.address && (
