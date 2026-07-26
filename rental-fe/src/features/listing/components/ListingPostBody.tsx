@@ -8,10 +8,11 @@ import {
   Users,
   Zap,
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo } from "react"
 import type { ReactNode } from "react"
 
 import type { SearchListing } from "@/features/map-search/types"
+import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { ReviewTagBadges } from "@/shared/components/data-display/ReviewTagBadges"
 
 import { ListingPhotoCarousel } from "./ListingPhotoCarousel"
@@ -54,45 +55,6 @@ function DetailChip({
   )
 }
 
-function ExpandableText({ text }: { text: string }) {
-  const textRef = useRef<HTMLParagraphElement | null>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [canToggle, setCanToggle] = useState(false)
-
-  useEffect(() => {
-    const element = textRef.current
-    if (!element || isExpanded) return
-
-    setCanToggle(element.scrollHeight > element.clientHeight + 1)
-  }, [isExpanded, text])
-
-  return (
-    <div className="px-3 pb-2">
-      <p
-        ref={textRef}
-        className={
-          isExpanded
-            ? "text-sm leading-5 text-slate-700"
-            : "line-clamp-2 text-sm leading-5 text-slate-700"
-        }
-      >
-        {text}
-      </p>
-
-      {canToggle && (
-        <button
-          type="button"
-          className="mt-0.5 text-sm font-semibold text-slate-950"
-          onClick={() => setIsExpanded((current) => !current)}
-          aria-expanded={isExpanded}
-        >
-          {isExpanded ? "less" : "more"}
-        </button>
-      )}
-    </div>
-  )
-}
-
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : ""
 }
@@ -120,7 +82,7 @@ export function ListingPostBody({
     () => getSortedListingPhotos(listing.media),
     [listing.media],
   )
-  const description = normalizeText(listing.description)
+  const description = listing.description
   const facilities = normalizeFacilities(listing.facilities)
   const occupancy = normalizeOccupancy(listing.occupancy)
   const kitchenType = normalizeText(listing.kitchenType)
@@ -128,7 +90,11 @@ export function ListingPostBody({
 
   return (
     <>
-      {description && <ExpandableText text={description} />}
+      <ExpandableFormattedText
+        text={description}
+        className="px-3 pb-2"
+        textClassName="leading-5"
+      />
 
       <div className="relative">
         <ListingPhotoCarousel photos={photos} />

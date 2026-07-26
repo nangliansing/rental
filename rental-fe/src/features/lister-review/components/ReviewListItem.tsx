@@ -15,6 +15,7 @@ import {
 } from "@/features/review-report"
 import { cn } from "@/lib/utils"
 import { Avatar } from "@/shared/components/data-display/Avatar"
+import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { ConfirmationDialog } from "@/shared/components/dialogs/ConfirmationDialog"
 
 import {
@@ -158,11 +159,11 @@ export function ReviewListItem({
             </div>
           ) : (
             <>
-              {review.comment && (
-                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
-                  {review.comment}
-                </p>
-              )}
+              <ExpandableFormattedText
+                text={review.comment}
+                className="mt-3"
+                collapsedLines={4}
+              />
               {review.tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {review.tags.map((tag) => (

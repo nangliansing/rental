@@ -8,6 +8,7 @@ import {
 import { ListingPhotoCarousel } from "@/features/listing/components/ListingPhotoCarousel"
 import type { UploadedMedia } from "@/features/uploads"
 import { cn } from "@/lib/utils"
+import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 
 import { AdminChipList, AdminStatusChip } from "./AdminChipList"
 import { AdminInfoRow } from "./AdminInfoRow"
@@ -139,11 +140,12 @@ export function AdminListingCard({
           )}
         </div>
 
-        {listing.description && (
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            {listing.description}
-          </p>
-        )}
+        <ExpandableFormattedText
+          text={listing.description}
+          className="mt-4"
+          textClassName="text-slate-600"
+          collapsedLines={4}
+        />
 
         <AdminChipList
           label="Room facilities"
