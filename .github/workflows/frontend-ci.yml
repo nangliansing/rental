@@ -7,10 +7,6 @@ on:
       - "package.json"
       - ".github/workflows/frontend-ci.yml"
   pull_request:
-    paths:
-      - "rental-fe/**"
-      - "package.json"
-      - ".github/workflows/frontend-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,8 +31,32 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Detect frontend changes
+        id: changes
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if git diff --name-only \
+              "${{ github.event.pull_request.base.sha }}" \
+              "${{ github.event.pull_request.head.sha }}" \
+              | grep -Eq '^(rental-fe/|package\.json|\.github/workflows/frontend-ci\.yml)'; then
+              echo "frontend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "frontend=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip frontend validation
+        if: steps.changes.outputs.frontend != 'true'
+        working-directory: .
+        run: echo "No frontend changes in this pull request."
 
       - name: Set up Node.js
+        if: steps.changes.outputs.frontend == 'true'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
@@ -44,10 +64,13 @@ jobs:
           cache-dependency-path: rental-fe/package-lock.json
 
       - name: Install locked dependencies
+        if: steps.changes.outputs.frontend == 'true'
         run: npm ci
 
       - name: Run unit tests
+        if: steps.changes.outputs.frontend == 'true'
         run: npm test
 
       - name: Build production bundle
+        if: steps.changes.outputs.frontend == 'true'
         run: npm run build
