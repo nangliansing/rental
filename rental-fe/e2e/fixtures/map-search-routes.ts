@@ -174,16 +174,34 @@ export async function installMapSearchApiMocks(
 }
 
 export async function waitForMapReady(page: Page) {
-  await page.getByText("Loading map...").waitFor({
-    state: "hidden",
-    timeout: 20_000,
-  })
-  await page.getByText("Map temporarily unavailable").waitFor({
-    state: "hidden",
-    timeout: 5_000,
-  })
-  await page.locator(".gm-style").first().waitFor({
-    state: "visible",
-    timeout: 20_000,
-  })
+  const mapCanvas = page.locator(".gm-style").first()
+  const maxAttempts = 2
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    await page.getByText("Loading map...").waitFor({
+      state: "hidden",
+      timeout: 20_000,
+    })
+
+    const unavailable = page.getByText("Map temporarily unavailable")
+    const mapVisible = await mapCanvas
+      .waitFor({ state: "visible", timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (mapVisible && !(await unavailable.isVisible().catch(() => false))) {
+      return
+    }
+
+    if (attempt === maxAttempts) {
+      if (await unavailable.isVisible().catch(() => false)) {
+        throw new Error("Google Maps failed to load after retries.")
+      }
+
+      await mapCanvas.waitFor({ state: "visible", timeout: 1_000 })
+      return
+    }
+
+    await page.reload({ waitUntil: "domcontentloaded" })
+  }
 }

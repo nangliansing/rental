@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
+  useNavigate,
   useNavigationType,
   useSearchParams,
 } from "react-router-dom"
@@ -15,6 +16,7 @@ import type { LineStringGeometry, MapPosition } from "../types"
 import { useEventCallback } from "./useEventCallback"
 import {
   createSubmittedSearchStateFromUrl,
+  getMapSearchRestoreKey,
   linePointsToGeometry,
   parseMapSearchUrl,
   writeMapSearchUrl,
@@ -35,6 +37,7 @@ export function useMapSearchUrl({
   onPopRestore,
 }: UseMapSearchUrlOptions) {
   const navigationType = useNavigationType()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSubmittedState = useMemo(
     () => createSubmittedSearchStateFromUrl(initialUrlState),
@@ -75,6 +78,11 @@ export function useMapSearchUrl({
   const [pendingBuildingId, setPendingBuildingId] = useState(
     initialSubmittedState.pendingBuildingId,
   )
+  const pendingListingId = useMemo(
+    () =>
+      parseMapSearchUrl(searchParams, DEFAULT_MAP_SEARCH_FILTERS).listingId,
+    [searchParams],
+  )
   const [cameraRestoreVersion, setCameraRestoreVersion] = useState(
     initialSubmittedState.cameraRestoreVersion,
   )
@@ -82,28 +90,37 @@ export function useMapSearchUrl({
   const lastRestoredUrlRef = useRef(searchParams.toString())
   const onPopRestoreRef = useEventCallback(onPopRestore)
 
-  const applySubmittedSearchState = useCallback((state: MapSearchUrlState) => {
-    const submitted = createSubmittedSearchStateFromUrl(state)
-    setSearchSource(submitted.searchSource)
-    setSubmittedBounds(submitted.submittedBounds)
-    setSubmittedNearbyPosition(submitted.submittedNearbyPosition)
-    setNearbyRadiusMeters(submitted.nearbyRadiusMeters)
-    setLineDistanceMeters(submitted.lineDistanceMeters)
-    setLinePoints(submitted.linePoints)
-    setSubmittedLineGeometry(submitted.submittedLineGeometry)
-    setPendingBuildingId(submitted.pendingBuildingId)
-    setCameraRestoreVersion((version) => version + 1)
-  }, [])
+  const applySubmittedSearchState = useCallback(
+    (state: MapSearchUrlState, restoreCamera = true) => {
+      const submitted = createSubmittedSearchStateFromUrl(state)
+      setSearchSource(submitted.searchSource)
+      setSubmittedBounds(submitted.submittedBounds)
+      setSubmittedNearbyPosition(submitted.submittedNearbyPosition)
+      setNearbyRadiusMeters(submitted.nearbyRadiusMeters)
+      setLineDistanceMeters(submitted.lineDistanceMeters)
+      setLinePoints(submitted.linePoints)
+      setSubmittedLineGeometry(submitted.submittedLineGeometry)
+      setPendingBuildingId(submitted.pendingBuildingId)
+      if (restoreCamera) {
+        setCameraRestoreVersion((version) => version + 1)
+      }
+    },
+    [],
+  )
 
   const updateSearchUrl = useCallback(
     (state: MapSearchUrlState, replace = false) => {
       const next = writeMapSearchUrl(searchParams, state)
-      if (next.toString() !== searchParams.toString()) {
-        lastRestoredUrlRef.current = next.toString()
-        setSearchParams(next, { replace })
-      }
+      const nextString = next.toString()
+      if (nextString === searchParams.toString()) return
+
+      lastRestoredUrlRef.current = nextString
+      navigate(
+        { search: nextString ? `?${nextString}` : "" },
+        { replace },
+      )
     },
-    [searchParams, setSearchParams],
+    [navigate, searchParams],
   )
 
   const clearListingPurpose = useCallback(() => {
@@ -118,15 +135,23 @@ export function useMapSearchUrl({
     if (navigationType !== "POP") return
     const urlKey = searchParams.toString()
     if (lastRestoredUrlRef.current === urlKey) return
-    lastRestoredUrlRef.current = urlKey
 
+    const previousState = parseMapSearchUrl(
+      new URLSearchParams(lastRestoredUrlRef.current),
+      DEFAULT_MAP_SEARCH_FILTERS,
+    )
     const restored = parseMapSearchUrl(
       searchParams,
       DEFAULT_MAP_SEARCH_FILTERS,
     )
+    const restoreCamera =
+      getMapSearchRestoreKey(previousState) !==
+      getMapSearchRestoreKey(restored)
+
+    lastRestoredUrlRef.current = urlKey
 
     isHydratingUrlRef.current = true
-    applySubmittedSearchState(restored)
+    applySubmittedSearchState(restored, restoreCamera)
     onPopRestoreRef(restored)
     isHydratingUrlRef.current = false
   }, [
@@ -161,6 +186,7 @@ export function useMapSearchUrl({
     submittedLinePoints,
     pendingBuildingId,
     setPendingBuildingId,
+    pendingListingId,
     cameraRestoreVersion,
     updateSearchUrl,
     clearListingPurpose,

@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef } from "react"
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react"
 
 import {
+  isTopStackEntry,
+  registerStackEntry,
+  requestStackClose,
+} from "@/shared/utils/modalHistoryStack"
+import {
   ensureFocusTracking,
   getFocusRestoreTarget,
 } from "@/shared/utils/focusHistory"
@@ -15,7 +20,6 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",")
 
-const modalStack: symbol[] = []
 let bodyScrollLockCount = 0
 let previousBodyOverflow = ""
 function lockBodyScroll() {
@@ -48,6 +52,7 @@ type UseAccessibleModalOptions = {
   onClose: () => void
   closeOnEscape?: boolean
   lockScroll?: boolean
+  trackBrowserHistory?: boolean
   initialFocusRef?: RefObject<HTMLElement | null>
 }
 
@@ -56,12 +61,13 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
   onClose,
   closeOnEscape = true,
   lockScroll = true,
+  trackBrowserHistory = true,
   initialFocusRef,
 }: UseAccessibleModalOptions) {
   ensureFocusTracking()
   const containerElementRef = useRef<T | null>(null)
   const onCloseRef = useRef(onClose)
-  const tokenRef = useRef(Symbol("modal"))
+  const tokenRef = useRef(Symbol("accessible-modal"))
   const restoreFocusRef = useRef<HTMLElement | null>(null)
 
   const containerRef = useCallback((element: T | null) => {
@@ -84,11 +90,16 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
     if (!isOpen) return undefined
 
     const token = tokenRef.current
-    modalStack.push(token)
     if (lockScroll) lockBodyScroll()
 
+    const unregister = registerStackEntry({
+      token,
+      onClose: () => onCloseRef.current(),
+      tracksHistory: trackBrowserHistory,
+    })
+
     queueMicrotask(() => {
-      if (modalStack.at(-1) !== token) return
+      if (!isTopStackEntry(token)) return
 
       const focusTarget =
         initialFocusRef?.current ??
@@ -99,11 +110,11 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
     })
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (modalStack.at(-1) !== token) return
+      if (!isTopStackEntry(token)) return
 
       if (event.key === "Escape") {
         event.stopImmediatePropagation()
-        if (closeOnEscape) onCloseRef.current()
+        if (closeOnEscape) requestStackClose(token)
         return
       }
 
@@ -131,8 +142,7 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
-      const tokenIndex = modalStack.lastIndexOf(token)
-      if (tokenIndex >= 0) modalStack.splice(tokenIndex, 1)
+      unregister()
       if (lockScroll) unlockBodyScroll()
 
       const restoreTarget = restoreFocusRef.current
@@ -140,20 +150,26 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
         restoreTarget.focus()
       }
     }
-  }, [closeOnEscape, initialFocusRef, isOpen, lockScroll])
+  }, [
+    closeOnEscape,
+    initialFocusRef,
+    isOpen,
+    lockScroll,
+    trackBrowserHistory,
+  ])
 
   const onBackdropClick = useCallback(
     (event: ReactMouseEvent<HTMLElement>) => {
       if (
         isOpen &&
         event.target === event.currentTarget &&
-        modalStack.at(-1) === tokenRef.current
+        isTopStackEntry(tokenRef.current)
       ) {
-        onCloseRef.current()
+        requestStackClose(tokenRef.current)
       }
     },
     [isOpen],
   )
 
-  return { containerRef, onBackdropClick }
+  return { containerRef, onBackdropClick, requestClose: () => requestStackClose(tokenRef.current) }
 }

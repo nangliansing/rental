@@ -86,9 +86,12 @@ const sessionDefaults = {
   onSearchAgain: vi.fn(),
   onExitListingSearch: vi.fn(),
   onBuildingSelect: vi.fn(),
+  onListingSelect: vi.fn(),
+  onListingClose: vi.fn(),
   onBuildingHoverChange: vi.fn(),
   onListNewBuilding: vi.fn(),
   pendingBuildingId: null,
+  pendingListingId: null,
   isPendingBuildingUnresolved: false,
 }
 

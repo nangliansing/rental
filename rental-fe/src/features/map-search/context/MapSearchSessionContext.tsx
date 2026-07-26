@@ -41,6 +41,7 @@ export type MapSearchSessionContextValue = {
   isRefreshingBuildings: boolean
   isBuildingSearchError: boolean
   pendingBuildingId: string | null
+  pendingListingId: string | null
   isPendingBuildingUnresolved: boolean
   onPlaceFound: (place: SearchedPlace) => void
   onSearchArea: (bounds: SearchBounds) => void
@@ -57,6 +58,8 @@ export type MapSearchSessionContextValue = {
   onLineDistanceChange: (distanceMeters: number) => void
   onSearchLine: () => void
   onBuildingSelect: (building: SearchBuilding | null) => void
+  onListingSelect: (listingId: string) => void
+  onListingClose: () => void
   onBuildingHoverChange: (buildingId: string | null) => void
   onPlaceSearchOpenChange: (isOpen: boolean) => void
   onFetchNextPage: () => void
@@ -129,8 +132,11 @@ export type MapSearchResultsContextValue = Pick<
   | "isRefreshingBuildings"
   | "isBuildingSearchError"
   | "pendingBuildingId"
+  | "pendingListingId"
   | "isPendingBuildingUnresolved"
   | "onBuildingSelect"
+  | "onListingSelect"
+  | "onListingClose"
   | "onBuildingHoverChange"
   | "onFetchNextPage"
   | "onSearchAgain"

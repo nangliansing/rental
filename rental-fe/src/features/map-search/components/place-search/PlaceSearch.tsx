@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { cn } from "@/lib/utils"
+import { useBrowserBackDismiss } from "@/shared/hooks/useBrowserBackDismiss"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchPlace } from "../../context/MapSearchSessionContext"
 import {
@@ -93,12 +94,26 @@ export const PlaceSearch = memo(function PlaceSearch() {
     mobileSearchButtonRef.current?.focus()
   }, [isMobileSearchOpen])
 
-  const closeSearchUi = () => {
+  const closeSearchUiState = () => {
     cancelPendingSearch()
     shouldRestoreMobileFocusRef.current = isMobileSearchOpen
     setIsMobileSearchOpen(false)
     setDesktopSuggestionsOpen(false)
     onPlaceSearchOpenChange(false)
+  }
+
+  const dismissMobileSearch = useBrowserBackDismiss(
+    isMobileSearchOpen,
+    closeSearchUiState,
+  )
+
+  const closeSearchUi = () => {
+    if (isMobileSearchOpen) {
+      dismissMobileSearch()
+      return
+    }
+
+    closeSearchUiState()
   }
 
   const searchPlaces = async (value: string) => {

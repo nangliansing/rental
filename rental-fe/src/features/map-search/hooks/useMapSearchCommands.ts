@@ -44,6 +44,7 @@ type UseMapSearchCommandsInput = {
   submittedFilters: MapSearchFilters
   activeSelectedBuilding: SearchBuilding | null
   pendingBuildingId: string | null
+  pendingListingId: string | null
   setSearchSource: (source: MapSearchSource | null) => void
   setSubmittedBounds: (bounds: SearchBounds | null) => void
   setSubmittedNearbyPosition: (position: MapPosition | null) => void
@@ -73,6 +74,7 @@ function buildCurrentSearchUrlState({
   nearbyRadiusMeters,
   submittedFilters,
   buildingId,
+  listingId = null,
 }: Pick<
   UseMapSearchCommandsInput,
   | "searchSource"
@@ -82,7 +84,7 @@ function buildCurrentSearchUrlState({
   | "lineDistanceMeters"
   | "nearbyRadiusMeters"
   | "submittedFilters"
-> & { buildingId: string | null }) {
+> & { buildingId: string | null; listingId?: string | null }) {
   return buildActiveMapSearchUrlState({
     searchSource,
     submittedBounds,
@@ -92,6 +94,7 @@ function buildCurrentSearchUrlState({
     nearbyRadiusMeters,
     filters: submittedFilters,
     buildingId,
+    listingId,
   })
 }
 
@@ -109,6 +112,8 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
     linePoints,
     submittedFilters,
     activeSelectedBuilding,
+    pendingBuildingId,
+    pendingListingId,
     setSearchSource,
     setSubmittedBounds,
     setSubmittedNearbyPosition,
@@ -148,6 +153,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
       radiusMeters: nearbyRadiusMeters,
       filters: submittedFilters,
       buildingId: null,
+      listingId: null,
     })
   }, [
     clearBuildingSelection,
@@ -199,6 +205,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
         linePoints: [],
         radiusMeters: nearbyRadiusMeters,
         buildingId: null,
+        listingId: null,
       })
     },
     [commitBuildingSearch, nearbyRadiusMeters, setSubmittedBounds],
@@ -216,6 +223,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
         linePoints: [],
         radiusMeters: nearbyRadiusMeters,
         buildingId: null,
+        listingId: null,
       })
     },
     [commitBuildingSearch, nearbyRadiusMeters, selectedPin, setSubmittedNearbyPosition],
@@ -278,6 +286,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
       linePoints,
       radiusMeters: lineDistanceMeters,
       buildingId: null,
+      listingId: null,
     })
   }, [
     commitBuildingSearch,
@@ -362,6 +371,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
         radiusMeters: nearbyRadiusMeters,
         filters: submittedFilters,
         buildingId: null,
+        listingId: null,
       })
     }
   }, [
@@ -414,6 +424,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
           nearbyRadiusMeters,
           submittedFilters,
           buildingId: building?._id ?? null,
+          listingId: null,
         }),
       )
     },
@@ -432,6 +443,45 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
       updateSearchUrl,
     ],
   )
+
+  const handleListingSelect = useCallback(
+    (listingId: string) => {
+      const buildingId = activeSelectedBuilding?._id ?? pendingBuildingId
+      if (!buildingId) return
+
+      updateSearchUrl(
+        buildCurrentSearchUrlState({
+          searchSource,
+          submittedBounds,
+          submittedNearbyPosition,
+          submittedLinePoints,
+          lineDistanceMeters,
+          nearbyRadiusMeters,
+          submittedFilters,
+          buildingId,
+          listingId,
+        }),
+        false,
+      )
+    },
+    [
+      activeSelectedBuilding,
+      lineDistanceMeters,
+      nearbyRadiusMeters,
+      pendingBuildingId,
+      searchSource,
+      submittedBounds,
+      submittedFilters,
+      submittedLinePoints,
+      submittedNearbyPosition,
+      updateSearchUrl,
+    ],
+  )
+
+  const handleListingClose = useCallback(() => {
+    if (!pendingListingId) return
+    navigate(-1)
+  }, [navigate, pendingListingId])
 
   const handleSearchAgain = useCallback(() => {
     if (searchSource === "nearby" && submittedNearbyPosition) {
@@ -454,6 +504,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
         linePoints: submittedLinePoints,
         radiusMeters: lineDistanceMeters,
         buildingId: null,
+        listingId: null,
       })
       void refetchActiveSearch()
       return
@@ -502,6 +553,8 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
     onLineDistanceChange: useEventCallback(handleLineDistanceChange),
     onClearPin: useEventCallback(handleClearPin),
     onBuildingSelect: useEventCallback(handleBuildingSelect),
+    onListingSelect: useEventCallback(handleListingSelect),
+    onListingClose: useEventCallback(handleListingClose),
     onSearchAgain: useEventCallback(handleSearchAgain),
     onExitListingSearch: useEventCallback(handleExitListingSearch),
     onListExistingBuilding: useEventCallback(handleListExistingBuilding),

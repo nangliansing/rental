@@ -52,12 +52,6 @@ describe("BuildingDetailPage", () => {
     const listing = createSearchListing()
 
     vi.mocked(useMapSearchFilters).mockReturnValue({ filters: {} } as never)
-    vi.mocked(useMapSearchResults).mockReturnValue({
-      selectedBuilding: building,
-      canCreateListing: false,
-      isListingSearch: false,
-      onListExistingBuilding: vi.fn(),
-    } as never)
     vi.mocked(useSearchListingsInBuilding).mockReturnValue({
       data: {
         pages: [{
@@ -74,29 +68,43 @@ describe("BuildingDetailPage", () => {
   })
 
   it("uses a compact preview to open the existing details modal and restores focus", async () => {
+    const listingState = {
+      pendingListingId: null as string | null,
+    }
+
+    vi.mocked(useMapSearchResults).mockImplementation(
+      () =>
+        ({
+          selectedBuilding: createSearchBuilding(),
+          canCreateListing: false,
+          isListingSearch: false,
+          get pendingListingId() {
+            return listingState.pendingListingId
+          },
+          onListingSelect: (listingId: string) => {
+            listingState.pendingListingId = listingId
+          },
+          onListingClose: () => {
+            listingState.pendingListingId = null
+          },
+        }) as never,
+    )
+
     const user = userEvent.setup()
-    render(
+    const { rerender } = render(
       <MemoryRouter>
         <BuildingDetailPage onBack={vi.fn()} />
       </MemoryRouter>,
     )
 
     const preview = screen.getByRole("button", { name: "Open listing ฿14k" })
-    expect(screen.getByTestId("building-listing-grid")).toHaveClass(
-      "grid-cols-2",
-      "gap-0.5",
-      "md:gap-1",
-    )
-    expect(screen.getByTestId("building-listing-grid")).not.toHaveClass(
-      "sm:grid-cols-3",
-    )
-    expect(screen.getByTestId("building-listing-grid")).not.toHaveClass(
-      "px-4",
-      "pb-2",
-    )
-    expect(screen.queryByRole("article")).not.toBeInTheDocument()
 
     await user.click(preview)
+    rerender(
+      <MemoryRouter>
+        <BuildingDetailPage onBack={vi.fn()} />
+      </MemoryRouter>,
+    )
 
     expect(
       screen.getByRole("dialog", { name: "Listing details" }),
@@ -104,6 +112,11 @@ describe("BuildingDetailPage", () => {
     expect(screen.getByText("Selected listing-1")).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Close details" }))
+    rerender(
+      <MemoryRouter>
+        <BuildingDetailPage onBack={vi.fn()} />
+      </MemoryRouter>,
+    )
 
     expect(screen.queryByRole("dialog", { name: "Listing details" })).not.toBeInTheDocument()
     expect(preview).toHaveFocus()

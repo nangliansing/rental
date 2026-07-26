@@ -57,6 +57,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
     filterState.applyFilters(restored.filters)
     commitFilters("building-list", restored.filters)
     commitFilters("building-detail", restored.filters)
+    setSelectedBuilding(null)
     if (restored.position) {
       mapInteraction.enterManualPinMode(restored.position)
     } else {
@@ -84,6 +85,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
     submittedLinePoints,
     pendingBuildingId,
     setPendingBuildingId,
+    pendingListingId,
     cameraRestoreVersion,
     updateSearchUrl,
     clearListingPurpose,
@@ -114,6 +116,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
             nearbyRadiusMeters,
             filters,
             buildingId: selectedBuilding?._id ?? pendingBuildingId,
+            listingId: pendingListingId,
           }),
           true,
         )
@@ -128,6 +131,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
       searchSource,
       selectedBuilding,
       pendingBuildingId,
+      pendingListingId,
       submittedBounds,
       submittedNearbyPosition,
       updateSearchUrl,
@@ -225,6 +229,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
     submittedFilters,
     activeSelectedBuilding,
     pendingBuildingId,
+    pendingListingId,
     setSearchSource,
     setSubmittedBounds,
     setSubmittedNearbyPosition,
@@ -255,6 +260,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
     activeSelectedBuilding,
     hoveredBuildingId,
     pendingBuildingId,
+    pendingListingId,
     isPendingBuildingUnresolved,
     selectedPin,
     nearbyRadiusMeters,
@@ -287,6 +293,8 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
       onLineDistanceChange: commands.onLineDistanceChange,
       onSearchLine: commands.onSearchLine,
       onBuildingSelect: commands.onBuildingSelect,
+      onListingSelect: commands.onListingSelect,
+      onListingClose: commands.onListingClose,
       onSearchAgain: commands.onSearchAgain,
       onExitListingSearch: commands.onExitListingSearch,
       onListExistingBuilding: commands.onListExistingBuilding,
