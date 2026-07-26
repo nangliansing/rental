@@ -15,6 +15,7 @@ import { io, type Socket } from "socket.io-client"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { getAccessToken } from "@/lib/api-client"
+import { getSocketUrl } from "@/lib/public-env"
 
 import {
   getMyNotifications,
@@ -41,7 +42,6 @@ type ServerToClientEvents = {
 
 type ClientToServerEvents = Record<string, never>
 
-const socketUrl = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000"
 const notificationQueryKey = queryKeys.notifications.me
 const notificationPageSize = 20
 
@@ -119,8 +119,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = getAccessToken()
+    const socketUrl = getSocketUrl()
 
-    if (!shouldUseNotifications || !token) {
+    if (!shouldUseNotifications || !token || !socketUrl) {
       socketRef.current?.disconnect()
       socketRef.current = null
       deferStateUpdate(() => {
