@@ -29,6 +29,7 @@ import {
 } from "@/features/pending-post"
 import { cn } from "@/lib/utils"
 import { ModalPortal } from "@/shared/components/ModalPortal"
+import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 import {
@@ -252,11 +253,11 @@ export function PendingPostDetailOverlay({
                     />
                   </div>
 
-                  {listing.description && (
-                    <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-600">
-                      {listing.description}
-                    </p>
-                  )}
+                  <ExpandableFormattedText
+                    text={listing.description}
+                    className="mt-4"
+                    collapsedLines={6}
+                  />
                 </section>
 
                 {building && (

@@ -1,6 +1,7 @@
 import { Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 
 import {
   AdminDetailPanel as DetailPanel,
@@ -146,9 +147,10 @@ export function ReviewReportDetail({
             </div>
 
             {review.comment ? (
-              <p className="whitespace-pre-line text-sm leading-6 text-slate-700">
-                {review.comment}
-              </p>
+              <ExpandableFormattedText
+                text={review.comment}
+                collapsedLines={6}
+              />
             ) : (
               <p className="text-sm text-slate-500">No written comment.</p>
             )}

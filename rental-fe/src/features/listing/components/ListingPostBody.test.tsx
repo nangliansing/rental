@@ -54,6 +54,17 @@ describe("ListingPostBody", () => {
     expect(screen.getByText(/month with electricity and water/)).toBeInTheDocument()
   })
 
+  it("renders multiline descriptions with preserved formatting", () => {
+    const listing = createSearchListing({
+      description: "Line one\n\nLine two with extra detail",
+    })
+
+    render(<ListingPostBody listing={listing} />)
+
+    expect(screen.getByText(/Line one/)).toHaveClass("whitespace-pre-wrap")
+    expect(screen.getByText(/Line one/).textContent).toContain("Line two")
+  })
+
   it("keeps review badges visible after the carousel photo loads", async () => {
     const onReviewsRequest = vi.fn()
     const listing = createSearchListing({
