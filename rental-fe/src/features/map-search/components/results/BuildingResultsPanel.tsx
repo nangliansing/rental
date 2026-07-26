@@ -15,6 +15,7 @@ import {
 import type { SearchBuilding } from "../../types"
 import { FilterBar } from "../filters/FilterBar"
 import { FilterConfigPage } from "../filters/FilterConfigPage"
+import { BuildingDetailSessionProvider } from "../../context/BuildingDetailSessionContext"
 import { BuildingDetailPage } from "./BuildingDetailPage"
 import { BuildingListPage } from "./BuildingListPage"
 import { SearchStateMessage } from "./SearchStateMessage"
@@ -478,7 +479,7 @@ export function BuildingResultsPanel() {
   }
 
   return (
-    <>
+    <BuildingDetailSessionProvider>
       <MapSearchResultsAnnouncement
         status={searchStatus}
         source={searchSource}
@@ -527,6 +528,6 @@ export function BuildingResultsPanel() {
           {renderContent(desktopScrollRootRef, true, true)}
         </div>
       </aside>
-    </>
+    </BuildingDetailSessionProvider>
   )
 }

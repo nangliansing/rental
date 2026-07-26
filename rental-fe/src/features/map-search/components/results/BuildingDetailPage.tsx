@@ -2,12 +2,8 @@ import { useEffect, useMemo, useRef } from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
 import type React from "react"
 
-import {
-  BuildingNeighbourhoodExploreModal,
-  useNeighbourhoodExploreDialog,
-} from "@/features/buildings/neighbourhood-explore"
 import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
-import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
+import { useBuildingDetailSession } from "../../context/BuildingDetailSessionContext"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
 import {
@@ -34,15 +30,13 @@ export function BuildingDetailPage({
   onBack,
 }: BuildingDetailPageProps) {
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const shouldRestoreFocusRef = useRef(false)
-  const exploreNeighbourhood = useNeighbourhoodExploreDialog()
+  const exploreNeighbourhood = useBuildingDetailSession()
   const {
     selectedBuilding: building,
     buildingDetailFilters,
     isListingSearch,
     pendingListingId,
     onListingSelect,
-    onListingClose,
   } = useMapSearchResults()
 
   const listingsQuery = useSearchListingsInBuilding({
@@ -70,20 +64,14 @@ export function BuildingDetailPage({
     hasListings
 
   useEffect(() => {
-    if (pendingListingId || !shouldRestoreFocusRef.current) return
+    if (pendingListingId || !listingTriggerRef.current) return
 
-    shouldRestoreFocusRef.current = false
-    listingTriggerRef.current?.focus()
+    listingTriggerRef.current.focus()
   }, [pendingListingId])
 
   const openListing = (listingId: string, trigger?: HTMLButtonElement) => {
     if (trigger) listingTriggerRef.current = trigger
     onListingSelect(listingId)
-  }
-
-  const closeListing = () => {
-    shouldRestoreFocusRef.current = true
-    onListingClose()
   }
 
   if (!building) return null
@@ -175,20 +163,6 @@ export function BuildingDetailPage({
           </>
         )}
       </div>
-
-      <ListingDetailModal
-        listingId={pendingListingId}
-        onClose={closeListing}
-        onListingSelect={openListing}
-        trackBrowserHistory={false}
-      />
-
-      <BuildingNeighbourhoodExploreModal
-        buildingId={building._id}
-        isOpen={exploreNeighbourhood.isOpen}
-        onClose={exploreNeighbourhood.close}
-        trackBrowserHistory={false}
-      />
     </>
   )
 }
