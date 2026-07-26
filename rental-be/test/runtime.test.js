@@ -56,6 +56,21 @@ describe("runtime health", () => {
 });
 
 describe("graceful shutdown", () => {
+  test("binds the HTTP server on 0.0.0.0", async () => {
+    const server = createServer((req, res) => res.end("OK"));
+
+    await listen(server, 0);
+
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    assert.notEqual(address, null);
+    assert.equal(address.address, "0.0.0.0");
+
+    await new Promise((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  });
+
   test("is idempotent and closes transports before dependencies", async () => {
     const events = [];
     const server = createServer((req, res) => res.end("OK"));
