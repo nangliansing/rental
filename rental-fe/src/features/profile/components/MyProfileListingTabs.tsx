@@ -10,11 +10,12 @@ import {
 
 import { SegmentedTabs } from "@/shared/components/inputs/SegmentedTabs"
 
-import {
-    PROFILE_TAB_CONTROLS_CENTERED_CLASS,
-    PROFILE_TAB_CONTROLS_CLASS,
-} from "../utils/profileLayoutStyles"
 import { ProfileSectionTab } from "./ProfileSectionTab"
+import {
+  PROFILE_SECTION_TABLIST_4_CLASS,
+  PROFILE_TAB_CONTROLS_CENTERED_CLASS,
+  PROFILE_TAB_CONTROLS_CLASS,
+} from "../utils/profileLayoutStyles"
 
 export type MyProfileMainTab = "listings" | "pending" | "saved" | "reviews"
 export type MyProfileListingFilter = "all" | "available" | "unavailable"
@@ -132,7 +133,7 @@ export function MyProfileListingTabs({
     return (
         <>
             <div
-                className="grid grid-cols-4 border-b border-slate-200 text-slate-500"
+                className={PROFILE_SECTION_TABLIST_4_CLASS}
                 role="tablist"
                 aria-label="Profile sections"
             >

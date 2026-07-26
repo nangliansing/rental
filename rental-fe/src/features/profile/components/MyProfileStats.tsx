@@ -2,6 +2,7 @@ import type { ListerReviewSummary } from "@/features/lister-review/api"
 
 import type { ProfileListingSummaryCounts } from "../utils/profileListingSummary"
 import { buildOwnerProfileStatRows } from "../utils/profileStatItems"
+import { PROFILE_STATS_WRAPPER_CLASS } from "../utils/profileLayoutStyles"
 import { ProfileStatList } from "./ProfileOverviewPrimitives"
 
 type MyProfileStatsProps = {
@@ -21,7 +22,7 @@ export function MyProfileStats({
   })
 
   return (
-    <div className="flex w-full flex-col items-center gap-1.5 md:items-start">
+    <div className={PROFILE_STATS_WRAPPER_CLASS}>
       <ProfileStatList variant={variant} items={primary} />
       <ProfileStatList variant={variant} items={secondary} />
     </div>

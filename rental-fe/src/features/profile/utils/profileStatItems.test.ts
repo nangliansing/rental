@@ -61,7 +61,7 @@ describe("buildOwnerProfileStatRows", () => {
 })
 
 describe("buildListerProfileStatItems", () => {
-  it("formats rating and hides it when there are no reviews", () => {
+  it("formats rating and always shows it, including zero-state", () => {
     expect(
       buildListerProfileStatItems({
         activeCount: 3,
@@ -70,22 +70,17 @@ describe("buildListerProfileStatItems", () => {
     ).toEqual([
       { id: "listings", value: 3, label: "Listings" },
       { id: "reviews", value: 2, label: "Reviews" },
-      { id: "rating", value: "4.6", label: "Rating", hidden: false },
+      { id: "rating", value: "4.6", label: "Rating" },
     ])
 
     expect(
       buildListerProfileStatItems({
         activeCount: 3,
-        reviewSummary: {
-          ...reviewSummary,
-          reviewCount: 0,
-          averageRating: 0,
-        },
       }),
     ).toEqual([
       { id: "listings", value: 3, label: "Listings" },
       { id: "reviews", value: 0, label: "Reviews" },
-      { id: "rating", value: "0.0", label: "Rating", hidden: true },
+      { id: "rating", value: "0.0", label: "Rating" },
     ])
   })
 })
