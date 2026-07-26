@@ -1,42 +1,29 @@
 import type { ListerReviewSummary } from "@/features/lister-review/api"
+
+import type { ProfileListingSummaryCounts } from "../utils/profileListingSummary"
+import { buildOwnerProfileStatRows } from "../utils/profileStatItems"
 import { ProfileStatList } from "./ProfileOverviewPrimitives"
 
 type MyProfileStatsProps = {
-    activeCount?: number
-    pendingCount?: number
-    rejectedCount?: number
-    reviewSummary?: ListerReviewSummary | null
+  listingSummary: ProfileListingSummaryCounts
+  reviewSummary?: ListerReviewSummary | null
+  variant?: "default" | "centered"
 }
 
 export function MyProfileStats({
-    activeCount = 0,
-    pendingCount = 0,
-    rejectedCount = 0,
-    reviewSummary,
+  listingSummary,
+  reviewSummary,
+  variant = "default",
 }: MyProfileStatsProps) {
-    const reviewCount = reviewSummary?.reviewCount ?? 0
-    const averageRating = reviewSummary?.averageRating ?? 0
-    const hasReviews = reviewCount > 0
+  const { primary, secondary } = buildOwnerProfileStatRows({
+    listingSummary,
+    reviewSummary,
+  })
 
-    return (
-        <ProfileStatList
-            items={[
-                { id: "listings", value: activeCount, label: "Listings" },
-                { id: "reviews", value: reviewCount, label: "Reviews" },
-                {
-                    id: "rating",
-                    value: averageRating.toFixed(1),
-                    label: "Rating",
-                    hidden: !hasReviews,
-                },
-                { id: "pending", value: pendingCount, label: "Pending" },
-                {
-                    id: "rejected",
-                    value: rejectedCount,
-                    label: "Rejected",
-                    hidden: rejectedCount <= 0,
-                },
-            ]}
-        />
-    )
+  return (
+    <div className="flex w-full flex-col items-center gap-1.5 md:items-start">
+      <ProfileStatList variant={variant} items={primary} />
+      <ProfileStatList variant={variant} items={secondary} />
+    </div>
+  )
 }

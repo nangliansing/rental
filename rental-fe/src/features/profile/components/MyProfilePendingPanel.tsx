@@ -14,10 +14,12 @@ import { MyProfileEmptyState } from "./MyProfileEmptyState"
 import { MyProfilePendingCard } from "./MyProfilePendingCard"
 import { PendingPostDetailOverlay } from "./PendingPostDetailOverlay"
 import type { MyProfilePendingFilter } from "./MyProfileListingTabs"
+import { ProfileTabPanel } from "./ProfileTabPanel"
 import {
   OWNER_PENDING_STATUS_BY_PROFILE_FILTER,
   PENDING_EMPTY_COPY,
 } from "../utils/pendingPostDisplayUtils"
+import { PROFILE_TAB_CONTENT_TOP_CLASS } from "../utils/profileLayoutStyles"
 
 type MyProfilePendingPanelProps = {
   filter: MyProfilePendingFilter
@@ -43,14 +45,14 @@ export function MyProfilePendingPanel({
 
   if (pendingPostsQuery.isLoading) {
     return (
-      <ListingCollectionSkeleton className="mt-8 pt-5" />
+      <ListingCollectionSkeleton className={PROFILE_TAB_CONTENT_TOP_CLASS} />
     )
   }
 
   if (pendingPostsQuery.isError) {
     return (
       <ListingCollectionMessage
-        className="mt-8"
+        className={PROFILE_TAB_CONTENT_TOP_CLASS}
         title="Could not load submissions"
         description="Please try again in a moment."
         onRetry={() => void pendingPostsQuery.refetch()}
@@ -72,7 +74,7 @@ export function MyProfilePendingPanel({
   }
 
   return (
-    <div className="mt-8 bg-white pt-5">
+    <ProfileTabPanel>
       <ListingCardGrid
         hasNextPage={Boolean(pendingPostsQuery.hasNextPage)}
         isFetchingNextPage={pendingPostsQuery.isFetchingNextPage}
@@ -98,6 +100,6 @@ export function MyProfilePendingPanel({
         }}
         onClose={() => setSelectedPost(null)}
       />
-    </div>
+    </ProfileTabPanel>
   )
 }

@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom"
 
 import { LoginRequired } from "@/shared/components/auth/LoginRequired"
+import { useStandalonePageBack } from "@/shared/components/navigation/StandalonePageBackContext"
+import { useNavigateBack } from "@/shared/hooks/useNavigateBack"
 
 import { useUpdateMyAgentProfile } from "../api"
 import { AgentProfileForm } from "../components/AgentProfileForm"
@@ -10,9 +12,12 @@ import {
   ProfileSetupRequired,
 } from "../components/ProfilePageStates"
 import { useMyProfileGate } from "../hooks/useMyProfileGate"
+import { PROFILE_PATH } from "../utils/profileLayoutStyles"
 
 export function ProfileEditPage() {
   const navigate = useNavigate()
+  const navigateBack = useNavigateBack(PROFILE_PATH)
+  useStandalonePageBack(navigateBack)
   const updateProfileMutation = useUpdateMyAgentProfile()
   const gate = useMyProfileGate()
 
@@ -50,7 +55,7 @@ export function ProfileEditPage() {
               defaultValues={gate.profile}
               onSubmit={async (values) => {
                 await updateProfileMutation.mutateAsync(values)
-                navigate("/profile")
+                navigate(PROFILE_PATH)
               }}
             />
           </div>

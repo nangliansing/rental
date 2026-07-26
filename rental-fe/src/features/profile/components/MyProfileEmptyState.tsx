@@ -1,6 +1,8 @@
 import type { ComponentType } from "react"
 import { Link } from "react-router-dom"
 
+import { PROFILE_TAB_CONTENT_TOP_CLASS } from "../utils/profileLayoutStyles"
+
 type MyProfileEmptyStateAction = {
     label: string
     href: string
@@ -20,7 +22,7 @@ export function MyProfileEmptyState({
     action,
 }: MyProfileEmptyStateProps) {
     return (
-        <div className="mt-8 py-16 text-center">
+        <div className={`${PROFILE_TAB_CONTENT_TOP_CLASS} py-16 text-center`}>
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                 <Icon className="h-7 w-7 text-slate-400" />
             </div>

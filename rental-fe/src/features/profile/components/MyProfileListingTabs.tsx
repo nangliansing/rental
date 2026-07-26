@@ -10,6 +10,10 @@ import {
 
 import { SegmentedTabs } from "@/shared/components/inputs/SegmentedTabs"
 
+import {
+    PROFILE_TAB_CONTROLS_CENTERED_CLASS,
+    PROFILE_TAB_CONTROLS_CLASS,
+} from "../utils/profileLayoutStyles"
 import { ProfileSectionTab } from "./ProfileSectionTab"
 
 export type MyProfileMainTab = "listings" | "pending" | "saved" | "reviews"
@@ -178,7 +182,7 @@ function ListingTabControls({
         "Latest"
 
     return (
-        <div className="mt-7 flex flex-col items-center gap-3 md:flex-row md:justify-between">
+        <div className={PROFILE_TAB_CONTROLS_CLASS}>
             <SegmentedTabs
                 options={LISTING_FILTERS}
                 value={activeFilter}
@@ -224,7 +228,7 @@ function PendingTabControls({
     onFilterChange: (filter: MyProfilePendingFilter) => void
 }) {
     return (
-        <div className="mt-7 flex justify-center">
+        <div className={PROFILE_TAB_CONTROLS_CENTERED_CLASS}>
             <SegmentedTabs
                 options={PENDING_FILTERS}
                 value={activeFilter}

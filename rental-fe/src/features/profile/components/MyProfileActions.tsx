@@ -4,11 +4,13 @@ import { useState } from "react"
 import { MAP_SEARCH_LIST_ROOM_PATH } from "@/features/map-search/constants"
 
 import { useMyProfile } from "../context/MyProfileContext"
+import {
+  PROFILE_ACTIONS_ROW_CLASS,
+  PROFILE_ICON_BUTTON_CLASS,
+  PROFILE_PRIMARY_ACTION_CLASS,
+} from "../utils/profileLayoutStyles"
 import { MyProfileSettingsModal } from "./MyProfileSettingsModal"
 import { MyProfileShareModal } from "./MyProfileShareModal"
-
-const iconButtonClass =
-  "flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-950 hover:bg-slate-200"
 
 export function MyProfileActions() {
   const { profile, logout } = useMyProfile()
@@ -16,40 +18,30 @@ export function MyProfileActions() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   return (
-    <div className="mt-5 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-      <a
-        href="/profile/edit"
-        className="flex h-11 items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-semibold text-white hover:bg-slate-800"
-      >
-        Edit profile
-      </a>
-
-      <a
-        href={MAP_SEARCH_LIST_ROOM_PATH}
-        className="flex h-11 items-center justify-center gap-2 rounded-full bg-slate-100 px-6 text-sm font-semibold text-slate-950 hover:bg-slate-200"
-      >
-        <Plus className="h-4 w-4" />
+    <div className={PROFILE_ACTIONS_ROW_CLASS}>
+      <a href={MAP_SEARCH_LIST_ROOM_PATH} className={PROFILE_PRIMARY_ACTION_CLASS}>
+        <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
         List a room
       </a>
 
       <button
         type="button"
-        className={iconButtonClass}
+        className={PROFILE_ICON_BUTTON_CLASS}
         aria-label="Profile settings"
         aria-expanded={isSettingsOpen}
         onClick={() => setIsSettingsOpen(true)}
       >
-        <Settings className="h-5 w-5" />
+        <Settings className="h-5 w-5" aria-hidden="true" />
       </button>
 
       <button
         type="button"
-        className={iconButtonClass}
+        className={PROFILE_ICON_BUTTON_CLASS}
         aria-label="Share profile"
         aria-expanded={isShareOpen}
         onClick={() => setIsShareOpen(true)}
       >
-        <Share2 className="h-5 w-5" />
+        <Share2 className="h-5 w-5" aria-hidden="true" />
       </button>
 
       {isShareOpen && (

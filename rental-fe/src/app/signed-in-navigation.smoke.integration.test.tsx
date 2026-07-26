@@ -207,6 +207,44 @@ describe("Signed-in navigation smoke (integration)", () => {
     )
   })
 
+  it("returns to profile when using back from profile edit", async () => {
+    const user = userEvent.setup()
+
+    renderSignedInApp(
+      <Routes>
+        <Route
+          path="/profile"
+          element={
+            <>
+              <ProfilePage />
+              <AppNavigation />
+            </>
+          }
+        />
+        <Route path="/" element={<StandalonePageLayout />}>
+          <Route path="profile/edit" element={<ProfileEditPage />} />
+        </Route>
+      </Routes>,
+      ["/profile"],
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Nang Lian Sing" }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("link", { name: "Edit profile" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Edit contact profile" }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Go back" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Nang Lian Sing" }),
+    ).toBeInTheDocument()
+  })
+
   it("returns create listing from step 2 to step 1 via the shared back button", async () => {
     const user = userEvent.setup()
 

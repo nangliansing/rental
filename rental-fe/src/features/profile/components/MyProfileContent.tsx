@@ -9,7 +9,16 @@ import {
   useMyProfile,
   type MyProfileContextValue,
 } from "../context/MyProfileContext"
-import { MyProfileActions } from "./MyProfileActions"
+import {
+  normalizeListingSummary,
+  decrementListingSummaryCounts,
+  shouldShowFirstListingPrompt,
+} from "../utils/profileListingSummary"
+import {
+  PROFILE_PAGE_GRID_CLASS,
+  PROFILE_TAB_CONTENT_TOP_CLASS,
+  PROFILE_TABS_SECTION_CLASS,
+} from "../utils/profileLayoutStyles"
 import { MyProfileFirstListingPrompt } from "./MyProfileFirstListingPrompt"
 import { MyProfileHeader } from "./MyProfileHeader"
 import { MyProfileListingsPanel } from "./MyProfileListingsPanel"
@@ -22,7 +31,6 @@ import {
   type MyProfileMainTab,
   type MyProfilePendingFilter,
 } from "./MyProfileListingTabs"
-import { MyProfileStats } from "./MyProfileStats"
 
 type MyProfileContentProps = {
   user: AuthUser | null
@@ -46,7 +54,7 @@ export function MyProfileContent({
         logout,
       }}
     >
-      <div className="mx-auto max-w-6xl">
+      <div className={PROFILE_PAGE_GRID_CLASS}>
         <MyProfileOverviewSection />
         <MyProfileTabsSection />
       </div>
@@ -56,31 +64,21 @@ export function MyProfileContent({
 
 function MyProfileOverviewSection() {
   const { user, profile } = useMyProfile()
-  const listingSummary = profile.listingSummary ?? {
-    activeCount: 0,
-    pendingCount: 0,
-    rejectedCount: 0,
-  }
-  const showFirstListingPrompt =
-    listingSummary.activeCount === 0 && listingSummary.pendingCount === 0
+  const listingSummary = normalizeListingSummary(profile.listingSummary)
+  const showFirstListingPrompt = shouldShowFirstListingPrompt(listingSummary)
 
   return (
-    <section className="pt-4 md:pt-8">
-      <MyProfileHeader user={user} profile={profile} />
-
-      <div className="mx-auto max-w-4xl md:mx-0 md:pl-[calc(9rem+2.5rem)] lg:pl-[calc(10rem+2.5rem)]">
-        <MyProfileStats
-          activeCount={listingSummary.activeCount}
-          pendingCount={listingSummary.pendingCount}
-          rejectedCount={listingSummary.rejectedCount}
-          reviewSummary={profile.reviewSummary}
-        />
-
-        {showFirstListingPrompt && <MyProfileFirstListingPrompt />}
-
-        <MyProfileActions />
-      </div>
-    </section>
+    <MyProfileHeader
+      user={user}
+      profile={profile}
+      footer={
+        showFirstListingPrompt ? (
+          <div className="mt-2 w-full max-w-md px-2 md:max-w-xl md:px-0">
+            <MyProfileFirstListingPrompt />
+          </div>
+        ) : null
+      }
+    />
   )
 }
 
@@ -95,7 +93,7 @@ function MyProfileTabsSection() {
     useState<MyProfilePendingFilter>("all")
 
   return (
-    <section className="-mx-4 mt-10 sm:mx-0">
+    <section className={PROFILE_TABS_SECTION_CLASS}>
       <MyProfileListingTabs
         activeTab={activeTab}
         activeListingFilter={activeListingFilter}
@@ -111,8 +109,6 @@ function MyProfileTabsSection() {
         <MyProfilePendingPanel
           filter={activePendingFilter}
           onPendingPostDeleted={(post) => {
-            if (!profile.listingSummary) return
-
             const pendingDelta = post.status === "PENDING" ? 1 : 0
             const rejectedDelta = post.status === "REJECTED" ? 1 : 0
 
@@ -120,17 +116,10 @@ function MyProfileTabsSection() {
 
             onProfileChange({
               ...profile,
-              listingSummary: {
-                ...profile.listingSummary,
-                pendingCount: Math.max(
-                  0,
-                  profile.listingSummary.pendingCount - pendingDelta,
-                ),
-                rejectedCount: Math.max(
-                  0,
-                  profile.listingSummary.rejectedCount - rejectedDelta,
-                ),
-              },
+              listingSummary: decrementListingSummaryCounts(
+                profile.listingSummary,
+                { pending: pendingDelta, rejected: rejectedDelta },
+              ),
             })
           }}
         />
@@ -140,7 +129,7 @@ function MyProfileTabsSection() {
 
       {activeTab === "reviews" && (
         <ListerReviewsSection
-          className="px-4 sm:px-0"
+          className={`${PROFILE_TAB_CONTENT_TOP_CLASS} px-4 sm:px-0`}
           listerProfileId={profile._id}
           listerUserId={profile.userId}
           reviewSummary={profile.reviewSummary}
