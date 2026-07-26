@@ -15,11 +15,13 @@ import {
 } from "@/shared/components/collections/ListingCollectionState"
 import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 
+import { PROFILE_TAB_CONTENT_TOP_CLASS } from "../utils/profileLayoutStyles"
 import { MyProfileListingsEmpty } from "./MyProfileListingsEmpty"
 import type {
     MyProfileListingFilter,
     MyProfileListingSort,
 } from "./MyProfileListingTabs"
+import { ProfileTabPanel } from "./ProfileTabPanel"
 
 type MyProfileListingsPanelProps = {
     filter: MyProfileListingFilter
@@ -70,13 +72,13 @@ export function MyProfileListingsPanel({
     }, [listingsQuery.data])
 
     if (listingsQuery.isLoading) {
-        return <ListingCollectionSkeleton className="mt-8 pt-5" />
+        return <ListingCollectionSkeleton className={PROFILE_TAB_CONTENT_TOP_CLASS} />
     }
 
     if (listingsQuery.isError) {
         return (
             <ListingCollectionMessage
-                className="mt-8"
+                className={PROFILE_TAB_CONTENT_TOP_CLASS}
                 title="Could not load listings"
                 description="Please try again in a moment."
                 onRetry={() => void listingsQuery.refetch()}
@@ -89,7 +91,7 @@ export function MyProfileListingsPanel({
     }
 
     return (
-        <div className="mt-8 bg-white pt-5">
+        <ProfileTabPanel>
             <ListingCardGrid
                 hasNextPage={Boolean(listingsQuery.hasNextPage)}
                 isFetchingNextPage={listingsQuery.isFetchingNextPage}
@@ -111,7 +113,7 @@ export function MyProfileListingsPanel({
                 onClose={() => setSelectedListingId(null)}
                 onListingSelect={setSelectedListingId}
             />
-        </div>
+        </ProfileTabPanel>
     )
 }
 

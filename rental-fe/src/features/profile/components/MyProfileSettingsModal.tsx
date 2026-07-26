@@ -1,5 +1,6 @@
-import { LogOut, Settings, X } from "lucide-react"
+import { LogOut, Pencil, Settings, X } from "lucide-react"
 import { useState } from "react"
+import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -7,6 +8,8 @@ import {
     DialogShell,
     DialogTitle,
 } from "@/shared/components/dialogs/DialogShell"
+
+import { PROFILE_EDIT_PATH } from "../utils/profileLayoutStyles"
 
 type MyProfileSettingsModalProps = {
     isLoggingOut: boolean
@@ -90,7 +93,16 @@ function SettingsMenu({
                 </button>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 space-y-1">
+                <Link
+                    to={PROFILE_EDIT_PATH}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-950 hover:bg-slate-100"
+                    onClick={onClose}
+                >
+                    <Pencil className="h-4 w-4 shrink-0" />
+                    Edit profile
+                </Link>
+
                 <button
                     type="button"
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"

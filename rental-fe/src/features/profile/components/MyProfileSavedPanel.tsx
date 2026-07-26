@@ -1,9 +1,11 @@
 import { SavedListingsPanel } from "@/features/saved-listing/components"
 
+import { ProfileTabPanel } from "./ProfileTabPanel"
+
 export function MyProfileSavedPanel() {
   return (
-    <div className="mt-8 bg-white">
+    <ProfileTabPanel>
       <SavedListingsPanel layout="profile" />
-    </div>
+    </ProfileTabPanel>
   )
 }
