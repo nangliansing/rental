@@ -139,6 +139,11 @@ Response:
 
 This also applies when the building exists but is inactive.
 
+Related endpoint:
+
+- [`get-building-neighbourhood.md`](./get-building-neighbourhood.md) — nearby
+  POIs around the building for Explore neighbourhood
+
 ## Implementation Notes
 
 The service validates the id with:

@@ -13,6 +13,7 @@ export const MODEL_NAMES = Object.freeze({
   ListerReview: "ListerReview",
   ReviewReport: "ReviewReport",
   AuthIdentity: "AuthIdentity",
+  NeighbourhoodCache: "NeighbourhoodCache",
 });
 
 export const COLLECTION_NAMES = Object.freeze({
@@ -29,4 +30,5 @@ export const COLLECTION_NAMES = Object.freeze({
   ListerReviews: "lister_reviews",
   ReviewReports: "review_reports",
   AuthIdentities: "auth_identities",
+  NeighbourhoodCaches: "neighbourhood_caches",
 });
