@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useMemo, useState, type ReactNode } from "react"
 
 import { useNeighbourhoodExploreState } from "./hooks/useNeighbourhoodExploreState"
 import {
@@ -33,19 +33,22 @@ export function NeighbourhoodExploreProvider({
     enabled,
   })
 
-  const selectedPlace = useMemo(
-    () => visiblePlaces.find((place) => place.id === selectedPlaceId) ?? null,
-    [selectedPlaceId, visiblePlaces],
-  )
-
-  useEffect(() => {
-    if (
-      selectedPlaceId &&
-      !visiblePlaces.some((place) => place.id === selectedPlaceId)
-    ) {
-      setSelectedPlaceId(null)
+  const effectiveSelectedPlaceId = useMemo(() => {
+    if (!selectedPlaceId) {
+      return null
     }
+
+    return visiblePlaces.some((place) => place.id === selectedPlaceId)
+      ? selectedPlaceId
+      : null
   }, [selectedPlaceId, visiblePlaces])
+
+  const selectedPlace = useMemo(
+    () =>
+      visiblePlaces.find((place) => place.id === effectiveSelectedPlaceId) ??
+      null,
+    [effectiveSelectedPlaceId, visiblePlaces],
+  )
 
   const isInitialLoading = neighbourhoodQuery.isPending && !neighbourhood
   const isInitialError = neighbourhoodQuery.isError && !neighbourhood
@@ -70,7 +73,7 @@ export function NeighbourhoodExploreProvider({
       categoryPillOptions,
       radiusMeters,
       selectedCategory,
-      selectedPlaceId,
+      selectedPlaceId: effectiveSelectedPlaceId,
       selectedPlace,
       isInitialLoading,
       isInitialError,
@@ -88,7 +91,7 @@ export function NeighbourhoodExploreProvider({
       categoryPillOptions,
       radiusMeters,
       selectedCategory,
-      selectedPlaceId,
+      effectiveSelectedPlaceId,
       selectedPlace,
       isInitialLoading,
       isInitialError,

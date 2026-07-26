@@ -6,9 +6,9 @@ import type { FilterPillOption } from "@/shared/components/inputs/FilterPills"
 import type {
   BuildingNeighbourhood,
   NeighbourhoodPlace,
-} from "../../api/getBuildingNeighbourhood"
-import type { NeighbourhoodRadiusMeters } from "../../constants/neighbourhood"
-import type { NeighbourhoodCategoryFilter } from "../utils/filterNeighbourhoodPlaces"
+} from "../api/getBuildingNeighbourhood"
+import type { NeighbourhoodRadiusMeters } from "../constants/neighbourhood"
+import type { NeighbourhoodCategoryFilter } from "./utils/filterNeighbourhoodPlaces"
 
 export type NeighbourhoodExploreOrigin = {
   lat: number
