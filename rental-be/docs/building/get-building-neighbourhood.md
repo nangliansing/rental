@@ -119,9 +119,15 @@ Rules:
 
 ### Result limits
 
-- At most **200** places are returned in `places`.
+- Non-transit POIs are capped at **200** closest places within `radiusM`.
+- **Public transport** is never capped and is always included when within radius.
 - Places are sorted by ascending `distanceMeters`, then name.
 - POIs without a usable name fall back to `Unnamed place`.
+- When the non-transit cap applies, `summary.truncated` is `true` and
+  `summary.totalWithinRadius` reports how many places matched the radius
+  before the response cap.
+- On cache miss, non-transit POIs are capped at **500** closest places within
+  `fetchRadiusM` before being stored in MongoDB.
 
 ## Data Sources
 
@@ -212,6 +218,8 @@ Body:
     "source": "openstreetmap",
     "summary": {
       "all": 35,
+      "truncated": false,
+      "totalWithinRadius": 35,
       "public_transport": 0,
       "convenience": 11,
       "supermarket": 1,
@@ -270,7 +278,9 @@ Field notes:
 | `fetchRadiusMeters` | Cached fetch radius |
 | `fetchedAt` | ISO timestamp for the cached POI set |
 | `source` | Always `openstreetmap` for v1 |
-| `summary.all` | Number of places within `radiusMeters` |
+| `summary.all` | Number of places returned within `radiusMeters` |
+| `summary.truncated` | `true` when non-transit POIs were capped at 200 |
+| `summary.totalWithinRadius` | Total places within `radiusMeters` before the response cap |
 | `categories` | Tab metadata; zero-count categories omitted |
 | `places[].id` | Stable POI id (`osm-...` or static station id) |
 | `places[].distanceMeters` | Straight-line distance from the building |
@@ -456,7 +466,9 @@ Backend automated coverage:
 params validation
 OSM classification and normalization
 summary tab ordering and zero-count exclusion
-radius filtering and 200-place cap
+radius filtering and 200-place response cap
+cache ingest cap at 500 non-transit POIs
+truncation metadata in summary
 cache hit/miss/stale behaviour
 static transit merge
 HTTP success and error boundaries

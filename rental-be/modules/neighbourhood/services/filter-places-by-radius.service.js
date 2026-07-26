@@ -29,8 +29,16 @@ export const filterPlacesByRadius = ({
     .sort(sortPlaces);
   const otherPlaces = placesWithDistance
     .filter((place) => place.category !== "public_transport")
-    .sort(sortPlaces)
-    .slice(0, maxPlaces);
+    .sort(sortPlaces);
+  const truncated = otherPlaces.length > maxPlaces;
+  const cappedOtherPlaces = otherPlaces.slice(0, maxPlaces);
+  const filteredPlaces = [...transitPlaces, ...cappedOtherPlaces].sort(
+    sortPlaces,
+  );
 
-  return [...transitPlaces, ...otherPlaces].sort(sortPlaces);
+  return {
+    places: filteredPlaces,
+    truncated,
+    totalWithinRadius: placesWithDistance.length,
+  };
 };

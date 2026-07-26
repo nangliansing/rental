@@ -1,6 +1,9 @@
 import { NEIGHBOURHOOD_CATEGORIES } from "../neighbourhood.constants.js";
 
-export const buildNeighbourhoodSummary = (places) => {
+export const buildNeighbourhoodSummary = (
+  places,
+  { truncated = false, totalWithinRadius = places.length } = {},
+) => {
   const counts = Object.fromEntries(
     NEIGHBOURHOOD_CATEGORIES.map((category) => [category.key, 0]),
   );
@@ -22,6 +25,8 @@ export const buildNeighbourhoodSummary = (places) => {
     summary: {
       all: places.length,
       ...counts,
+      truncated,
+      totalWithinRadius,
     },
     categories,
   };

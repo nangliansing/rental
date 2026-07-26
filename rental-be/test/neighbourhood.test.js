@@ -8,6 +8,7 @@ import {
 } from "../shared/geo/index.js";
 import { buildNeighbourhoodCacheKey } from "../modules/neighbourhood/cache/build-neighbourhood-cache-key.js";
 import {
+  MAX_CACHED_PLACES,
   MAX_RETURNED_PLACES,
   MIN_RADIUS_METERS,
   NEIGHBOURHOOD_CATEGORIES,
@@ -424,7 +425,7 @@ test("buildNeighbourhoodSummary keeps configured importance order", () => {
 
 test("filterPlacesByRadius sorts by straight-line distance and applies radius", () => {
   const origin = { lat: 13.75, lng: 100.5 };
-  const places = filterPlacesByRadius({
+  const { places } = filterPlacesByRadius({
     origin,
     radiusMeters: 250,
     places: [
@@ -460,13 +461,15 @@ test("filterPlacesByRadius caps the number of returned places", () => {
     lng: 100.5,
   }));
 
-  const filtered = filterPlacesByRadius({
+  const { places: filtered, truncated, totalWithinRadius } = filterPlacesByRadius({
     origin,
     radiusMeters: 2000,
     places,
   });
 
   assert.equal(filtered.length, MAX_RETURNED_PLACES);
+  assert.equal(truncated, true);
+  assert.equal(totalWithinRadius, MAX_RETURNED_PLACES + 25);
   assert.ok(filtered[0].distanceMeters <= filtered.at(-1).distanceMeters);
 });
 
@@ -483,7 +486,7 @@ test("filterPlacesByRadius always keeps public transport even when POI cap is re
     }),
   );
 
-  const filtered = filterPlacesByRadius({
+  const { places: filtered } = filterPlacesByRadius({
     origin,
     radiusMeters: 2000,
     places: [
@@ -635,7 +638,7 @@ test("buildNeighbourhoodSummary exposes labels for visible categories", () => {
 
 test("filterPlacesByRadius breaks ties by place name", () => {
   const origin = { lat: 13.75, lng: 100.5 };
-  const places = filterPlacesByRadius({
+  const { places } = filterPlacesByRadius({
     origin,
     radiusMeters: 500,
     places: [
@@ -738,7 +741,7 @@ test("buildNeighbourhoodSummary count matches number of places provided", () => 
 });
 
 test("filterPlacesByRadius returns an empty list when nothing is inside radius", () => {
-  const filtered = filterPlacesByRadius({
+  const { places: filtered } = filterPlacesByRadius({
     origin: { lat: 13.75, lng: 100.5 },
     radiusMeters: 10,
     places: [
@@ -795,7 +798,7 @@ test("buildNeighbourhoodCacheKey includes fetch radius in the cache key", () => 
 });
 
 test("filterPlacesByRadius rounds distanceMeters to whole meters", () => {
-  const [place] = filterPlacesByRadius({
+  const { places } = filterPlacesByRadius({
     origin: { lat: 13.75, lng: 100.5 },
     radiusMeters: 1000,
     places: [
@@ -809,7 +812,69 @@ test("filterPlacesByRadius rounds distanceMeters to whole meters", () => {
     ],
   });
 
+  const [place] = places;
+
   assert.equal(place.distanceMeters, Math.round(place.distanceMeters));
+});
+
+test("filterPlacesByRadius reports truncated=false when under cap", () => {
+  const { truncated, totalWithinRadius } = filterPlacesByRadius({
+    origin: { lat: 13.75, lng: 100.5 },
+    radiusMeters: 2000,
+    places: [
+      {
+        id: "near",
+        name: "Near Place",
+        category: "convenience",
+        lat: 13.751,
+        lng: 100.501,
+      },
+    ],
+  });
+
+  assert.equal(truncated, false);
+  assert.equal(totalWithinRadius, 1);
+});
+
+test("buildNeighbourhoodSummary includes truncation metadata", () => {
+  const { summary } = buildNeighbourhoodSummary(
+    [
+      {
+        id: "place-1",
+        name: "Restaurant",
+        category: "restaurant",
+        lat: 13.75,
+        lng: 100.5,
+        distanceMeters: 100,
+      },
+    ],
+    { truncated: true, totalWithinRadius: 347 },
+  );
+
+  assert.equal(summary.truncated, true);
+  assert.equal(summary.totalWithinRadius, 347);
+  assert.equal(summary.all, 1);
+});
+
+test("filterPlacesByRadius supports cache ingest cap", () => {
+  const origin = { lat: 13.75, lng: 100.5 };
+  const places = Array.from({ length: MAX_CACHED_PLACES + 40 }, (_, index) => ({
+    id: `place-${index}`,
+    name: `Place ${index}`,
+    category: "convenience",
+    lat: 13.75 + index * 0.00001,
+    lng: 100.5,
+  }));
+
+  const { places: filtered, truncated } = filterPlacesByRadius({
+    origin,
+    radiusMeters: 2000,
+    places,
+    maxPlaces: MAX_CACHED_PLACES,
+  });
+
+  assert.equal(filtered.length, MAX_CACHED_PLACES);
+  assert.equal(truncated, true);
 });
 
 test("buildGetBuildingNeighbourhoodParams throws AppError instances", () => {
