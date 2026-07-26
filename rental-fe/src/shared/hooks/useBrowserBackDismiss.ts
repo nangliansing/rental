@@ -1,6 +1,9 @@
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 
-import { registerStackEntry } from "@/shared/utils/modalHistoryStack"
+import {
+  registerStackEntry,
+  requestStackClose,
+} from "@/shared/utils/modalHistoryStack"
 
 type UseBrowserBackDismissOptions = {
   enabled?: boolean
@@ -27,4 +30,8 @@ export function useBrowserBackDismiss(
       tracksHistory: true,
     })
   }, [enabled, isOpen])
+
+  return useCallback(() => {
+    requestStackClose(tokenRef.current)
+  }, [])
 }

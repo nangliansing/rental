@@ -235,9 +235,12 @@ export function BuildingResultsPanel() {
     setPage(returnPage)
   }
 
-  useBrowserBackDismiss(searchStatus !== "idle" && page === "filters", () => {
-    closeFiltersRef.current()
-  })
+  const dismissFilters = useBrowserBackDismiss(
+    searchStatus !== "idle" && page === "filters",
+    () => {
+      closeFiltersRef.current()
+    },
+  )
 
   if (searchStatus === "idle") return null
 
@@ -250,6 +253,11 @@ export function BuildingResultsPanel() {
   }
 
   const closeFilters = () => {
+    if (page === "filters") {
+      dismissFilters()
+      return
+    }
+
     closeFiltersRef.current()
   }
 

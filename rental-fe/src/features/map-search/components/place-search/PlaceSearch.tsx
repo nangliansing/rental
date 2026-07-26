@@ -94,7 +94,7 @@ export const PlaceSearch = memo(function PlaceSearch() {
     mobileSearchButtonRef.current?.focus()
   }, [isMobileSearchOpen])
 
-  const closeSearchUi = () => {
+  const closeSearchUiState = () => {
     cancelPendingSearch()
     shouldRestoreMobileFocusRef.current = isMobileSearchOpen
     setIsMobileSearchOpen(false)
@@ -102,7 +102,19 @@ export const PlaceSearch = memo(function PlaceSearch() {
     onPlaceSearchOpenChange(false)
   }
 
-  useBrowserBackDismiss(isMobileSearchOpen, closeSearchUi)
+  const dismissMobileSearch = useBrowserBackDismiss(
+    isMobileSearchOpen,
+    closeSearchUiState,
+  )
+
+  const closeSearchUi = () => {
+    if (isMobileSearchOpen) {
+      dismissMobileSearch()
+      return
+    }
+
+    closeSearchUiState()
+  }
 
   const searchPlaces = async (value: string) => {
     const query = value.trim()
