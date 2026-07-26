@@ -1,5 +1,6 @@
-import { Building2, Compass, MapPin } from "lucide-react"
+import { Building2, MapPin } from "lucide-react"
 
+import { ExploreNeighbourhoodButton } from "@/features/buildings/neighbourhood-explore/components/ExploreNeighbourhoodButton"
 import { cn } from "@/lib/utils"
 
 import { BuildingAmenityRail } from "./BuildingAmenityRail"
@@ -27,6 +28,7 @@ type BuildingSummaryCardProps = {
   onListHere?: () => void
   onRequestEdit?: () => void
   onExploreNeighbourhood?: (trigger: HTMLButtonElement) => void
+  isExploreOpen?: boolean
 }
 
 const VARIANT_CLASS_NAME = {
@@ -48,6 +50,7 @@ export function BuildingSummaryCard({
   onListHere,
   onRequestEdit,
   onExploreNeighbourhood,
+  isExploreOpen = false,
 }: BuildingSummaryCardProps) {
   const summary = normalizeBuildingSummary(building, { showCoordinates })
   const {
@@ -84,15 +87,10 @@ export function BuildingSummaryCard({
 
         <div className="flex shrink-0 items-center gap-2">
           {onExploreNeighbourhood && (
-            <button
-              type="button"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
-              aria-label="Explore neighbourhood"
-              onClick={(event) => onExploreNeighbourhood(event.currentTarget)}
-            >
-              <Compass className="h-3.5 w-3.5" aria-hidden="true" />
-              Explore
-            </button>
+            <ExploreNeighbourhoodButton
+              isOpen={isExploreOpen}
+              onClick={onExploreNeighbourhood}
+            />
           )}
 
           {shouldShowRent && (

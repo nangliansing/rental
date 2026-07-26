@@ -22,16 +22,12 @@ type SavedListingsPanelProps = {
   enabled?: boolean
   layout?: "drawer" | "profile"
   rootRef?: RefObject<HTMLDivElement | null>
-  mobileBackLabel?: string
-  desktopBackLabel?: string
 }
 
 export function SavedListingsPanel({
   enabled = true,
   layout = "drawer",
   rootRef,
-  mobileBackLabel = "Saved",
-  desktopBackLabel = "Back to saved",
 }: SavedListingsPanelProps) {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
   const [deletingSavedListingId, setDeletingSavedListingId] = useState<
@@ -123,8 +119,6 @@ export function SavedListingsPanel({
         listingId={selectedListingId}
         onClose={() => setSelectedListingId(null)}
         onListingSelect={setSelectedListingId}
-        mobileBackLabel={mobileBackLabel}
-        desktopBackLabel={desktopBackLabel}
       />
     </>
   )

@@ -31,6 +31,11 @@ vi.mock("@/features/buildings/components/BuildingSummaryCard", () => ({
 }))
 vi.mock("@/features/buildings/neighbourhood-explore", () => ({
   BuildingNeighbourhoodExploreModal: () => null,
+  useNeighbourhoodExploreDialog: () => ({
+    isOpen: false,
+    open: vi.fn(),
+    close: vi.fn(),
+  }),
 }))
 vi.mock("@/features/listing/components/ListingDetailModal", () => ({
   ListingDetailModal: ({

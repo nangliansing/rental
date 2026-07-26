@@ -16,6 +16,7 @@ type ContactActionsProps = {
   directionsDestination?: DirectionsDestination | null
   className?: string
   leadingAction?: React.ReactNode
+  trailingAction?: React.ReactNode
 }
 
 export function ContactActions({
@@ -25,6 +26,7 @@ export function ContactActions({
   directionsDestination,
   className,
   leadingAction,
+  trailingAction,
 }: ContactActionsProps) {
   const {
     contactLinks,
@@ -41,24 +43,36 @@ export function ContactActions({
     [directionsDestination],
   )
   const hasFooterActions =
-    hasContactOptions || hasDirections || Boolean(leadingAction)
+    hasContactOptions ||
+    hasDirections ||
+    Boolean(leadingAction) ||
+    Boolean(trailingAction)
 
   if (!hasFooterActions) return null
 
   return (
     <>
-      <footer className={cn("flex items-center gap-1", className)}>
-        {leadingAction}
-        {hasContactOptions && (
-          <ContactTriggerButton
-            contactOwnerName={ownerName}
-            isOpen={isContactDialogOpen}
-            onClick={openContactDialog}
-          />
+      <footer
+        className={cn(
+          "flex items-center gap-1",
+          trailingAction && "justify-between",
+          className,
         )}
-        {hasDirections && normalizedDestination && (
-          <DirectionsAction destination={normalizedDestination} />
-        )}
+      >
+        <div className="flex items-center gap-1">
+          {leadingAction}
+          {hasContactOptions && (
+            <ContactTriggerButton
+              contactOwnerName={ownerName}
+              isOpen={isContactDialogOpen}
+              onClick={openContactDialog}
+            />
+          )}
+          {hasDirections && normalizedDestination && (
+            <DirectionsAction destination={normalizedDestination} />
+          )}
+        </div>
+        {trailingAction}
       </footer>
 
       {hasContactOptions && (

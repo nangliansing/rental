@@ -70,8 +70,6 @@ export function SavedListingsButton({ variant }: SavedListingsButtonProps) {
               enabled={isOpen}
               layout="drawer"
               rootRef={scrollRef}
-              mobileBackLabel="Saved"
-              desktopBackLabel="Back to saved"
             />
           </Suspense>
         </FloatingActionPanel>

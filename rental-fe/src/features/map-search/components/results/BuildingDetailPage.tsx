@@ -1,9 +1,11 @@
-// src/features/map-search/components/results/BuildingDetailPage.tsx
-import { useEffect, useMemo, useRef, useState } from "react"
-import type React from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
+import type React from "react"
 
-import { BuildingNeighbourhoodExploreModal } from "@/features/buildings/neighbourhood-explore"
+import {
+  BuildingNeighbourhoodExploreModal,
+  useNeighbourhoodExploreDialog,
+} from "@/features/buildings/neighbourhood-explore"
 import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
 import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
@@ -32,10 +34,8 @@ export function BuildingDetailPage({
   onBack,
 }: BuildingDetailPageProps) {
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const exploreTriggerRef = useRef<HTMLButtonElement | null>(null)
   const shouldRestoreFocusRef = useRef(false)
-  const shouldRestoreExploreFocusRef = useRef(false)
-  const [isExploreOpen, setIsExploreOpen] = useState(false)
+  const exploreNeighbourhood = useNeighbourhoodExploreDialog()
   const {
     selectedBuilding: building,
     buildingDetailFilters,
@@ -76,13 +76,6 @@ export function BuildingDetailPage({
     listingTriggerRef.current?.focus()
   }, [pendingListingId])
 
-  useEffect(() => {
-    if (isExploreOpen || !shouldRestoreExploreFocusRef.current) return
-
-    shouldRestoreExploreFocusRef.current = false
-    exploreTriggerRef.current?.focus()
-  }, [isExploreOpen])
-
   const openListing = (listingId: string, trigger?: HTMLButtonElement) => {
     if (trigger) listingTriggerRef.current = trigger
     onListingSelect(listingId)
@@ -91,16 +84,6 @@ export function BuildingDetailPage({
   const closeListing = () => {
     shouldRestoreFocusRef.current = true
     onListingClose()
-  }
-
-  const openExplore = (trigger?: HTMLButtonElement) => {
-    if (trigger) exploreTriggerRef.current = trigger
-    setIsExploreOpen(true)
-  }
-
-  const closeExplore = () => {
-    shouldRestoreExploreFocusRef.current = true
-    setIsExploreOpen(false)
   }
 
   if (!building) return null
@@ -122,7 +105,8 @@ export function BuildingDetailPage({
         <BuildingSummaryCard
           building={building}
           hideEmptyRent={isListingSearch}
-          onExploreNeighbourhood={openExplore}
+          isExploreOpen={exploreNeighbourhood.isOpen}
+          onExploreNeighbourhood={exploreNeighbourhood.open}
         />
       </div>
 
@@ -196,15 +180,13 @@ export function BuildingDetailPage({
         listingId={pendingListingId}
         onClose={closeListing}
         onListingSelect={openListing}
-        mobileBackLabel={building.name}
-        desktopBackLabel="Back to building"
         trackBrowserHistory={false}
       />
 
       <BuildingNeighbourhoodExploreModal
         buildingId={building._id}
-        isOpen={isExploreOpen}
-        onClose={closeExplore}
+        isOpen={exploreNeighbourhood.isOpen}
+        onClose={exploreNeighbourhood.close}
         trackBrowserHistory={false}
       />
     </>
