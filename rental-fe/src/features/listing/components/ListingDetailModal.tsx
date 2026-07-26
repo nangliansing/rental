@@ -1,8 +1,9 @@
-import { ArrowLeft, FileQuestion, Loader2, X } from "lucide-react"
+import { FileQuestion, Loader2 } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useMyAgentProfile } from "@/features/profile/api"
 import { ModalPortal } from "@/shared/components/ModalPortal"
+import { ModalDismissHeader } from "@/shared/components/navigation/ModalDismissHeader"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 import { useListingDetailData } from "../hooks/useListingDetailData"
@@ -12,8 +13,6 @@ type ListingDetailModalProps = {
   listingId: string | null
   onClose: () => void
   onListingSelect?: (listingId: string) => void
-  mobileBackLabel?: string
-  desktopBackLabel?: string
   trackBrowserHistory?: boolean
 }
 
@@ -21,8 +20,6 @@ export function ListingDetailModal({
   listingId,
   onClose,
   onListingSelect,
-  mobileBackLabel = "Back",
-  desktopBackLabel = "Back",
   trackBrowserHistory = true,
 }: ListingDetailModalProps) {
   const { containerRef, onBackdropClick, requestClose } = useAccessibleModal<HTMLElement>({
@@ -54,26 +51,10 @@ export function ListingDetailModal({
           tabIndex={-1}
           className="flex h-dvh w-full flex-col overflow-hidden bg-white text-slate-950 md:h-[min(860px,calc(100dvh-2rem))] md:max-w-2xl md:rounded-2xl md:shadow-2xl"
         >
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-3">
-            <button
-              type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-full px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-              onClick={requestClose}
-            >
-              <ArrowLeft className="h-5 w-5 md:h-4 md:w-4" />
-              <span className="md:hidden">{mobileBackLabel}</span>
-              <span className="hidden md:inline">{desktopBackLabel}</span>
-            </button>
-
-            <button
-              type="button"
-              className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 md:flex"
-              aria-label="Close listing details"
-              onClick={requestClose}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <ModalDismissHeader
+            onClose={requestClose}
+            closeLabel="Close listing details"
+          />
 
           <div className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
             {isLoading ? (

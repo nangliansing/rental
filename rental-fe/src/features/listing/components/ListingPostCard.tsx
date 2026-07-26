@@ -1,6 +1,11 @@
 import { useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
+import {
+  BuildingNeighbourhoodExploreModal,
+  ExploreNeighbourhoodButton,
+  useNeighbourhoodExploreDialog,
+} from "@/features/buildings/neighbourhood-explore"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { ContactActions } from "@/features/contacts/components/ContactActions"
 import type { DirectionsDestination } from "@/features/contacts/utils/buildGoogleMapsDirectionsUrl"
@@ -92,6 +97,7 @@ function ListingPostCardArticle({
     listingId: listing._id,
     initialIsSaved: Boolean(listing.isSavedByMe),
   })
+  const exploreNeighbourhood = useNeighbourhoodExploreDialog()
 
   const agent = listing.agentProfile
   const isOwnListing =
@@ -182,7 +188,21 @@ function ListingPostCardArticle({
         }
         directionsDestination={directionsDestination}
         leadingAction={saveButton}
+        trailingAction={
+          <ExploreNeighbourhoodButton
+            variant="footer"
+            isOpen={exploreNeighbourhood.isOpen}
+            onClick={exploreNeighbourhood.open}
+          />
+        }
         className="mt-2 px-3"
+      />
+
+      <BuildingNeighbourhoodExploreModal
+        buildingId={listing.buildingId}
+        isOpen={exploreNeighbourhood.isOpen}
+        onClose={exploreNeighbourhood.close}
+        trackBrowserHistory={false}
       />
     </article>
   )

@@ -1,3 +1,5 @@
 export { BuildingNeighbourhoodExploreModal } from "./components/BuildingNeighbourhoodExploreModal"
+export { ExploreNeighbourhoodButton } from "./components/ExploreNeighbourhoodButton"
 export { NeighbourhoodExploreProvider } from "./NeighbourhoodExploreProvider"
 export { useNeighbourhoodExplore } from "./NeighbourhoodExploreContext"
+export { useNeighbourhoodExploreDialog } from "./hooks/useNeighbourhoodExploreDialog"

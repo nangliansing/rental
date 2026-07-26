@@ -40,7 +40,7 @@ test.describe("Profile dashboard smoke", () => {
     ).toBeVisible()
     await page.getByRole("button", { name: "Open listing ฿14k" }).click()
     await expect(page.getByRole("dialog", { name: "Listing details" })).toBeVisible()
-    await page.getByRole("button", { name: "Back" }).click()
+    await page.getByRole("button", { name: "Close listing details" }).click()
     await expect(page.getByRole("dialog", { name: "Listing details" })).toHaveCount(
       0,
     )

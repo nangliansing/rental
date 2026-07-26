@@ -123,6 +123,26 @@ describe("ContactActions", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("renders trailingAction on the right side of the footer", () => {
+    render(
+      <ContactActions
+        contactOwnerName="Lister"
+        contacts={{ phone: "0812345678" }}
+        trailingAction={
+          <button type="button">Explore neighbourhood</button>
+        }
+      />,
+    )
+
+    const footer = screen.getByRole("button", { name: "Contact Lister" })
+      .parentElement?.parentElement
+
+    expect(footer).toHaveClass("justify-between")
+    expect(
+      screen.getByRole("button", { name: "Explore neighbourhood" }),
+    ).toBeInTheDocument()
+  })
+
   it("shows directions next to contact when a valid destination is provided", async () => {
     const user = userEvent.setup()
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
