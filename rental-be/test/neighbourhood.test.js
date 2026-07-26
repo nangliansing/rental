@@ -47,7 +47,7 @@ test("buildNeighbourhoodCacheKey rounds coordinates for shared cache entries", (
       origin: { lat: 13.75678, lng: 100.64231 },
       fetchRadiusMeters: 2000,
     }),
-    "2:13.757:100.642:2000",
+    "3:13.757:100.642:2000",
   );
 
   assert.equal(

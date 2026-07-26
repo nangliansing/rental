@@ -9,7 +9,7 @@ export const MAX_RADIUS_METERS = 2000;
 export const MAX_FETCH_RADIUS_METERS = 2000;
 export const MAX_RETURNED_PLACES = 200;
 export const CACHE_COORDINATE_DECIMALS = 3;
-export const NEIGHBOURHOOD_CACHE_VERSION = 2;
+export const NEIGHBOURHOOD_CACHE_VERSION = 3;
 
 export const NEIGHBOURHOOD_CATEGORIES = Object.freeze([
   {

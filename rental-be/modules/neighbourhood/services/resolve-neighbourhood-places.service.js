@@ -75,11 +75,14 @@ export const resolveNeighbourhoodPlaces = async ({
   }
 
   let osmPlaces = [];
+  let overpassFetchFailed = false;
 
   if (overpassEnabled) {
     try {
       osmPlaces = await queryOverpassFn({ origin, fetchRadiusMeters });
     } catch (error) {
+      overpassFetchFailed = true;
+
       const staleEntry = await findStaleNeighbourhoodCacheByKey({
         cacheKey,
         session,
@@ -113,21 +116,28 @@ export const resolveNeighbourhoodPlaces = async ({
     fetchRadiusMeters,
   });
   const fetchedAt = new Date();
-  const expiresAt = buildCacheExpiry(cacheTtlDays);
 
-  await upsertNeighbourhoodCache({
-    cacheKey,
-    origin,
-    fetchRadiusMeters,
-    places,
-    fetchedAt,
-    expiresAt,
-    session,
-  });
+  if (!overpassFetchFailed) {
+    const expiresAt = buildCacheExpiry(cacheTtlDays);
+
+    await upsertNeighbourhoodCache({
+      cacheKey,
+      origin,
+      fetchRadiusMeters,
+      places,
+      fetchedAt,
+      expiresAt,
+      session,
+    });
+  }
 
   return {
     places,
     fetchedAt,
-    cacheStatus: overpassEnabled ? "miss" : "bypass",
+    cacheStatus: overpassFetchFailed
+      ? "bypass"
+      : overpassEnabled
+        ? "miss"
+        : "bypass",
   };
 };
