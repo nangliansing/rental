@@ -480,8 +480,34 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
 
   const handleListingClose = useCallback(() => {
     if (!pendingListingId) return
-    navigate(-1)
-  }, [navigate, pendingListingId])
+
+    updateSearchUrl(
+      buildCurrentSearchUrlState({
+        searchSource,
+        submittedBounds,
+        submittedNearbyPosition,
+        submittedLinePoints,
+        lineDistanceMeters,
+        nearbyRadiusMeters,
+        submittedFilters,
+        buildingId: activeSelectedBuilding?._id ?? pendingBuildingId,
+        listingId: null,
+      }),
+      true,
+    )
+  }, [
+    activeSelectedBuilding,
+    lineDistanceMeters,
+    nearbyRadiusMeters,
+    pendingBuildingId,
+    pendingListingId,
+    searchSource,
+    submittedBounds,
+    submittedFilters,
+    submittedLinePoints,
+    submittedNearbyPosition,
+    updateSearchUrl,
+  ])
 
   const handleSearchAgain = useCallback(() => {
     if (searchSource === "nearby" && submittedNearbyPosition) {

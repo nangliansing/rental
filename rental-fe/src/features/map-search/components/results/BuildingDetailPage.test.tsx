@@ -8,6 +8,7 @@ import {
 import { renderWithProviders } from "@/test/renderWithProviders"
 
 import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuilding"
+import { BuildingDetailSessionProvider } from "../../context/BuildingDetailSessionContext"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
 import { BuildingDetailPage } from "./BuildingDetailPage"
@@ -101,13 +102,19 @@ describe("BuildingDetailPage", () => {
     )
 
     const { rerender, user } = renderWithProviders(
-      <BuildingDetailPage onBack={vi.fn()} />,
+      <BuildingDetailSessionProvider>
+        <BuildingDetailPage onBack={vi.fn()} />
+      </BuildingDetailSessionProvider>,
     )
 
     const preview = screen.getByRole("button", { name: "Open listing ฿14k" })
 
     await user.click(preview)
-    rerender(<BuildingDetailPage onBack={vi.fn()} />)
+    rerender(
+      <BuildingDetailSessionProvider>
+        <BuildingDetailPage onBack={vi.fn()} />
+      </BuildingDetailSessionProvider>,
+    )
 
     expect(
       screen.getByRole("dialog", { name: "Listing details" }),
@@ -115,7 +122,11 @@ describe("BuildingDetailPage", () => {
     expect(screen.getByText("Selected listing-1")).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Close details" }))
-    rerender(<BuildingDetailPage onBack={vi.fn()} />)
+    rerender(
+      <BuildingDetailSessionProvider>
+        <BuildingDetailPage onBack={vi.fn()} />
+      </BuildingDetailSessionProvider>,
+    )
 
     expect(screen.queryByRole("dialog", { name: "Listing details" })).not.toBeInTheDocument()
     expect(preview).toHaveFocus()

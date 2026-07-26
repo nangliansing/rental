@@ -1,4 +1,4 @@
-import type { Ref } from "react"
+import type { ReactNode, Ref } from "react"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -8,6 +8,14 @@ import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
 import type { SearchBuilding } from "../../types"
 import { BuildingResultsPanel } from "./BuildingResultsPanel"
+
+vi.mock("../../context/BuildingDetailSessionContext", () => ({
+  BuildingDetailSessionProvider: ({
+    children,
+  }: {
+    children: ReactNode
+  }) => children,
+}))
 
 vi.mock("@/hooks/useMediaQuery")
 vi.mock("../../context/MapSearchFilterContext")

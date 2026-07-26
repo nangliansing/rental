@@ -1,4 +1,5 @@
 import { ChevronLeft, X } from "lucide-react"
+import type { MouseEvent } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -13,6 +14,11 @@ export function ModalDismissHeader({
   closeLabel = "Close",
   className,
 }: ModalDismissHeaderProps) {
+  const handleClose = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    onClose()
+  }
+
   return (
     <div
       className={cn(
@@ -24,7 +30,7 @@ export function ModalDismissHeader({
         type="button"
         className="inline-flex h-10 items-center gap-2 rounded-full px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950"
         aria-label={closeLabel}
-        onClick={onClose}
+        onClick={handleClose}
       >
         <ChevronLeft className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.25} />
         <span className="hidden md:inline">{closeLabel}</span>
@@ -34,7 +40,7 @@ export function ModalDismissHeader({
         type="button"
         className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 md:flex"
         aria-label={closeLabel}
-        onClick={onClose}
+        onClick={handleClose}
       >
         <X className="h-5 w-5" />
       </button>
