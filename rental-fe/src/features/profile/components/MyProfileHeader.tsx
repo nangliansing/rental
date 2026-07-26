@@ -4,20 +4,17 @@ import type { AuthUser } from "@/features/auth/api"
 
 import type { AgentProfile } from "../api"
 import { buildProfileContactChips } from "../utils/buildProfileContactChips"
-import {
-  normalizeListingSummary,
-} from "../utils/profileListingSummary"
+import { normalizeListingSummary } from "../utils/profileListingSummary"
 import {
   PROFILE_AVATAR_CELL_CLASS,
   PROFILE_DETAILS_CELL_CLASS,
   PROFILE_EDIT_PATH,
 } from "../utils/profileLayoutStyles"
 import { MyProfileActions } from "./MyProfileActions"
-import { ProfileContactChips } from "./ProfileContactChips"
+import { ProfileHeaderDetailsBlock } from "./ProfileHeaderDetailsBlock"
 import { MyProfileStats } from "./MyProfileStats"
 import {
   ProfileAvatar,
-  ProfileDetails,
   ProfileIdentity,
 } from "./ProfileOverviewPrimitives"
 
@@ -58,15 +55,12 @@ export function MyProfileHeader({ user, profile, footer }: MyProfileHeaderProps)
           reviewSummary={profile.reviewSummary}
         />
 
-        <div className="w-full max-w-md space-y-2 px-2 md:max-w-none md:px-0">
-          <ProfileDetails
-            createdAt={profile.createdAt}
-            description={profile.description}
-            languages={profile.supportLanguages}
-            align="start"
-          />
-          <ProfileContactChips contacts={contactChips} />
-        </div>
+        <ProfileHeaderDetailsBlock
+          contacts={contactChips}
+          createdAt={profile.createdAt}
+          description={profile.description}
+          languages={profile.supportLanguages}
+        />
 
         <MyProfileActions />
 

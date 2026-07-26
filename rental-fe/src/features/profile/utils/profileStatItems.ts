@@ -3,7 +3,9 @@ import type { ListerReviewSummary } from "@/features/lister-review/api"
 import type { ProfileStatItem } from "../components/ProfileOverviewPrimitives"
 import type { ProfileListingSummaryCounts } from "./profileListingSummary"
 
-function normalizeReviewSummary(reviewSummary?: ListerReviewSummary | null) {
+export function normalizeReviewSummary(
+  reviewSummary?: ListerReviewSummary | null,
+) {
   const reviewCount =
     typeof reviewSummary?.reviewCount === "number" &&
     Number.isFinite(reviewSummary.reviewCount)
@@ -19,6 +21,30 @@ function normalizeReviewSummary(reviewSummary?: ListerReviewSummary | null) {
   return { reviewCount, averageRating, hasReviews: reviewCount > 0 }
 }
 
+function buildPrimaryProfileStatItems({
+  activeCount,
+  reviewSummary,
+  alwaysShowRating = false,
+}: {
+  activeCount: number
+  reviewSummary?: ListerReviewSummary | null
+  alwaysShowRating?: boolean
+}) {
+  const { reviewCount, averageRating, hasReviews } =
+    normalizeReviewSummary(reviewSummary)
+
+  return [
+    { id: "listings", value: activeCount, label: "Listings" },
+    { id: "reviews", value: reviewCount, label: "Reviews" },
+    {
+      id: "rating",
+      value: averageRating.toFixed(1),
+      label: "Rating",
+      ...(alwaysShowRating || hasReviews ? {} : { hidden: true }),
+    },
+  ] satisfies ProfileStatItem[]
+}
+
 export function buildOwnerProfileStatRows({
   listingSummary,
   reviewSummary,
@@ -26,19 +52,10 @@ export function buildOwnerProfileStatRows({
   listingSummary: ProfileListingSummaryCounts
   reviewSummary?: ListerReviewSummary | null
 }) {
-  const { reviewCount, averageRating, hasReviews } =
-    normalizeReviewSummary(reviewSummary)
-
-  const primary: ProfileStatItem[] = [
-    { id: "listings", value: listingSummary.activeCount, label: "Listings" },
-    { id: "reviews", value: reviewCount, label: "Reviews" },
-    {
-      id: "rating",
-      value: averageRating.toFixed(1),
-      label: "Rating",
-      hidden: !hasReviews,
-    },
-  ]
+  const primary = buildPrimaryProfileStatItems({
+    activeCount: listingSummary.activeCount,
+    reviewSummary,
+  })
 
   const secondary: ProfileStatItem[] = [
     { id: "pending", value: listingSummary.pendingCount, label: "Pending" },
@@ -60,17 +77,9 @@ export function buildListerProfileStatItems({
   activeCount: number
   reviewSummary?: ListerReviewSummary | null
 }) {
-  const { reviewCount, averageRating, hasReviews } =
-    normalizeReviewSummary(reviewSummary)
-
-  return [
-    { id: "listings", value: activeCount, label: "Listings" },
-    { id: "reviews", value: reviewCount, label: "Reviews" },
-    {
-      id: "rating",
-      value: averageRating.toFixed(1),
-      label: "Rating",
-      hidden: !hasReviews,
-    },
-  ] satisfies ProfileStatItem[]
+  return buildPrimaryProfileStatItems({
+    activeCount,
+    reviewSummary,
+    alwaysShowRating: true,
+  })
 }

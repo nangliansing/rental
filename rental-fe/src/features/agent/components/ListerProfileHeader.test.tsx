@@ -17,16 +17,17 @@ vi.mock("@/features/profile/components/MyProfileShareModal", () => ({
 }))
 
 describe("ListerProfileHeader", () => {
-  it("renders identity, online status, contacts, stats, and share affordance", () => {
+  it("renders identity, online status, contact chips, stats, and share affordance", () => {
     render(<ListerProfileHeader profile={createListerProfile()} />)
 
-    expect(screen.getByText("Nang Lian Sing")).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Nang Lian Sing" }),
+    ).toBeInTheDocument()
     expect(screen.getByText("Since Jul 2026 · English · Thai")).toBeInTheDocument()
     expect(screen.getByLabelText("Online lister")).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: "Contact" }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Line" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Contact" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Line" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Phone" })).toBeInTheDocument()
     expect(screen.getByText("Listings")).toBeInTheDocument()
     expect(screen.getByText("Reviews")).toBeInTheDocument()
     expect(screen.getByText("4.5")).toBeInTheDocument()
@@ -51,7 +52,7 @@ describe("ListerProfileHeader", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("hides rating stat when there are no reviews", () => {
+  it("shows zero rating when there are no reviews", () => {
     render(
       <ListerProfileHeader
         profile={createListerProfile({
@@ -71,7 +72,8 @@ describe("ListerProfileHeader", () => {
       />,
     )
 
-    expect(screen.queryByText("Rating")).not.toBeInTheDocument()
+    expect(screen.getByText("0.0")).toBeInTheDocument()
+    expect(screen.getByText("Rating")).toBeInTheDocument()
   })
 
   it("shows only share when no contact channels exist", () => {
@@ -90,6 +92,7 @@ describe("ListerProfileHeader", () => {
     expect(
       screen.queryByRole("button", { name: "Contact" }),
     ).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Line" })).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Share profile" }),
     ).toBeInTheDocument()
