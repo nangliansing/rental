@@ -1,4 +1,5 @@
 import { classifyOsmPlace } from "./classify-osm-place.service.js";
+import { enrichTransitPlace } from "./enrich-transit-place.service.js";
 
 const resolvePlaceName = (tags) =>
   tags.name?.trim() ||
@@ -21,13 +22,16 @@ export const normalizeOverpassElement = (element) => {
     return null;
   }
 
-  return {
-    id: `osm-${element.type}-${element.id}`,
-    name: resolvePlaceName(tags),
-    lat,
-    lng,
-    category,
-  };
+  return enrichTransitPlace(
+    {
+      id: `osm-${element.type}-${element.id}`,
+      name: resolvePlaceName(tags),
+      lat,
+      lng,
+      category,
+    },
+    tags,
+  );
 };
 
 export const normalizeOverpassResponse = (response) => {

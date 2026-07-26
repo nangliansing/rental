@@ -142,5 +142,21 @@
     "lng": 100.5614,
     "mode": "rail",
     "line": "Airport Rail Link"
+  },
+  {
+    "id": "mrt-yaek-lam-sali",
+    "name": "MRT Yaek Lam Sali",
+    "lat": 13.7617,
+    "lng": 100.6455,
+    "mode": "mrt",
+    "line": "Yellow Line"
+  },
+  {
+    "id": "mrt-bang-kapi",
+    "name": "MRT Bang Kapi",
+    "lat": 13.7692,
+    "lng": 100.6396,
+    "mode": "mrt",
+    "line": "Yellow Line"
   }
 ]

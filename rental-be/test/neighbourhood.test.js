@@ -16,7 +16,16 @@ import {
 import { buildGetBuildingNeighbourhoodParams } from "../modules/neighbourhood/params/build-get-building-neighbourhood-params.js";
 import { buildNeighbourhoodSummary } from "../modules/neighbourhood/services/build-neighbourhood-summary.service.js";
 import { buildOverpassQuery } from "../modules/neighbourhood/services/build-overpass-query.service.js";
-import { classifyOsmPlace } from "../modules/neighbourhood/services/classify-osm-place.service.js";
+import {
+  classifyOsmPlace,
+  isPublicTransportStation,
+} from "../modules/neighbourhood/services/classify-osm-place.service.js";
+import { dedupeTransitPlaces } from "../modules/neighbourhood/services/dedupe-transit-places.service.js";
+import {
+  enrichTransitPlace,
+  resolveTransitLine,
+  resolveTransitMode,
+} from "../modules/neighbourhood/services/enrich-transit-place.service.js";
 import { filterPlacesByRadius } from "../modules/neighbourhood/services/filter-places-by-radius.service.js";
 import { loadStaticTransitPlaces } from "../modules/neighbourhood/services/load-static-transit-places.service.js";
 import { normalizeOverpassResponse } from "../modules/neighbourhood/services/normalize-overpass-response.service.js";
@@ -38,7 +47,7 @@ test("buildNeighbourhoodCacheKey rounds coordinates for shared cache entries", (
       origin: { lat: 13.75678, lng: 100.64231 },
       fetchRadiusMeters: 2000,
     }),
-    "13.757:100.642:2000",
+    "2:13.757:100.642:2000",
   );
 
   assert.equal(
@@ -70,6 +79,190 @@ test("classifyOsmPlace uses category priority when multiple tags match", () => {
   );
   assert.equal(classifyOsmPlace({ amenity: "cafe" }), "cafe");
   assert.equal(classifyOsmPlace({ amenity: "bank" }), null);
+});
+
+test("classifyOsmPlace recognizes Bangkok transit stations from OSM tags", () => {
+  assert.equal(
+    classifyOsmPlace({
+      station: "subway",
+      name: "MRT Sukhumvit",
+      network: "MRT",
+    }),
+    "public_transport",
+  );
+  assert.equal(
+    classifyOsmPlace({
+      station: "light_rail",
+      name: "BTS Asok",
+      network: "BTS",
+    }),
+    "public_transport",
+  );
+  assert.equal(
+    classifyOsmPlace({
+      public_transport: "station",
+      railway: "station",
+      network: "BTS",
+      name: "Asok",
+    }),
+    "public_transport",
+  );
+  assert.equal(
+    isPublicTransportStation({
+      public_transport: "station",
+      railway: "station",
+      name: "State Railway Station",
+    }),
+    false,
+  );
+});
+
+test("classifyOsmPlace recognizes MRT monorail stations such as Yaek Lam Sali", () => {
+  const yaekLamSaliTags = {
+    public_transport: "station",
+    railway: "station",
+    station: "monorail",
+    monorail: "yes",
+    name: "แยกลำสาลี",
+    "name:en": "Yaek Lam Sali",
+    operator: "Eastern Bangkok Monorail",
+    ref: "YL09",
+  };
+
+  assert.equal(classifyOsmPlace(yaekLamSaliTags), "public_transport");
+
+  const places = normalizeOverpassResponse({
+    elements: [
+      {
+        type: "node",
+        id: 10867419326,
+        lat: 13.7617,
+        lon: 100.6455,
+        tags: yaekLamSaliTags,
+      },
+    ],
+  });
+
+  assert.deepEqual(places, [
+    {
+      id: "osm-node-10867419326",
+      name: "แยกลำสาลี",
+      lat: 13.7617,
+      lng: 100.6455,
+      category: "public_transport",
+      mode: "mrt",
+      line: "Yellow Line",
+    },
+  ]);
+});
+
+test("resolveTransitMode and resolveTransitLine infer Bangkok transit metadata", () => {
+  assert.equal(
+    resolveTransitMode({ station: "light_rail", network: "BTS" }, "BTS Asok"),
+    "bts",
+  );
+  assert.equal(
+    resolveTransitMode({ station: "subway", network: "MRT" }, "MRT Silom"),
+    "mrt",
+  );
+  assert.equal(
+    resolveTransitLine({ line: "Blue Line" }, "MRT Silom"),
+    "Blue Line",
+  );
+  assert.equal(
+    resolveTransitLine({ network: "BTS", station: "light_rail" }, "BTS Thong Lo"),
+    null,
+  );
+});
+
+test("normalizeOverpassResponse enriches public transport places", () => {
+  const places = normalizeOverpassResponse({
+    elements: [
+      {
+        type: "node",
+        id: 42,
+        lat: 13.737,
+        lon: 100.5603,
+        tags: {
+          name: "BTS Asok",
+          station: "light_rail",
+          network: "BTS",
+          line: "Sukhumvit Line",
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(places, [
+    {
+      id: "osm-node-42",
+      name: "BTS Asok",
+      lat: 13.737,
+      lng: 100.5603,
+      category: "public_transport",
+      mode: "bts",
+      line: "Sukhumvit Line",
+    },
+  ]);
+});
+
+test("dedupeTransitPlaces prefers static stations over nearby OSM duplicates", () => {
+  const places = dedupeTransitPlaces([
+    {
+      id: "osm-node-99",
+      name: "BTS Bang Chak",
+      lat: 13.6963,
+      lng: 100.6051,
+      category: "public_transport",
+      mode: "bts",
+    },
+    {
+      id: "bts-bang-chak",
+      name: "BTS Bang Chak",
+      lat: 13.6963,
+      lng: 100.6051,
+      category: "public_transport",
+      mode: "bts",
+      line: "Sukhumvit Line",
+    },
+    {
+      id: "osm-node-100",
+      name: "Remote BTS",
+      lat: 13.8,
+      lng: 100.6,
+      category: "public_transport",
+      mode: "bts",
+    },
+    {
+      id: "place-1",
+      name: "Cafe",
+      lat: 13.75,
+      lng: 100.5,
+      category: "cafe",
+    },
+  ]);
+
+  assert.deepEqual(
+    places.map((place) => place.id).sort(),
+    ["bts-bang-chak", "osm-node-100", "place-1"],
+  );
+});
+
+test("enrichTransitPlace uses nearby static station metadata for sparse OSM tags", () => {
+  const enriched = enrichTransitPlace(
+    {
+      id: "osm-node-55",
+      name: "Unnamed place",
+      lat: 13.6963,
+      lng: 100.6051,
+      category: "public_transport",
+    },
+    { station: "light_rail" },
+  );
+
+  assert.equal(enriched.name, "BTS Bang Chak");
+  assert.equal(enriched.mode, "bts");
+  assert.equal(enriched.line, "Sukhumvit Line");
 });
 
 test("normalizeOverpassResponse supports nodes, centered ways, and name fallbacks", () => {
@@ -144,6 +337,12 @@ test("buildOverpassQuery includes all configured OSM categories", () => {
     }
   }
 
+  assert.match(query, /network"~"\^\(BTS\|MRT\|SRT\|Airport Rail Link\)"/);
+  assert.match(query, /way\["station"="monorail"\]/);
+  assert.match(
+    query,
+    /node\["public_transport"="station"\]\["station"="monorail"\]/,
+  );
   assert.match(query, /around:2000,13\.75,100\.5/);
 });
 
@@ -269,6 +468,57 @@ test("filterPlacesByRadius caps the number of returned places", () => {
 
   assert.equal(filtered.length, MAX_RETURNED_PLACES);
   assert.ok(filtered[0].distanceMeters <= filtered.at(-1).distanceMeters);
+});
+
+test("filterPlacesByRadius always keeps public transport even when POI cap is reached", () => {
+  const origin = { lat: 13.7692, lng: 100.6396 };
+  const conveniencePlaces = Array.from(
+    { length: MAX_RETURNED_PLACES + 10 },
+    (_, index) => ({
+      id: `place-${index}`,
+      name: `Place ${index}`,
+      category: "convenience",
+      lat: 13.7692 + index * 0.00001,
+      lng: 100.6396,
+    }),
+  );
+
+  const filtered = filterPlacesByRadius({
+    origin,
+    radiusMeters: 2000,
+    places: [
+      ...conveniencePlaces,
+      {
+        id: "mrt-bang-kapi",
+        name: "MRT Bang Kapi",
+        category: "public_transport",
+        lat: 13.7692,
+        lng: 100.6396,
+      },
+    ],
+  });
+
+  assert.equal(
+    filtered.filter((place) => place.category !== "public_transport").length,
+    MAX_RETURNED_PLACES,
+  );
+  assert.ok(
+    filtered.some(
+      (place) =>
+        place.id === "mrt-bang-kapi" && place.category === "public_transport",
+    ),
+  );
+});
+
+test("classifyOsmPlace recognizes ferry terminals", () => {
+  assert.equal(
+    classifyOsmPlace({
+      amenity: "ferry_terminal",
+      name: "The Mall Bangkapi Pier",
+      operator: "Khlong Saen Saep Express Boat",
+    }),
+    "public_transport",
+  );
 });
 
 test("loadStaticTransitPlaces returns BTS/MRT stations within fetch radius", () => {
