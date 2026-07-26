@@ -1,6 +1,5 @@
-import type { SearchBounds } from "../hooks/useMapBounds"
 import type { MapPosition } from "../types"
-import { isValidMapPosition, isValidSearchBounds } from "./map-position"
+import { isValidMapPosition } from "./map-position"
 
 export type MapCameraBounds = {
   north: number
@@ -9,80 +8,35 @@ export type MapCameraBounds = {
   west: number
 }
 
-const MIN_SELECTION_SPAN = 0.0008
-
-export function extendMapCameraBounds(
-  bounds: MapCameraBounds,
+export function isPositionInsideMapCameraBounds(
   position: MapPosition,
-): MapCameraBounds {
-  return {
-    north: Math.max(bounds.north, position.lat),
-    south: Math.min(bounds.south, position.lat),
-    east: Math.max(bounds.east, position.lng),
-    west: Math.min(bounds.west, position.lng),
-  }
+  bounds: MapCameraBounds | null,
+): boolean {
+  if (!bounds || !isValidMapPosition(position)) return false
+
+  return (
+    position.lat <= bounds.north &&
+    position.lat >= bounds.south &&
+    position.lng <= bounds.east &&
+    position.lng >= bounds.west
+  )
 }
 
-export function getBoundsFromSearchArea(searchBounds: SearchBounds): MapCameraBounds {
-  return {
-    north: searchBounds.northEast.lat,
-    south: searchBounds.southWest.lat,
-    east: searchBounds.northEast.lng,
-    west: searchBounds.southWest.lng,
-  }
-}
+export function getMapCameraBoundsFromGoogleMap(
+  map: google.maps.Map,
+): MapCameraBounds | null {
+  const bounds = map.getBounds()
+  if (!bounds) return null
 
-function ensureMinimumSpan(bounds: MapCameraBounds): MapCameraBounds {
-  const latSpan = bounds.north - bounds.south
-  const lngSpan = bounds.east - bounds.west
-  const latPadding = Math.max(0, (MIN_SELECTION_SPAN - latSpan) / 2)
-  const lngPadding = Math.max(0, (MIN_SELECTION_SPAN - lngSpan) / 2)
+  const northEast = bounds.getNorthEast()
+  const southWest = bounds.getSouthWest()
 
   return {
-    north: bounds.north + latPadding,
-    south: bounds.south - latPadding,
-    east: bounds.east + lngPadding,
-    west: bounds.west - lngPadding,
+    north: northEast.lat(),
+    south: southWest.lat(),
+    east: northEast.lng(),
+    west: southWest.lng(),
   }
-}
-
-export function getBuildingSelectionCameraBounds({
-  buildingPosition,
-  pin,
-  searchBounds,
-}: {
-  buildingPosition: MapPosition
-  pin: MapPosition | null
-  searchBounds: SearchBounds | null
-}): MapCameraBounds | null {
-  if (!isValidMapPosition(buildingPosition)) return null
-
-  const hasSearchPin = isValidMapPosition(pin)
-  const hasSearchBounds = isValidSearchBounds(searchBounds)
-  if (!hasSearchPin && !hasSearchBounds) return null
-
-  let bounds: MapCameraBounds = {
-    north: buildingPosition.lat,
-    south: buildingPosition.lat,
-    east: buildingPosition.lng,
-    west: buildingPosition.lng,
-  }
-
-  if (hasSearchPin) {
-    bounds = extendMapCameraBounds(bounds, pin)
-  }
-  if (hasSearchBounds) {
-    bounds = extendMapCameraBounds(bounds, {
-      lat: searchBounds.northEast.lat,
-      lng: searchBounds.northEast.lng,
-    })
-    bounds = extendMapCameraBounds(bounds, {
-      lat: searchBounds.southWest.lat,
-      lng: searchBounds.southWest.lng,
-    })
-  }
-
-  return ensureMinimumSpan(bounds)
 }
 
 export function getNearbyZoom(radiusMeters: number) {

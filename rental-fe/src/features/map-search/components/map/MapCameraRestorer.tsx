@@ -5,8 +5,9 @@ import type { SearchBounds } from "../../hooks/useMapBounds"
 import { useMapCameraTransition } from "../../hooks/useMapCameraTransition"
 import type { MapPosition, SearchBuilding } from "../../types"
 import {
-  getBuildingSelectionCameraBounds,
+  getMapCameraBoundsFromGoogleMap,
   getNearbyZoom,
+  isPositionInsideMapCameraBounds,
 } from "../../utils/map-camera"
 import {
   getPositionFromBuildingLocation,
@@ -49,24 +50,17 @@ export const MapCameraRestorer = memo(function MapCameraRestorer({
     if (!isValidMapPosition(buildingPosition) || !map) return
 
     focusedBuildingIdRef.current = selectedBuilding._id
-    onRestoreStart()
 
-    const selectionBounds = getBuildingSelectionCameraBounds({
-      buildingPosition,
-      pin,
-      searchBounds: bounds,
-    })
-
-    if (selectionBounds) {
-      map.fitBounds(selectionBounds, BUILDING_FOCUS_PADDING)
+    const cameraBounds = getMapCameraBoundsFromGoogleMap(map)
+    if (
+      isPositionInsideMapCameraBounds(buildingPosition, cameraBounds)
+    ) {
       return
     }
 
-    camera.flyTo(
-      buildingPosition,
-      Math.max(map.getZoom() ?? 0, 16),
-    )
-  }, [bounds, camera, map, onRestoreStart, pin, selectedBuilding])
+    onRestoreStart()
+    map.panTo(buildingPosition)
+  }, [map, onRestoreStart, selectedBuilding])
 
   useEffect(() => {
     if (!map || restoreVersion === 0) return
