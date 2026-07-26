@@ -26,6 +26,22 @@ function findEntry(token: symbol) {
   return stack.find((entry) => entry.token === token)
 }
 
+function isModalHistoryStateActive() {
+  if (typeof window === "undefined") return false
+
+  return window.history.state?.[MODAL_HISTORY_STATE_KEY] === true
+}
+
+function syncHistoryAfterClose(entry: StackEntry) {
+  entry.historyActive = false
+  removeEntry(entry.token)
+
+  if (!entry.tracksHistory || !isModalHistoryStateActive()) return
+
+  suppressNextPopstate = true
+  window.history.back()
+}
+
 function handlePopstate() {
   if (suppressNextPopstate) {
     suppressNextPopstate = false
@@ -73,15 +89,7 @@ export function registerStackEntry({
     const current = findEntry(token)
     if (!current) return
 
-    if (current.tracksHistory && current.historyActive) {
-      current.historyActive = false
-      removeEntry(token)
-      suppressNextPopstate = true
-      window.history.back()
-      return
-    }
-
-    removeEntry(token)
+    syncHistoryAfterClose(current)
   }
 }
 
@@ -92,11 +100,8 @@ export function requestStackClose(token: symbol) {
   const entry = stack[index]!
 
   if (entry.tracksHistory && entry.historyActive) {
-    entry.historyActive = false
-    removeEntry(token)
     entry.onClose()
-    suppressNextPopstate = true
-    window.history.back()
+    syncHistoryAfterClose(entry)
     return
   }
 

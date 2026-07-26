@@ -103,16 +103,23 @@ describe("modalHistoryStack", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it("does not push history for untracked entries", () => {
-    const pushState = vi.spyOn(window.history, "pushState")
+  it("does not history.back when the modal entry was replaced", () => {
+    const back = vi.spyOn(window.history, "back")
+    const onClose = vi.fn()
     const token = Symbol("modal")
 
     registerStackEntry({
       token,
-      onClose: vi.fn(),
-      tracksHistory: false,
+      onClose,
+      tracksHistory: true,
     })
 
-    expect(pushState).not.toHaveBeenCalled()
+    window.history.replaceState({ replaced: true }, "")
+
+    requestStackClose(token)
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(back).not.toHaveBeenCalled()
+    expect(isTopStackEntry(token)).toBe(false)
   })
 })
