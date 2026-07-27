@@ -31,14 +31,18 @@ export function useNeighbourhoodExploreState({
   const [selectedCategory, setSelectedCategory] =
     useState<NeighbourhoodCategoryFilter>(NEIGHBOURHOOD_ALL_CATEGORY_KEY)
 
-  const neighbourhoodQuery = useBuildingNeighbourhood({
+  const {
+    data: neighbourhood,
+    isPending,
+    isError,
+    isFetching,
+    refetch: refetchNeighbourhood,
+  } = useBuildingNeighbourhood({
     buildingId,
     radiusM: radiusMeters,
     fetchRadiusM: NEIGHBOURHOOD_FETCH_RADIUS_METERS,
     enabled: enabled && Boolean(buildingId),
   })
-
-  const neighbourhood = neighbourhoodQuery.data
 
   const categoryPillOptions = useMemo((): FilterPillOption<string>[] => {
     if (!neighbourhood) return []
@@ -83,14 +87,21 @@ export function useNeighbourhoodExploreState({
     setSelectedCategory(value as NeighbourhoodCategoryFilter)
   }, [])
 
+  const refetch = useCallback(() => {
+    void refetchNeighbourhood()
+  }, [refetchNeighbourhood])
+
   return {
     neighbourhood,
-    neighbourhoodQuery,
+    isPending,
+    isError,
+    isFetching,
     radiusMeters,
     selectedCategory,
     categoryPillOptions,
     visiblePlaces,
     handleRadiusChange,
     handleCategoryChange,
+    refetch,
   }
 }

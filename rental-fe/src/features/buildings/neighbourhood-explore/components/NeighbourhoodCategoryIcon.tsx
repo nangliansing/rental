@@ -5,6 +5,7 @@ import { getNeighbourhoodPlacePinDisplay } from "../utils/neighbourhoodPlacePinD
 
 type NeighbourhoodCategoryIconProps = {
   category: NeighbourhoodCategoryKey
+  mode?: string
   className?: string
   iconClassName?: string
   size?: number
@@ -12,11 +13,12 @@ type NeighbourhoodCategoryIconProps = {
 
 export function NeighbourhoodCategoryIcon({
   category,
+  mode,
   className,
   iconClassName = "h-4 w-4",
   size,
 }: NeighbourhoodCategoryIconProps) {
-  const { color, Icon } = getNeighbourhoodPlacePinDisplay(category)
+  const { color, Icon } = getNeighbourhoodPlacePinDisplay(category, mode)
 
   return (
     <span

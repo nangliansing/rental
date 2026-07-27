@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 export function useNeighbourhoodExploreDialog() {
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -27,9 +27,12 @@ export function useNeighbourhoodExploreDialog() {
     setIsOpen(false)
   }, [])
 
-  return {
-    isOpen,
-    open,
-    close,
-  }
+  return useMemo(
+    () => ({
+      isOpen,
+      open,
+      close,
+    }),
+    [isOpen, open, close],
+  )
 }

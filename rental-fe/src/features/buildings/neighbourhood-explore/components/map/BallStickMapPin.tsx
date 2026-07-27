@@ -7,9 +7,11 @@ type BallStickMapPinProps = {
   ballSize: number
   variant?: "filled" | "light"
   isSelected?: boolean
-  label?: string
-  onClick?: () => void
   children?: ReactNode
+}
+
+function getSelectedLightPinShadow(color: string) {
+  return `0 0 0 2px #ffffff, 0 0 0 5px ${color}, 0 8px 18px rgba(15, 23, 42, 0.34)`
 }
 
 export function BallStickMapPin({
@@ -17,74 +19,51 @@ export function BallStickMapPin({
   ballSize,
   variant = "filled",
   isSelected = false,
-  label,
-  onClick,
   children,
 }: BallStickMapPinProps) {
-  const stemHeight = 9
-  const scale = isSelected ? 1.12 : 1
+  const stemHeight = isSelected ? 11 : 9
+  const scale = isSelected ? 1.2 : 1
   const isLight = variant === "light"
+  const isLightSelected = isLight && isSelected
+  const ballBackgroundColor = isLightSelected ? color : isLight ? "#ffffff" : color
+  const ballBorderColor = isLight ? color : "white"
 
-  const PinGraphic = (
+  return (
     <div
-      className="flex flex-col items-center transition-transform duration-150"
+      className="flex flex-col items-center transition-transform duration-200 ease-out"
       style={{ transform: `scale(${scale})` }}
     >
       <div
         className={cn(
-          "flex items-center justify-center rounded-full",
-          isLight
-            ? cn(
-                "border bg-white shadow-[0_1px_4px_rgba(15,23,42,0.18)]",
-                isSelected ? "border-[2.5px]" : "border-2",
-              )
-            : "border-2 border-white shadow-[0_2px_6px_rgba(15,23,42,0.28)]",
+          "flex items-center justify-center rounded-full transition-[background-color,border-color,box-shadow] duration-200 ease-out",
+          isLight &&
+            !isLightSelected &&
+            "border-2 border bg-white shadow-[0_1px_4px_rgba(15,23,42,0.18)]",
+          isLightSelected && "border-[3px]",
+          !isLight &&
+            "border-2 border-white shadow-[0_2px_6px_rgba(15,23,42,0.28)]",
         )}
         style={{
           width: ballSize,
           height: ballSize,
-          backgroundColor: isLight ? "#ffffff" : color,
-          borderColor: isLight ? color : "white",
+          backgroundColor: ballBackgroundColor,
+          borderColor: ballBorderColor,
+          ...(isLightSelected
+            ? { boxShadow: getSelectedLightPinShadow(color) }
+            : {}),
         }}
       >
         {children}
       </div>
       <div
-        className="rounded-full"
+        className="rounded-full transition-all duration-200 ease-out"
         style={{
-          width: isSelected ? 2.5 : 2,
+          width: isSelected ? 3 : 2,
           height: stemHeight,
           backgroundColor: color,
           opacity: isLight ? 0.85 : 1,
         }}
       />
-    </div>
-  )
-
-  if (!onClick) {
-    return (
-      <div className="relative h-0 w-0">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-          {PinGraphic}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative h-0 w-0">
-      <button
-        type="button"
-        className={cn(
-          "absolute bottom-0 left-1/2 -translate-x-1/2 rounded-sm",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2",
-        )}
-        aria-label={label}
-        aria-pressed={isSelected}
-        onClick={onClick}
-      >
-        {PinGraphic}
-      </button>
     </div>
   )
 }

@@ -6,15 +6,16 @@ import { BallStickMapPin } from "./BallStickMapPin"
 type NeighbourhoodPlaceMarkerProps = {
   place: NeighbourhoodPlace
   isSelected: boolean
-  onSelect?: () => void
 }
 
 export function NeighbourhoodPlaceMarker({
   place,
   isSelected,
-  onSelect,
 }: NeighbourhoodPlaceMarkerProps) {
-  const { color, Icon } = getNeighbourhoodPlacePinDisplay(place.category)
+  const { color, Icon } = getNeighbourhoodPlacePinDisplay(
+    place.category,
+    place.mode,
+  )
   const sizes = isSelected
     ? NEIGHBOURHOOD_PIN_SIZES.selectedPlace
     : NEIGHBOURHOOD_PIN_SIZES.place
@@ -25,14 +26,12 @@ export function NeighbourhoodPlaceMarker({
       ballSize={sizes.ballSize}
       variant="light"
       isSelected={isSelected}
-      label={place.name}
-      onClick={onSelect}
     >
       <Icon
         aria-hidden="true"
-        style={{ color }}
+        style={{ color: isSelected ? "#ffffff" : color }}
         size={sizes.iconSize}
-        strokeWidth={2.5}
+        strokeWidth={isSelected ? 2.75 : 2.5}
       />
     </BallStickMapPin>
   )

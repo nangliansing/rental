@@ -2,7 +2,7 @@ import { FilterPills } from "@/shared/components/inputs/FilterPills"
 import { CollectionRefreshStatus } from "@/shared/components/collections/ListingCollectionState"
 import { cn } from "@/lib/utils"
 
-import { useNeighbourhoodExplore } from "../NeighbourhoodExploreContext"
+import { useNeighbourhoodExploreData } from "../NeighbourhoodExploreContext"
 import {
   NEIGHBOURHOOD_CATEGORY_BAR_GRADIENT_CLASS,
   shouldShowNeighbourhoodCategoryBar,
@@ -15,7 +15,7 @@ export function NeighbourhoodExploreCategoryBar() {
     selectedCategory,
     isBackgroundFetching,
     setCategory,
-  } = useNeighbourhoodExplore()
+  } = useNeighbourhoodExploreData()
 
   const categoryCount = categoryPillOptions.length
 

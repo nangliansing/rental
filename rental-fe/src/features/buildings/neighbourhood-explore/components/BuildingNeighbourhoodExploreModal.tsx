@@ -1,7 +1,7 @@
 import { ResponsiveScreenModal } from "@/shared/components/modals/ResponsiveScreenModal"
 
+import { useNeighbourhoodExploreData } from "../NeighbourhoodExploreContext"
 import { NeighbourhoodExploreProvider } from "../NeighbourhoodExploreProvider"
-import { useNeighbourhoodExplore } from "../NeighbourhoodExploreContext"
 import { NEIGHBOURHOOD_EXPLORE_MODAL_LABEL } from "../utils/neighbourhoodExploreUi"
 import { NeighbourhoodExploreAttribution } from "./NeighbourhoodExploreAttribution"
 import { NeighbourhoodExploreBody } from "./NeighbourhoodExploreBody"
@@ -19,7 +19,7 @@ function NeighbourhoodExploreModalShell({
 }: {
   onClose: () => void
 }) {
-  const { neighbourhood, showMap } = useNeighbourhoodExplore()
+  const { neighbourhood, showMap } = useNeighbourhoodExploreData()
 
   return (
     <>

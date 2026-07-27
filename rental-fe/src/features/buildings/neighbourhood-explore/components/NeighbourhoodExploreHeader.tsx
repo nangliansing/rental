@@ -1,6 +1,6 @@
 import { ModalDismissHeader } from "@/shared/components/navigation/ModalDismissHeader"
 
-import { useNeighbourhoodExplore } from "../NeighbourhoodExploreContext"
+import { useNeighbourhoodExploreData } from "../NeighbourhoodExploreContext"
 import {
   NEIGHBOURHOOD_EXPLORE_CLOSE_LABEL,
   NEIGHBOURHOOD_EXPLORE_MODAL_DESCRIPTION,
@@ -15,7 +15,7 @@ type NeighbourhoodExploreHeaderProps = {
 export function NeighbourhoodExploreHeader({
   onClose,
 }: NeighbourhoodExploreHeaderProps) {
-  const { radiusMeters, setRadius } = useNeighbourhoodExplore()
+  const { radiusMeters, setRadius } = useNeighbourhoodExploreData()
 
   return (
     <ModalDismissHeader

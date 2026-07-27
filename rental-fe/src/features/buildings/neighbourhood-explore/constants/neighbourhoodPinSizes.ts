@@ -8,7 +8,7 @@ export const NEIGHBOURHOOD_PIN_SIZES = {
     iconSize: 11,
   },
   selectedPlace: {
-    ballSize: 24,
-    iconSize: 12,
+    ballSize: 28,
+    iconSize: 14,
   },
 } as const

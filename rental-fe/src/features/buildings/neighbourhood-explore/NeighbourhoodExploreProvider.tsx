@@ -2,9 +2,13 @@ import { useCallback, useMemo, useState, type ReactNode } from "react"
 
 import { useNeighbourhoodExploreState } from "./hooks/useNeighbourhoodExploreState"
 import {
-  NeighbourhoodExploreContext,
-  type NeighbourhoodExploreContextValue,
-} from "./NeighbourhoodExploreContext"
+  NeighbourhoodExploreDataContext,
+  type NeighbourhoodExploreDataContextValue,
+} from "./context/NeighbourhoodExploreDataContext"
+import {
+  NeighbourhoodExploreSelectionContext,
+  type NeighbourhoodExploreSelectionContextValue,
+} from "./context/NeighbourhoodExploreSelectionContext"
 
 type NeighbourhoodExploreProviderProps = {
   buildingId: string | undefined
@@ -18,16 +22,25 @@ export function NeighbourhoodExploreProvider({
   children,
 }: NeighbourhoodExploreProviderProps) {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
+  const [selectedPlaceRevision, setSelectedPlaceRevision] = useState(0)
+
+  const selectPlace = useCallback((placeId: string | null) => {
+    setSelectedPlaceId(placeId)
+    setSelectedPlaceRevision((revision) => revision + 1)
+  }, [])
 
   const {
     neighbourhood,
-    neighbourhoodQuery,
+    isPending,
+    isError,
+    isFetching,
     radiusMeters,
     selectedCategory,
     categoryPillOptions,
     visiblePlaces,
     handleRadiusChange,
     handleCategoryChange,
+    refetch,
   } = useNeighbourhoodExploreState({
     buildingId,
     enabled,
@@ -50,49 +63,37 @@ export function NeighbourhoodExploreProvider({
     [effectiveSelectedPlaceId, visiblePlaces],
   )
 
-  const isInitialLoading = neighbourhoodQuery.isPending && !neighbourhood
-  const isInitialError = neighbourhoodQuery.isError && !neighbourhood
-  const isBackgroundFetching =
-    neighbourhoodQuery.isFetching && Boolean(neighbourhood)
+  const isInitialLoading = isPending && !neighbourhood
+  const isInitialError = isError && !neighbourhood
+  const isBackgroundFetching = isFetching && Boolean(neighbourhood)
   const showMap =
     Boolean(neighbourhood) &&
     visiblePlaces.length > 0 &&
     !isInitialLoading &&
     !isInitialError
 
-  const refetch = useCallback(() => {
-    void neighbourhoodQuery.refetch()
-  }, [neighbourhoodQuery])
-
-  const value = useMemo(
-    (): NeighbourhoodExploreContextValue => ({
+  const dataValue = useMemo(
+    (): NeighbourhoodExploreDataContextValue => ({
       neighbourhood,
-      neighbourhoodQuery,
       origin: neighbourhood?.origin ?? null,
       visiblePlaces,
       categoryPillOptions,
       radiusMeters,
       selectedCategory,
-      selectedPlaceId: effectiveSelectedPlaceId,
-      selectedPlace,
       isInitialLoading,
       isInitialError,
       isBackgroundFetching,
       showMap,
       setRadius: handleRadiusChange,
       setCategory: handleCategoryChange,
-      selectPlace: setSelectedPlaceId,
       refetch,
     }),
     [
       neighbourhood,
-      neighbourhoodQuery,
       visiblePlaces,
       categoryPillOptions,
       radiusMeters,
       selectedCategory,
-      effectiveSelectedPlaceId,
-      selectedPlace,
       isInitialLoading,
       isInitialError,
       isBackgroundFetching,
@@ -103,9 +104,21 @@ export function NeighbourhoodExploreProvider({
     ],
   )
 
+  const selectionValue = useMemo(
+    (): NeighbourhoodExploreSelectionContextValue => ({
+      selectedPlaceId: effectiveSelectedPlaceId,
+      selectedPlace,
+      selectedPlaceRevision,
+      selectPlace,
+    }),
+    [effectiveSelectedPlaceId, selectedPlace, selectedPlaceRevision, selectPlace],
+  )
+
   return (
-    <NeighbourhoodExploreContext.Provider value={value}>
-      {children}
-    </NeighbourhoodExploreContext.Provider>
+    <NeighbourhoodExploreDataContext.Provider value={dataValue}>
+      <NeighbourhoodExploreSelectionContext.Provider value={selectionValue}>
+        {children}
+      </NeighbourhoodExploreSelectionContext.Provider>
+    </NeighbourhoodExploreDataContext.Provider>
   )
 }

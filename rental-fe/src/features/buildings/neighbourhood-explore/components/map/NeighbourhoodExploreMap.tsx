@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { AdvancedMarker, Circle, Map } from "@vis.gl/react-google-maps"
 
 import { useGoogleMapsLoadState } from "@/features/map-search/hooks/useGoogleMapsLoadState"
@@ -13,20 +13,86 @@ import {
   shouldUseClientMapStyles,
 } from "@/shared/google-maps/googleMapsConfig"
 
-import { useNeighbourhoodExplore } from "../../NeighbourhoodExploreContext"
+import type { NeighbourhoodPlace } from "../../api/getBuildingNeighbourhood"
+import { useNeighbourhoodExploreData } from "../../NeighbourhoodExploreContext"
+import { useNeighbourhoodExplorePlaceSelection } from "../../hooks/useNeighbourhoodExplorePlaceSelection"
 import { NEIGHBOURHOOD_MAP_STYLES } from "../../constants/neighbourhoodMapStyles"
+import { NeighbourhoodExploreMapPlaceSync } from "../sync/NeighbourhoodExploreMapPlaceSync"
 import { NeighbourhoodOriginMarker } from "./NeighbourhoodOriginMarker"
 import { NeighbourhoodPlaceMarker } from "./NeighbourhoodPlaceMarker"
+import { NeighbourhoodPlaceMarkerSurface } from "./NeighbourhoodPlaceMarkerSurface"
+
+const NEIGHBOURHOOD_PLACE_MARKER_ANCHOR = {
+  anchorLeft: "-50%",
+  anchorTop: "-100%",
+} as const
+
+type NeighbourhoodPlaceAdvancedMarkerProps = {
+  place: NeighbourhoodPlace
+  isSelected: boolean
+  onSelect: (placeId: string) => void
+}
+
+const NeighbourhoodPlaceAdvancedMarker = memo(
+  function NeighbourhoodPlaceAdvancedMarker({
+    place,
+    isSelected,
+    onSelect,
+  }: NeighbourhoodPlaceAdvancedMarkerProps) {
+    const handleSelect = useCallback(() => {
+      onSelect(place.id)
+    }, [onSelect, place.id])
+
+    return (
+      <AdvancedMarker
+        position={{ lat: place.lat, lng: place.lng }}
+        zIndex={isSelected ? 40 : 30}
+        title={place.name}
+        clickable={false}
+        {...NEIGHBOURHOOD_PLACE_MARKER_ANCHOR}
+      >
+        <NeighbourhoodPlaceMarkerSurface
+          label={place.name}
+          onSelect={handleSelect}
+        >
+          <NeighbourhoodPlaceMarker place={place} isSelected={isSelected} />
+        </NeighbourhoodPlaceMarkerSurface>
+      </AdvancedMarker>
+    )
+  },
+)
+
+const NeighbourhoodExploreMapPlaces = memo(function NeighbourhoodExploreMapPlaces() {
+  const { visiblePlaces } = useNeighbourhoodExploreData()
+  const { selectedPlaceId, selectPlace } = useNeighbourhoodExplorePlaceSelection()
+
+  const validPlaces = useMemo(
+    () =>
+      visiblePlaces.filter(
+        (place) =>
+          isValidMapPosition({ lat: place.lat, lng: place.lng }) &&
+          Number.isFinite(place.distanceMeters),
+      ),
+    [visiblePlaces],
+  )
+
+  return (
+    <>
+      {validPlaces.map((place) => (
+        <NeighbourhoodPlaceAdvancedMarker
+          key={place.id}
+          place={place}
+          isSelected={place.id === selectedPlaceId}
+          onSelect={selectPlace}
+        />
+      ))}
+    </>
+  )
+})
 
 const NeighbourhoodExploreMapContent = memo(
   function NeighbourhoodExploreMapContent() {
-    const {
-      origin,
-      visiblePlaces,
-      radiusMeters,
-      selectedPlaceId,
-      selectPlace,
-    } = useNeighbourhoodExplore()
+    const { origin, radiusMeters } = useNeighbourhoodExploreData()
 
     const center = useMemo(() => {
       if (!origin || !isValidMapPosition(origin)) {
@@ -37,15 +103,6 @@ const NeighbourhoodExploreMapContent = memo(
     }, [origin])
 
     const zoom = getNearbyZoom(radiusMeters)
-    const validPlaces = useMemo(
-      () =>
-        visiblePlaces.filter(
-          (place) =>
-            isValidMapPosition({ lat: place.lat, lng: place.lng }) &&
-            Number.isFinite(place.distanceMeters),
-        ),
-      [visiblePlaces],
-    )
     const clientMapStyles = shouldUseClientMapStyles(GOOGLE_MAPS_MAP_ID)
       ? NEIGHBOURHOOD_MAP_STYLES
       : undefined
@@ -82,29 +139,18 @@ const NeighbourhoodExploreMapContent = memo(
           clickable={false}
         />
 
-        <AdvancedMarker position={origin} zIndex={50} title="Building">
+        <AdvancedMarker
+          position={origin}
+          zIndex={50}
+          title="Building"
+          clickable={false}
+          {...NEIGHBOURHOOD_PLACE_MARKER_ANCHOR}
+        >
           <NeighbourhoodOriginMarker />
         </AdvancedMarker>
 
-        {validPlaces.map((place) => {
-          const position = { lat: place.lat, lng: place.lng }
-          const isSelected = place.id === selectedPlaceId
-
-          return (
-            <AdvancedMarker
-              key={place.id}
-              position={position}
-              zIndex={isSelected ? 40 : 30}
-              title={place.name}
-            >
-              <NeighbourhoodPlaceMarker
-                place={place}
-                isSelected={isSelected}
-                onSelect={() => selectPlace(place.id)}
-              />
-            </AdvancedMarker>
-          )
-        })}
+        <NeighbourhoodExploreMapPlaces />
+        <NeighbourhoodExploreMapPlaceSync />
       </Map>
     )
   },
