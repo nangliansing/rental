@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, it, vi } from "vitest"
 
 import { BuildingAmenityRail } from "./BuildingAmenityRail"
 
@@ -58,5 +59,43 @@ describe("BuildingAmenityRail", () => {
     )
 
     expect(container.firstChild).toBeNull()
+  })
+
+  it("renders explore first in the amenity rail when provided", async () => {
+    const user = userEvent.setup()
+    const onExploreNeighbourhood = vi.fn()
+
+    render(
+      <BuildingAmenityRail
+        facilities={["Gym"]}
+        security={["CCTV"]}
+        onExploreNeighbourhood={onExploreNeighbourhood}
+      />,
+    )
+
+    const rail = screen.getByLabelText("Building facilities and security")
+    const exploreButton = screen.getByRole("button", {
+      name: "Explore neighbourhood",
+    })
+
+    expect(rail.firstElementChild?.firstElementChild).toBe(exploreButton)
+    expect(exploreButton).toHaveTextContent("Explore")
+
+    await user.click(exploreButton)
+    expect(onExploreNeighbourhood).toHaveBeenCalledOnce()
+  })
+
+  it("renders explore even when there are no amenities", () => {
+    render(
+      <BuildingAmenityRail
+        facilities={[]}
+        security={[]}
+        onExploreNeighbourhood={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Explore neighbourhood" }),
+    ).toBeInTheDocument()
   })
 })

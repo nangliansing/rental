@@ -5,6 +5,8 @@ import {
   BuildingNeighbourhoodExploreModal,
   ExploreNeighbourhoodButton,
   useNeighbourhoodExploreDialog,
+  useNeighbourhoodExploreDialogContext,
+  type NeighbourhoodExploreDialogControl,
 } from "@/features/buildings/neighbourhood-explore"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { ContactActions } from "@/features/contacts/components/ContactActions"
@@ -43,19 +45,32 @@ export function ListingPostCard({
   const [visibilityOverride, setVisibilityOverride] = useState<ListingVisibility | null>(
     null,
   )
+  const sharedExploreNeighbourhood = useNeighbourhoodExploreDialogContext()
 
   if (isDeletedLocally) return null
 
   return (
     <>
-      <ListingPostCardArticle
-        listing={listing}
-        currentUserId={currentUserId}
-        canCreateListing={canCreateListing}
-        directionsDestination={directionsDestination}
-        currentVisibility={visibilityOverride ?? listing.visibility}
-        dialogActionsRef={dialogActionsRef}
-      />
+      {sharedExploreNeighbourhood ? (
+        <ListingPostCardArticle
+          listing={listing}
+          currentUserId={currentUserId}
+          canCreateListing={canCreateListing}
+          directionsDestination={directionsDestination}
+          currentVisibility={visibilityOverride ?? listing.visibility}
+          dialogActionsRef={dialogActionsRef}
+          exploreNeighbourhood={sharedExploreNeighbourhood}
+        />
+      ) : (
+        <ListingPostCardArticleWithLocalExplore
+          listing={listing}
+          currentUserId={currentUserId}
+          canCreateListing={canCreateListing}
+          directionsDestination={directionsDestination}
+          currentVisibility={visibilityOverride ?? listing.visibility}
+          dialogActionsRef={dialogActionsRef}
+        />
+      )}
 
       <ListingPostCardDialogHost
         ref={dialogActionsRef}
@@ -79,6 +94,29 @@ type ListingPostCardArticleProps = {
   directionsDestination?: DirectionsDestination | null
   currentVisibility: ListingVisibility
   dialogActionsRef: React.RefObject<ListingPostCardDialogActions | null>
+  exploreNeighbourhood: NeighbourhoodExploreDialogControl
+}
+
+function ListingPostCardArticleWithLocalExplore(
+  props: Omit<ListingPostCardArticleProps, "exploreNeighbourhood">,
+) {
+  const exploreNeighbourhood = useNeighbourhoodExploreDialog()
+
+  return (
+    <>
+      <ListingPostCardArticle
+        {...props}
+        exploreNeighbourhood={exploreNeighbourhood}
+      />
+
+      <BuildingNeighbourhoodExploreModal
+        buildingId={props.listing.buildingId}
+        isOpen={exploreNeighbourhood.isOpen}
+        onClose={exploreNeighbourhood.close}
+        trackBrowserHistory={false}
+      />
+    </>
+  )
 }
 
 function ListingPostCardArticle({
@@ -88,6 +126,7 @@ function ListingPostCardArticle({
   directionsDestination,
   currentVisibility,
   dialogActionsRef,
+  exploreNeighbourhood,
 }: ListingPostCardArticleProps) {
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
@@ -97,7 +136,6 @@ function ListingPostCardArticle({
     listingId: listing._id,
     initialIsSaved: Boolean(listing.isSavedByMe),
   })
-  const exploreNeighbourhood = useNeighbourhoodExploreDialog()
 
   const agent = listing.agentProfile
   const isOwnListing =
@@ -196,13 +234,6 @@ function ListingPostCardArticle({
           />
         }
         className="mt-2 px-3"
-      />
-
-      <BuildingNeighbourhoodExploreModal
-        buildingId={listing.buildingId}
-        isOpen={exploreNeighbourhood.isOpen}
-        onClose={exploreNeighbourhood.close}
-        trackBrowserHistory={false}
       />
     </article>
   )

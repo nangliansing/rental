@@ -1,49 +1,90 @@
 import { ChevronLeft, X } from "lucide-react"
-import type { MouseEvent } from "react"
+import type { MouseEvent, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+
+import {
+  MODAL_DISMISS_BACK_BUTTON_CLASS,
+  MODAL_DISMISS_BAR_HEADER_CLASS,
+  MODAL_DISMISS_CLOSE_BUTTON_CLASS,
+  MODAL_DISMISS_INLINE_DESCRIPTION_CLASS,
+  MODAL_DISMISS_INLINE_HEADER_CLASS,
+  MODAL_DISMISS_INLINE_TITLE_CLASS,
+  normalizeModalCloseLabel,
+  shouldRenderModalDismissDescription,
+} from "./modalDismissHeaderLayout"
 
 type ModalDismissHeaderProps = {
   onClose: () => void
   closeLabel?: string
   className?: string
+  title?: ReactNode
+  description?: ReactNode
+  trailing?: ReactNode
 }
 
 export function ModalDismissHeader({
   onClose,
-  closeLabel = "Close",
+  closeLabel,
   className,
+  title,
+  description,
+  trailing,
 }: ModalDismissHeaderProps) {
+  const resolvedCloseLabel = normalizeModalCloseLabel(closeLabel)
+
   const handleClose = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     onClose()
   }
 
-  return (
-    <div
-      className={cn(
-        "flex h-14 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-3",
-        className,
-      )}
+  const backButton = (
+    <button
+      type="button"
+      className={MODAL_DISMISS_BACK_BUTTON_CLASS}
+      aria-label={resolvedCloseLabel}
+      onClick={handleClose}
     >
-      <button
-        type="button"
-        className="inline-flex h-10 items-center gap-2 rounded-full px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-        aria-label={closeLabel}
-        onClick={handleClose}
-      >
-        <ChevronLeft className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.25} />
-        <span className="hidden md:inline">{closeLabel}</span>
-      </button>
+      <ChevronLeft className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.25} />
+      {!title && <span className="hidden md:inline">{resolvedCloseLabel}</span>}
+    </button>
+  )
 
-      <button
-        type="button"
-        className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 md:flex"
-        aria-label={closeLabel}
-        onClick={handleClose}
-      >
-        <X className="h-5 w-5" />
-      </button>
+  const closeButton = (
+    <button
+      type="button"
+      className={MODAL_DISMISS_CLOSE_BUTTON_CLASS}
+      aria-label={resolvedCloseLabel}
+      onClick={handleClose}
+    >
+      <X className="h-5 w-5" />
+    </button>
+  )
+
+  if (title) {
+    return (
+      <div className={cn(MODAL_DISMISS_INLINE_HEADER_CLASS, className)}>
+        {backButton}
+
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h2 className={MODAL_DISMISS_INLINE_TITLE_CLASS}>{title}</h2>
+          {shouldRenderModalDismissDescription(description) ? (
+            <p className={MODAL_DISMISS_INLINE_DESCRIPTION_CLASS}>{description}</p>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 pt-0.5">
+          {trailing}
+          {closeButton}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn(MODAL_DISMISS_BAR_HEADER_CLASS, className)}>
+      {backButton}
+      {closeButton}
     </div>
   )
 }

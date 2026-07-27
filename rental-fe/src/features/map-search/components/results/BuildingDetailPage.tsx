@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
 import type React from "react"
 
-import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
+import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
 import { useBuildingDetailSession } from "../../context/BuildingDetailSessionContext"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
@@ -17,6 +17,10 @@ import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuilding"
 import { CollectionRefreshErrorBanner } from "./CollectionRefreshErrorBanner"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
+import {
+  BUILDING_DETAIL_LISTINGS_HEADING_CLASS,
+  RESULTS_PANEL_LISTING_GRID_CLASS,
+} from "../../utils/building-list-layout"
 
 type BuildingDetailPageProps = {
   scrollRootRef?: React.RefObject<HTMLElement | null>
@@ -78,48 +82,50 @@ export function BuildingDetailPage({
 
   return (
     <>
-      <div className="mb-4">
-        {showInlineBack && (
-          <button
-            type="button"
-            className="mb-3 flex items-center gap-2 px-4 text-sm font-medium text-slate-600 hover:text-slate-950 lg:my-3"
-            onClick={onBack}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-        )}
+      {showInlineBack && (
+        <button
+          type="button"
+          className="mb-3 flex items-center gap-2 px-4 text-sm font-medium text-slate-600 hover:text-slate-950 lg:my-3"
+          onClick={onBack}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back
+        </button>
+      )}
 
-        <BuildingSummaryCard
-          building={building}
-          hideEmptyRent={isListingSearch}
-          isExploreOpen={exploreNeighbourhood.isOpen}
-          onExploreNeighbourhood={exploreNeighbourhood.open}
-        />
-      </div>
+      <BuildingPanelSummarySection
+        building={building}
+        hideEmptyRent={isListingSearch}
+        isExploreOpen={exploreNeighbourhood.isOpen}
+        onExploreNeighbourhood={exploreNeighbourhood.open}
+      />
 
       <div>
-        <p className="mb-3 px-4 text-sm font-semibold">
+        <p className={BUILDING_DETAIL_LISTINGS_HEADING_CLASS}>
           {totalListings} available listings
         </p>
 
         {isBackgroundFetching && (
           <CollectionRefreshStatus
             label="Updating listings..."
-            className="mb-2 px-4"
+            className="mb-2"
           />
         )}
 
         {listingsQuery.isError && hasListings && (
           <CollectionRefreshErrorBanner
-            className="mx-4 mb-3"
+            className="mb-3"
             label="Could not update listings. Showing the previous results."
             onRetry={() => void listingsQuery.refetch()}
           />
         )}
 
         {isInitialLoading && (
-          <ListingCollectionSkeleton columns="two" count={4} />
+          <ListingCollectionSkeleton
+            columns="two"
+            count={4}
+            className={RESULTS_PANEL_LISTING_GRID_CLASS}
+          />
         )}
 
         {isInitialError && (
@@ -144,6 +150,7 @@ export function BuildingDetailPage({
           <>
             <ListingCardGrid
               columns="two"
+              className={RESULTS_PANEL_LISTING_GRID_CLASS}
               rootRef={scrollRootRef}
               hasNextPage={Boolean(listingsQuery.hasNextPage)}
               isFetchingNextPage={listingsQuery.isFetchingNextPage}

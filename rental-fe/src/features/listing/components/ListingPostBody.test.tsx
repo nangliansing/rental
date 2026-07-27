@@ -4,8 +4,25 @@ import { describe, expect, it, vi } from "vitest"
 import { createSearchListing } from "@/test/fixtures/listings"
 
 import { ListingPostBody } from "./ListingPostBody"
+import { LISTING_POST_BREAKOUT_CLASS } from "../utils/listingPostLayout"
 
 describe("ListingPostBody", () => {
+  it("scrolls detail chips edge to edge within the listing card", () => {
+    const listing = createSearchListing({
+      occupancy: 2,
+      kitchenType: "Western kitchen",
+      isCookingAllowed: true,
+      isPetAllowed: true,
+    })
+
+    render(<ListingPostBody listing={listing} />)
+
+    const chipRow = screen.getByText("2 people").closest("div")
+
+    expect(chipRow).toHaveClass(LISTING_POST_BREAKOUT_CLASS)
+    expect(chipRow).toHaveClass("overflow-x-auto", "flex-nowrap")
+  })
+
   it("renders listing media, pricing, details, facilities, and review action", () => {
     const onReviewsRequest = vi.fn()
     const listing = createSearchListing({

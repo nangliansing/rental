@@ -17,9 +17,11 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }))
 
-vi.mock("./BuildingCard", () => ({
-  BuildingCard: ({ building }: { building: SearchBuilding }) => (
-    <button type="button">{building.name}</button>
+vi.mock("./BuildingListRow", () => ({
+  BuildingListRow: ({ building }: { building: SearchBuilding }) => (
+    <div role="listitem">
+      <button type="button">{building.name}</button>
+    </div>
   ),
 }))
 
@@ -43,6 +45,7 @@ describe("VirtualizedBuildingList", () => {
     render(
       <VirtualizedBuildingList
         buildings={buildings}
+        totalCount={buildings.length}
         selectedBuildingId={null}
         isListingSearch={false}
         canCreateListing={false}

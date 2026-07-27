@@ -1,4 +1,5 @@
-import { BuildingSummaryCard } from "@/features/buildings/components/BuildingSummaryCard"
+import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
+import { useNeighbourhoodExploreDialogContext } from "@/features/buildings/neighbourhood-explore"
 import { useSearchListingsInBuilding } from "@/features/map-search/api/useSearchListingsInBuilding"
 import type { SearchListing } from "@/features/map-search/types"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
@@ -79,13 +80,15 @@ function ListingDetailBuildingSection({
 }: {
   listing: ListingDetailListing
 }) {
-  if (!listing.building) return null
+  const exploreNeighbourhood = useNeighbourhoodExploreDialogContext()
 
   return (
-    <BuildingSummaryCard
+    <BuildingPanelSummarySection
       building={listing.building}
+      breakout="flush"
       titleLevel={2}
-      className="border-y bg-slate-50/60 py-5"
+      isExploreOpen={exploreNeighbourhood?.isOpen ?? false}
+      onExploreNeighbourhood={exploreNeighbourhood?.open}
     />
   )
 }

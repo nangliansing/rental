@@ -6,8 +6,9 @@ import { CollectionRefreshStatus } from "@/shared/components/collections/Listing
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
 import type { SearchBuilding } from "../../types"
-import { BuildingCard } from "./BuildingCard"
+import { BUILDING_LIST_CONTAINER_CLASS } from "../../utils/building-list-layout"
 import { CollectionRefreshErrorBanner } from "./CollectionRefreshErrorBanner"
+import { BuildingListRow } from "./BuildingListRow"
 import { SelectedListerRail } from "./SelectedListerRail"
 import { formatBuildingResultsTitle } from "../../utils/map-search-presentation"
 import { shouldVirtualizeBuildingList } from "../../utils/building-list-virtualization"
@@ -50,6 +51,15 @@ export function BuildingListPage({
     buildings.length,
     Boolean(scrollRootRef),
   )
+  const sharedRowProps = {
+    totalCount: buildings.length,
+    selectedBuildingId: selectedBuilding?._id ?? null,
+    isListingSearch,
+    canCreateListing,
+    onBuildingSelect: handleBuildingSelect,
+    onBuildingHoverChange,
+    onListExistingBuilding: handleListExistingBuilding,
+  }
 
   return (
     <>
@@ -84,31 +94,25 @@ export function BuildingListPage({
         {shouldVirtualize ? (
           <VirtualizedBuildingList
             buildings={buildings}
-            selectedBuildingId={selectedBuilding?._id ?? null}
-            isListingSearch={isListingSearch}
-            canCreateListing={canCreateListing}
             scrollRootRef={scrollRootRef}
-            onBuildingSelect={handleBuildingSelect}
-            onBuildingHoverChange={onBuildingHoverChange}
-            onListExistingBuilding={handleListExistingBuilding}
+            {...sharedRowProps}
           />
-        ) : (
-          <div role="list" aria-label="Buildings">
-            {buildings.map((building) => (
-              <div key={building._id} role="listitem">
-                <BuildingCard
-                  building={building}
-                  isSelected={selectedBuilding?._id === building._id}
-                  isListingSearch={isListingSearch}
-                  onSelect={handleBuildingSelect}
-                  onHoverChange={onBuildingHoverChange}
-                  canCreateListing={canCreateListing}
-                  onListHere={handleListExistingBuilding}
-                />
-              </div>
+        ) : buildings.length > 0 ? (
+          <div
+            role="list"
+            aria-label="Buildings"
+            className={BUILDING_LIST_CONTAINER_CLASS}
+          >
+            {buildings.map((building, index) => (
+              <BuildingListRow
+                key={building._id}
+                building={building}
+                index={index}
+                {...sharedRowProps}
+              />
             ))}
           </div>
-        )}
+        ) : null}
       </div>
 
       <InfiniteScrollSentinel

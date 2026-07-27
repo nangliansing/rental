@@ -6,6 +6,10 @@ import {
   formatBuildingRent,
   formatDistance,
 } from "../../utils/building-display"
+import {
+  BUILDING_CARD_LISTING_RAIL_CLASS,
+  getBuildingPanelSurfaceClass,
+} from "../../utils/building-list-layout"
 import { BuildingListingPreview } from "./BuildingListingPreview"
 
 type BuildingCardProps = {
@@ -20,7 +24,7 @@ type BuildingCardProps = {
 
 export const BuildingCard = memo(function BuildingCard({
   building,
-  isSelected,
+  isSelected: _isSelected,
   isListingSearch = false,
   canCreateListing = false,
   onSelect,
@@ -35,10 +39,7 @@ export const BuildingCard = memo(function BuildingCard({
 
   return (
     <div
-      className={cn(
-        "w-full border-b border-slate-100 px-1 py-4 text-left last:border-b-0",
-        isSelected ? "bg-slate-50" : "bg-white",
-      )}
+      className={getBuildingPanelSurfaceClass("w-full text-left")}
       onMouseEnter={() => onHoverChange?.(building._id)}
       onMouseLeave={() => onHoverChange?.(null)}
       onFocus={() => onHoverChange?.(building._id)}
@@ -117,7 +118,7 @@ export const BuildingCard = memo(function BuildingCard({
       </div>
 
       {hasMatchingListings ? (
-        <div className="-mx-5 mt-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className={BUILDING_CARD_LISTING_RAIL_CLASS}>
           <div className="flex gap-2">
             {building.listings.slice(0, 4).map((listing) => (
               <button

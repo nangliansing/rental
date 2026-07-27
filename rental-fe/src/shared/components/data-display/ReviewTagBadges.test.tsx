@@ -5,6 +5,25 @@ import { describe, expect, it, vi } from "vitest"
 import { ReviewTagBadges } from "./ReviewTagBadges"
 
 describe("ReviewTagBadges", () => {
+  it("uses a horizontal scroll row for review badges", () => {
+    render(
+      <ReviewTagBadges
+        tagCounts={[
+          { tag: "ACCURATE_INFO", count: 1 },
+          { tag: "CLEAR_COMMUNICATION", count: 1 },
+        ]}
+      />,
+    )
+
+    expect(
+      screen.getByLabelText("Lister review highlights and actions"),
+    ).toHaveClass("overflow-x-auto", "flex-nowrap")
+    expect(screen.getByText("Accurate information: 1")).toHaveClass(
+      "whitespace-nowrap",
+      "shrink-0",
+    )
+  })
+
   it("ranks, deduplicates, and limits reviewer tags to the top two", () => {
     render(
       <ReviewTagBadges

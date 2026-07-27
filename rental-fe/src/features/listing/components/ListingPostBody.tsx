@@ -11,12 +11,19 @@ import {
 import { useMemo } from "react"
 import type { ReactNode } from "react"
 
+import { cn } from "@/lib/utils"
+
 import type { SearchListing } from "@/features/map-search/types"
 import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { ReviewTagBadges } from "@/shared/components/data-display/ReviewTagBadges"
+import { getEdgeToEdgeHorizontalScrollRowClass } from "@/shared/components/layout/horizontalScrollRow"
 
 import { ListingPhotoCarousel } from "./ListingPhotoCarousel"
 import { MonthlyCostAdvice } from "./MonthlyCostAdvice"
+import {
+  LISTING_POST_BREAKOUT_CLASS,
+  LISTING_POST_GUTTER_CLASS,
+} from "../utils/listingPostLayout"
 import {
   formatBathroom,
   formatBedroom,
@@ -46,8 +53,8 @@ function DetailChip({
     <span
       className={
         tone === "blue"
-          ? "inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
-          : "inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+          ? "inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
+          : "inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
       }
     >
       {children}
@@ -72,6 +79,20 @@ function normalizeOccupancy(value: unknown) {
   return typeof value === "number" && Number.isInteger(value) && value > 0
     ? value
     : null
+}
+
+function DetailChipRow({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className={getEdgeToEdgeHorizontalScrollRowClass(
+        LISTING_POST_BREAKOUT_CLASS,
+        LISTING_POST_GUTTER_CLASS,
+        "gap-1.5 pb-0.5",
+      )}
+    >
+      {children}
+    </div>
+  )
 }
 
 export function ListingPostBody({
@@ -102,7 +123,10 @@ export function ListingPostBody({
           tagCounts={agent?.reviewSummary?.tagCounts}
           maxTags={2}
           onReviewsClick={agent ? onReviewsRequest : undefined}
-          className="absolute bottom-3 left-3 z-10 max-w-[calc(100%-1.5rem)]"
+          className={cn(
+            "absolute inset-x-0 bottom-3 z-10",
+            LISTING_POST_GUTTER_CLASS,
+          )}
         />
       </div>
 
@@ -137,7 +161,7 @@ export function ListingPostBody({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <DetailChipRow>
           <DetailChip>
             {listing.bedroomCount === 0 ? (
               formatBedroom(listing.bedroomCount)
@@ -167,13 +191,13 @@ export function ListingPostBody({
           </DetailChip>
 
           {kitchenType && <DetailChip>{kitchenType}</DetailChip>}
-        </div>
+        </DetailChipRow>
 
         {(listing.isCookingAllowed ||
           listing.isPetAllowed ||
           listing.isTM30Provided ||
           listing.isForeignerAccepted) && (
-          <div className="flex flex-wrap gap-1.5">
+          <DetailChipRow>
             {listing.isCookingAllowed && (
               <DetailChip>
                 <CookingPot className="h-3.5 w-3.5" />
@@ -195,7 +219,7 @@ export function ListingPostBody({
             {listing.isForeignerAccepted && (
               <DetailChip>Foreigner accepted</DetailChip>
             )}
-          </div>
+          </DetailChipRow>
         )}
 
         {facilities.length > 0 && (
