@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useEffect } from "react"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClientProvider } from "@tanstack/react-query"
@@ -27,6 +28,7 @@ const googleMapsMocks = vi.hoisted(() => {
   const handlers: {
     onDragstart?: () => void
     onClick?: (event: unknown) => void
+    onIdle?: () => void
   } = {}
 
   let bounds: SearchBounds = {
@@ -73,6 +75,7 @@ const googleMapsMocks = vi.hoisted(() => {
     },
     triggerMapPan: () => {
       handlers.onDragstart?.()
+      handlers.onIdle?.()
     },
     triggerMapClick: (position = { lat: 13.8, lng: 100.7 }) => {
       handlers.onClick?.({
@@ -232,16 +235,25 @@ const updatedLineMockBuilding: SearchBuilding = {
 vi.mock("@vis.gl/react-google-maps", () => ({
   APIProvider: ({ children }: { children: ReactNode }) => children,
   Map: ({
+    children,
     onDragstart,
     onClick,
+    onIdle,
   }: {
     children?: ReactNode
     onDragstart?: () => void
     onClick?: (event: unknown) => void
+    onIdle?: () => void
   }) => {
     googleMapsMocks.handlers.onDragstart = onDragstart
     googleMapsMocks.handlers.onClick = onClick
-    return <div data-testid="map" />
+    googleMapsMocks.handlers.onIdle = onIdle
+
+    useEffect(() => {
+      onIdle?.()
+    }, [onIdle])
+
+    return <div data-testid="map">{children}</div>
   },
   AdvancedMarker: ({
     children,
@@ -1042,5 +1054,132 @@ describe("MapSearchPage integration", () => {
 
     expect(panel.getByText("1+ bed")).toBeInTheDocument()
     expect(panel.queryByRole("heading", { name: "Rental filters" })).not.toBeInTheDocument()
+  })
+
+  it("does not mark area search stale during programmatic camera restore", async () => {
+    mockAreaSearchResults({ data: [mockBuilding] })
+
+    renderWithProviders(<MapSearchPage />, {
+      initialEntries: [areaSearchUrl],
+    })
+
+    await waitFor(() => {
+      expect(searchMocks.area).toHaveBeenCalledOnce()
+    })
+
+    expect(
+      screen.queryByRole("button", { name: "Search this area" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("uses my location to drop a pin and commit a nearby search", async () => {
+    const currentPosition = { lat: 13.7563, lng: 100.5018 }
+    mockNearbySearchResults({ data: [nearbyMockBuilding] })
+
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: {
+        getCurrentPosition: (success: PositionCallback) => {
+          success({
+            coords: {
+              latitude: currentPosition.lat,
+              longitude: currentPosition.lng,
+            },
+          } as GeolocationCoordinates)
+        },
+      },
+    })
+
+    const { user } = renderWithProviders(<MapSearchPage />, {
+      initialEntries: ["/"],
+    })
+
+    await user.click(screen.getByRole("button", { name: "Use my location" }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Remove pin" }),
+      ).toHaveAttribute("aria-pressed", "true")
+    })
+
+    const searchButton = await screen.findByRole("button", {
+      name: "Search within 1 km",
+    })
+    await user.click(searchButton)
+
+    await waitFor(() => {
+      expect(searchMocks.nearby).toHaveBeenCalledOnce()
+    })
+
+    expect(searchMocks.nearby).toHaveBeenCalledWith(
+      expect.objectContaining({
+        position: currentPosition,
+        radiusMeters: 1_000,
+      }),
+    )
+  })
+
+  it("exits pin mode when Remove pin is clicked", async () => {
+    const { user } = renderWithProviders(<MapSearchPage />, {
+      initialEntries: ["/"],
+    })
+
+    await user.click(screen.getByRole("button", { name: "Drop pin" }))
+    expect(screen.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    )
+
+    await user.click(screen.getByRole("button", { name: "Remove pin" }))
+    expect(screen.getByRole("button", { name: "Drop pin" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    )
+    expect(
+      screen.queryByRole("button", { name: "Search within 1 km" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("exits line mode and returns to area search controls", async () => {
+    const { user } = renderWithProviders(<MapSearchPage />, {
+      initialEntries: ["/"],
+    })
+
+    await user.click(screen.getByRole("button", { name: "Draw search line" }))
+    expect(
+      screen.getByRole("button", { name: "Exit line search mode" }),
+    ).toHaveAttribute("aria-pressed", "true")
+
+    await user.click(
+      screen.getByRole("button", { name: "Exit line search mode" }),
+    )
+    expect(
+      screen.getByRole("button", { name: "Draw search line" }),
+    ).toHaveAttribute("aria-pressed", "false")
+    expect(
+      screen.queryByRole("button", { name: "Place starting point" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("ignores map clicks for pin moves while in area mode", async () => {
+    mockAreaSearchResults({ data: [mockBuilding] })
+
+    renderWithProviders(<MapSearchPage />, {
+      initialEntries: [areaSearchUrl],
+    })
+
+    await waitFor(() => {
+      expect(searchMocks.area).toHaveBeenCalledOnce()
+    })
+
+    googleMapsMocks.triggerMapClick({ lat: 13.8, lng: 100.7 })
+
+    expect(screen.getByRole("button", { name: "Drop pin" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    )
+    expect(
+      screen.queryByRole("button", { name: "Search within 1 km" }),
+    ).not.toBeInTheDocument()
   })
 })

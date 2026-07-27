@@ -10,7 +10,9 @@ const lineCoverageMocks = vi.hoisted(() => ({ build: vi.fn() }))
 
 vi.mock("@vis.gl/react-google-maps", () => ({
   APIProvider: ({ children }: { children: ReactNode }) => children,
-  Map: () => <div data-testid="map" />,
+  Map: ({ children }: { children?: ReactNode }) => (
+    <div data-testid="map">{children}</div>
+  ),
   AdvancedMarker: ({
     children,
     title,

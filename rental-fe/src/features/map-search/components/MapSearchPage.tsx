@@ -1,8 +1,6 @@
 import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
-import { GoogleMapsApiProvider } from "@/shared/google-maps/GoogleMapsApiProvider"
-
 import { MapView } from "./MapView"
 import { BuildingResultsPanel } from "./results/BuildingResultsPanel"
 import { DEFAULT_MAP_SEARCH_FILTERS } from "../context/MapSearchFilterContext"
@@ -29,13 +27,11 @@ function MapSearchPageContent({
       markerHighlight={session.markerHighlight}
     >
       <main className="relative h-screen w-screen overflow-hidden">
-        <GoogleMapsApiProvider>
-          <MapView />
+        <MapView />
 
-          {!isPlaceSearchOpen && searchStatus !== "idle" && (
-            <BuildingResultsPanel />
-          )}
-        </GoogleMapsApiProvider>
+        {!isPlaceSearchOpen && searchStatus !== "idle" && (
+          <BuildingResultsPanel />
+        )}
       </main>
     </MapSearchProviders>
   )

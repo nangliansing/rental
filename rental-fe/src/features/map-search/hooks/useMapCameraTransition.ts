@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-type MapPosition = google.maps.LatLngLiteral
+import type { MapPosition } from "../types"
+import { useMapProgrammaticMove } from "../context/MapProgrammaticMoveContext"
 
 const DEFAULT_DURATION_MS = 650
 
@@ -20,6 +21,7 @@ function prefersReducedMotion() {
 }
 
 export function useMapCameraTransition(map: google.maps.Map | null) {
+  const { beginProgrammaticMove } = useMapProgrammaticMove()
   const frameRef = useRef<number | null>(null)
   const transitionIdRef = useRef(0)
   const [isMoving, setIsMoving] = useState(false)
@@ -39,6 +41,8 @@ export function useMapCameraTransition(map: google.maps.Map | null) {
     (destination: MapPosition, targetZoom = 16) => {
       cancel()
       if (!map) return
+
+      beginProgrammaticMove()
 
       const startCenter = map.getCenter()
       const startZoom = map.getZoom()
@@ -76,7 +80,7 @@ export function useMapCameraTransition(map: google.maps.Map | null) {
 
       frameRef.current = requestAnimationFrame(moveFrame)
     },
-    [cancel, map],
+    [beginProgrammaticMove, cancel, map],
   )
 
   return { flyTo, isMoving, cancel }

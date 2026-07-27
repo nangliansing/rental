@@ -11,7 +11,7 @@ import {
   Undo2,
   X,
 } from "lucide-react"
-import { useMap } from "@vis.gl/react-google-maps"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 import { Popover } from "radix-ui"
 
 import { cn } from "@/lib/utils"
@@ -58,7 +58,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
     onSearchLine,
   } = useMapSearchControls()
   const { mode, selectedPin } = useMapInteraction()
-  const map = useMap()
+  const map = useMapSearchMap()
   const { getCurrentBounds } = useMapBounds()
   const currentLocation = useCurrentLocation()
   const cameraTransition = useMapCameraTransition(map)

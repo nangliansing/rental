@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useReducer, useRef } from "react"
 import {
   AdvancedMarker,
-  useMap,
   type AdvancedMarkerRef,
 } from "@vis.gl/react-google-maps"
 import { MarkerClusterer, type Renderer } from "@googlemaps/markerclusterer"
@@ -9,8 +8,9 @@ import { MarkerClusterer, type Renderer } from "@googlemaps/markerclusterer"
 import { cn } from "@/lib/utils"
 
 import { useMapSearchMarkerHighlight } from "../context/MapSearchMarkerHighlightContext"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 import type { SearchBuilding } from "../types"
-import { formatBuildingMarkerLabel } from "../utils/building-display"
+import { formatBuildingMarkerLabel, isListingOnlyBuilding } from "../utils/building-display"
 import { getPositionFromBuildingLocation } from "../utils/map-position"
 import { BuildingMarkerButton } from "./building-marker/BuildingMarkerButton"
 
@@ -142,7 +142,7 @@ export const BuildingMarkerLayer = memo(function BuildingMarkerLayer({
   isListingSearch: boolean
   onSelect: (building: SearchBuilding) => void
 }) {
-  const map = useMap()
+  const map = useMapSearchMap()
   const { hoveredBuildingId, selectedBuildingId } = useMapSearchMarkerHighlight()
   const clustererRef = useRef<MarkerClusterer | null>(null)
   const markersRef = useRef(
@@ -209,8 +209,6 @@ export const BuildingMarkerLayer = memo(function BuildingMarkerLayer({
       {prominentBuildings.map((building) => {
         const isSelected = selectedBuildingId === building._id
         const isHovered = hoveredBuildingId === building._id
-        const isListingOnly =
-          isListingSearch && building.listings.length === 0
 
         return (
           <ProminentBuildingMarker
@@ -218,26 +216,21 @@ export const BuildingMarkerLayer = memo(function BuildingMarkerLayer({
             building={building}
             isSelected={isSelected}
             isHovered={isHovered}
-            isListingOnly={isListingOnly}
+            isListingOnly={isListingOnlyBuilding(building, isListingSearch)}
             onSelect={onSelect}
           />
         )
       })}
 
-      {clusterableBuildings.map((building) => {
-        const isListingOnly =
-          isListingSearch && building.listings.length === 0
-
-        return (
+      {clusterableBuildings.map((building) => (
           <BuildingMarker
             key={building._id}
             building={building}
-            isListingOnly={isListingOnly}
+            isListingOnly={isListingOnlyBuilding(building, isListingSearch)}
             onSelect={onSelect}
             onMarkerChange={setMarkerRef}
           />
-        )
-      })}
+      ))}
     </>
   )
 })

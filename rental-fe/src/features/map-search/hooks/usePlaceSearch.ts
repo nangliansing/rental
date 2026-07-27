@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from "react"
-import { useMap } from "@vis.gl/react-google-maps"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 
+import { useMapProgrammaticMove } from "../context/MapProgrammaticMoveContext"
+import { focusMapOnPlace } from "../utils/map-camera"
 import type { SearchedPlace } from "../types"
 
 export type PlacePrediction = {
@@ -14,13 +16,42 @@ type SearchPlaceInput = {
   onPlaceFound: (place: SearchedPlace) => void
 }
 
+function toSearchedPlace(
+  place: google.maps.places.Place,
+  fallbackName: string,
+): SearchedPlace | null {
+  if (!place.location) return null
+
+  return {
+    name: place.displayName ?? fallbackName,
+    position: {
+      lat: place.location.lat(),
+      lng: place.location.lng(),
+    },
+  }
+}
+
 export function usePlaceSearch() {
-  const map = useMap()
+  const map = useMapSearchMap()
+  const { beginProgrammaticMove } = useMapProgrammaticMove()
   const [predictions, setPredictions] = useState<PlacePrediction[]>([])
   const [predictionError, setPredictionError] = useState<string | null>(null)
   const sessionTokenRef =
     useRef<google.maps.places.AutocompleteSessionToken | null>(null)
   const predictionRequestRef = useRef(0)
+
+  const focusPlaceOnMap = useCallback(
+    (
+      position: SearchedPlace["position"],
+      viewport?: google.maps.LatLngBounds | null,
+    ) => {
+      if (!map) return
+
+      beginProgrammaticMove()
+      focusMapOnPlace(map, position, viewport)
+    },
+    [beginProgrammaticMove, map],
+  )
 
   const getSessionToken = useCallback(async () => {
     if (sessionTokenRef.current) {
@@ -92,7 +123,7 @@ export function usePlaceSearch() {
                 text: prediction.text.toString(),
                 prediction,
               }
-            })
+            }),
         )
       } catch {
         if (requestId === predictionRequestRef.current) {
@@ -101,12 +132,12 @@ export function usePlaceSearch() {
         }
       }
     },
-    [getSessionToken, resetSessionToken]
+    [getSessionToken, resetSessionToken],
   )
 
   const selectPrediction = async (
     prediction: google.maps.places.PlacePrediction,
-    onPlaceFound: (place: SearchedPlace) => void
+    onPlaceFound: (place: SearchedPlace) => void,
   ) => {
     if (!map) return false
 
@@ -117,24 +148,14 @@ export function usePlaceSearch() {
         fields: ["displayName", "formattedAddress", "location", "viewport"],
       })
 
-      if (!place.location) return false
-
-      const searchedPlace: SearchedPlace = {
-        name: place.displayName ?? prediction.text.toString(),
-        position: {
-          lat: place.location.lat(),
-          lng: place.location.lng(),
-        },
-      }
+      const searchedPlace = toSearchedPlace(
+        place,
+        prediction.text.toString(),
+      )
+      if (!searchedPlace) return false
 
       onPlaceFound(searchedPlace)
-
-      if (place.viewport) {
-        map.fitBounds(place.viewport)
-      } else {
-        map.panTo(searchedPlace.position)
-        map.setZoom(15)
-      }
+      focusPlaceOnMap(searchedPlace.position, place.viewport)
 
       setPredictions([])
       setPredictionError(null)
@@ -163,25 +184,11 @@ export function usePlaceSearch() {
       })
 
       const place = places[0]
-
-      if (!place?.location) return false
-
-      const searchedPlace: SearchedPlace = {
-        name: place.displayName ?? textQuery,
-        position: {
-          lat: place.location.lat(),
-          lng: place.location.lng(),
-        },
-      }
+      const searchedPlace = toSearchedPlace(place, textQuery)
+      if (!searchedPlace) return false
 
       onPlaceFound(searchedPlace)
-
-      if (place.viewport) {
-        map.fitBounds(place.viewport)
-      } else {
-        map.panTo(searchedPlace.position)
-        map.setZoom(15)
-      }
+      focusPlaceOnMap(searchedPlace.position, place.viewport)
 
       setPredictions([])
       setPredictionError(null)

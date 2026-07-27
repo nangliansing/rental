@@ -45,3 +45,20 @@ export function getNearbyZoom(radiusMeters: number) {
   if (radiusMeters <= 1_500) return 14.5
   return 14
 }
+
+export function focusMapOnPlace(
+  map: google.maps.Map,
+  position: MapPosition,
+  viewport?: google.maps.LatLngBounds | null,
+  defaultZoom = 15,
+) {
+  if (!isValidMapPosition(position)) return
+
+  if (viewport) {
+    map.fitBounds(viewport)
+    return
+  }
+
+  map.panTo(position)
+  map.setZoom(defaultZoom)
+}
