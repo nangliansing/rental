@@ -6,5 +6,7 @@ export {
   useNeighbourhoodExploreDialogContext,
   type NeighbourhoodExploreDialogControl,
 } from "./NeighbourhoodExploreDialogProvider"
-export { useNeighbourhoodExplore } from "./NeighbourhoodExploreContext"
+export { useNeighbourhoodExplore, useNeighbourhoodExploreData, useNeighbourhoodExploreSelection } from "./NeighbourhoodExploreContext"
+export { useNeighbourhoodExplorePlaceSelection } from "./hooks/useNeighbourhoodExplorePlaceSelection"
+export { NeighbourhoodPlaceList, type NeighbourhoodPlaceListHandle } from "./components/list/NeighbourhoodPlaceList"
 export { useNeighbourhoodExploreDialog } from "./hooks/useNeighbourhoodExploreDialog"

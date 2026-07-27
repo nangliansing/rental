@@ -1,33 +1,18 @@
 import { cn } from "@/lib/utils"
 
-import { useNeighbourhoodExplore } from "../NeighbourhoodExploreContext"
+import { useNeighbourhoodExploreData } from "../NeighbourhoodExploreContext"
+import { getNeighbourhoodTruncationHint } from "../utils/neighbourhoodExploreUi"
 
 type NeighbourhoodExploreAttributionProps = {
   variant?: "overlay" | "footer"
 }
 
-function getTruncationHint(
-  summary: NonNullable<
-    ReturnType<typeof useNeighbourhoodExplore>["neighbourhood"]
-  >["summary"],
-) {
-  if (!summary.truncated) {
-    return null
-  }
-
-  if (summary.totalWithinRadius != null && summary.totalWithinRadius > summary.all) {
-    return `Showing ${summary.all} of ${summary.totalWithinRadius} nearby places`
-  }
-
-  return "Showing closest places only"
-}
-
 export function NeighbourhoodExploreAttribution({
   variant = "overlay",
 }: NeighbourhoodExploreAttributionProps) {
-  const { neighbourhood } = useNeighbourhoodExplore()
+  const { neighbourhood } = useNeighbourhoodExploreData()
   const truncationHint = neighbourhood
-    ? getTruncationHint(neighbourhood.summary)
+    ? getNeighbourhoodTruncationHint(neighbourhood.summary)
     : null
 
   if (variant === "footer") {

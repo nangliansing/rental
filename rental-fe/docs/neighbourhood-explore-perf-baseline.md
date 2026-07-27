@@ -85,10 +85,15 @@ Do **not** split context or memo markers preemptively without a measured regress
 npm test -- src/features/buildings/neighbourhood-explore \
   src/features/buildings/api/getBuildingNeighbourhood.test.ts \
   src/features/buildings/utils/filterNeighbourhoodPlaces.test.ts
+npm run test:e2e -- e2e/neighbourhood-explore.smoke.spec.ts
 ```
+
+Lightweight render-isolation guardrails live in
+`src/features/buildings/neighbourhood-explore/__tests__/neighbourhoodExploreRenderIsolation.test.tsx`.
+They assert split-context subscriptions and the dedicated explore map instance id.
 
 ## Remaining optional work
 
 1. Profile **radius change** (API refetch + marker replace) — network-bound, separate from render isolation.
-2. Playwright smoke for explore open + category filter (not yet in `e2e/`).
+2. ~~Playwright smoke for explore open + category filter (not yet in `e2e/`)~~ — added in `e2e/neighbourhood-explore.smoke.spec.ts`.
 3. Code optimizations (context split, marker memo) — only after a failed re-profile.

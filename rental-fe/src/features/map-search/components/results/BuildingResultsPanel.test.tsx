@@ -250,3 +250,115 @@ describe("BuildingResultsPanel focus management", () => {
     )
   })
 })
+
+function mockMobilePanelPointerCapture(panel: HTMLElement) {
+  const dragRegion = panel.querySelector(".cursor-grab")
+  if (!(dragRegion instanceof HTMLElement)) {
+    throw new Error("Expected mobile panel drag region")
+  }
+
+  dragRegion.setPointerCapture = vi.fn()
+  dragRegion.releasePointerCapture = vi.fn()
+  dragRegion.hasPointerCapture = vi.fn(() => true)
+
+  return dragRegion
+}
+
+describe("BuildingResultsPanel mobile drawer", () => {
+  beforeEach(() => {
+    vi.mocked(useMediaQuery).mockReturnValue(false)
+    vi.mocked(useMapSearchFilters).mockReturnValue({
+      selectedListers: [],
+      removeLister: vi.fn(),
+    } as never)
+    mockResultsSession()
+  })
+
+  it("exposes an accessible label on the mobile drawer", () => {
+    renderPanel()
+
+    expect(
+      screen.getByLabelText("Building search results"),
+    ).toBeInTheDocument()
+  })
+
+  it("starts at half height and expands to full on upward drag", async () => {
+    const user = userEvent.setup()
+    renderPanel()
+
+    const mobilePanel = screen.getByTestId("results-panel-mobile")
+    const dragRegion = mockMobilePanelPointerCapture(mobilePanel)
+
+    expect(mobilePanel).toHaveClass("h-[50vh]")
+
+    await user.pointer([
+      {
+        keys: "[MouseLeft>]",
+        target: dragRegion,
+        coords: { clientX: 0, clientY: 220 },
+      },
+      { coords: { clientX: 0, clientY: 140 } },
+      { keys: "[/MouseLeft]" },
+    ])
+
+    expect(mobilePanel).toHaveClass("h-[90vh]")
+  })
+
+  it("collapses to peek on downward drag from half", async () => {
+    const user = userEvent.setup()
+    renderPanel()
+
+    const mobilePanel = screen.getByTestId("results-panel-mobile")
+    const dragRegion = mockMobilePanelPointerCapture(mobilePanel)
+
+    await user.pointer([
+      {
+        keys: "[MouseLeft>]",
+        target: dragRegion,
+        coords: { clientX: 0, clientY: 140 },
+      },
+      { coords: { clientX: 0, clientY: 220 } },
+      { keys: "[/MouseLeft]" },
+    ])
+
+    expect(mobilePanel).toHaveClass("h-32")
+    expect(
+      within(mobilePanel).queryByRole("button", { name: "Building one" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not start a drag from the header back button", async () => {
+    const user = userEvent.setup()
+    let selectedBuilding: SearchBuilding | null = null
+    const onBuildingSelect = vi.fn((nextBuilding: SearchBuilding | null) => {
+      selectedBuilding = nextBuilding
+      mockResultsSession({ selectedBuilding })
+    })
+
+    mockResultsSession({ onBuildingSelect })
+    const view = renderPanel()
+    const mobilePanel = screen.getByTestId("results-panel-mobile")
+
+    await user.click(
+      within(mobilePanel).getByRole("button", { name: "Building one" }),
+    )
+    view.rerender(<BuildingResultsPanel />)
+
+    const backButton = within(mobilePanel).getByRole("button", {
+      name: "Go back",
+    })
+    mockMobilePanelPointerCapture(mobilePanel)
+
+    await user.pointer([
+      {
+        keys: "[MouseLeft>]",
+        target: backButton,
+        coords: { clientX: 0, clientY: 200 },
+      },
+      { coords: { clientX: 0, clientY: 120 } },
+      { keys: "[/MouseLeft]" },
+    ])
+
+    expect(mobilePanel).toHaveClass("h-[50vh]")
+  })
+})

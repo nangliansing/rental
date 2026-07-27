@@ -5,6 +5,13 @@ import { ChevronLeft, X } from "lucide-react"
 import type { SearchAgentProfile } from "@/features/agent"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
+import {
+  DraggableBottomDrawer,
+  DraggableBottomDrawerDragRegion,
+  preventDraggableBottomDrawerPropagation,
+  type DraggableBottomDrawerDragHandleProps,
+  type DraggableBottomDrawerSnap,
+} from "@/shared/components/navigation/DraggableBottomDrawer"
 import { useBrowserBackDismiss } from "@/shared/hooks/useBrowserBackDismiss"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import {
@@ -25,16 +32,8 @@ import { formatBuildingResultsTitle } from "../../utils/map-search-presentation"
 import { RESULTS_PANEL_CONTENT_INSET_CLASS } from "../../utils/building-list-layout"
 import { MapSearchResultsAnnouncement } from "./MapSearchResultsAnnouncement"
 
-type PanelSnap = "peek" | "half" | "full"
+type PanelSnap = DraggableBottomDrawerSnap
 type PanelPage = "results" | "buildingDetail" | "filters"
-
-const SNAP_ORDER: PanelSnap[] = ["peek", "half", "full"]
-
-const PANEL_HEIGHT_CLASS: Record<PanelSnap, string> = {
-  peek: "h-32",
-  half: "h-[50vh]",
-  full: "h-[90vh]",
-}
 
 type PanelHeaderProps = {
   title: string
@@ -42,11 +41,8 @@ type PanelHeaderProps = {
   selectedListers: SearchAgentProfile[]
   onBack: () => void
   onRemoveLister: (listerId: string) => void
-  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void
-  onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void
-  onPointerUp: () => void
   onHeaderButtonPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void
-}
+} & DraggableBottomDrawerDragHandleProps
 
 type ListingIntentNoticeProps = {
   onExit: () => void
@@ -146,20 +142,14 @@ function MobilePanelHeader({
   selectedListers,
   onBack,
   onRemoveLister,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
   onHeaderButtonPointerDown,
+  ...dragHandle
 }: PanelHeaderProps) {
   return (
-    <div
-      className="cursor-grab touch-none px-4 pb-3 pt-4 active:cursor-grabbing"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+    <DraggableBottomDrawerDragRegion
+      dragHandle={dragHandle}
+      className="px-4 pb-3 pt-4"
     >
-      <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-slate-300" />
       <div className="flex min-w-0 items-center gap-2">
         {canGoBack && (
           <button
@@ -181,7 +171,7 @@ function MobilePanelHeader({
           />
         )}
       </div>
-    </div>
+    </DraggableBottomDrawerDragRegion>
   )
 }
 
@@ -205,9 +195,6 @@ export function BuildingResultsPanel() {
   const [snap, setSnap] = useState<PanelSnap>("half")
   const [page, setPage] = useState<PanelPage>("results")
   const [returnPage, setReturnPage] = useState<PanelPage>("results")
-  const [dragY, setDragY] = useState(0)
-  const [isDragging, setIsDragging] = useState(false)
-  const startYRef = useRef<number | null>(null)
   const mobileScrollRootRef = useRef<HTMLDivElement | null>(null)
   const desktopScrollRootRef = useRef<HTMLDivElement | null>(null)
   const isDesktop = useMediaQuery("(min-width: 1024px)")
@@ -431,53 +418,7 @@ export function BuildingResultsPanel() {
     }
   }
 
-  const getNextSnap = (direction: "up" | "down") => {
-    const currentIndex = SNAP_ORDER.indexOf(snap)
-
-    if (direction === "up") {
-      return SNAP_ORDER[Math.min(currentIndex + 1, SNAP_ORDER.length - 1)]
-    }
-
-    return SNAP_ORDER[Math.max(currentIndex - 1, 0)]
-  }
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    startYRef.current = event.clientY
-    setIsDragging(true)
-    setDragY(0)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (startYRef.current === null) return
-
-    const distance = event.clientY - startYRef.current
-
-    if (snap === "peek") {
-      setDragY(Math.min(0, Math.max(distance, -260)))
-      return
-    }
-
-    if (snap === "full") {
-      setDragY(Math.max(0, Math.min(distance, 260)))
-      return
-    }
-
-    setDragY(Math.max(-260, Math.min(distance, 260)))
-  }
-
-  const handlePointerUp = () => {
-    if (dragY < -60) setSnap(getNextSnap("up"))
-    if (dragY > 60) setSnap(getNextSnap("down"))
-
-    startYRef.current = null
-    setIsDragging(false)
-    setDragY(0)
-  }
-
-  const stopHeaderButtonDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    event.stopPropagation()
-  }
+  const stopHeaderButtonDrag = preventDraggableBottomDrawerPropagation
 
   return (
     <BuildingDetailSessionProvider>
@@ -487,39 +428,30 @@ export function BuildingResultsPanel() {
         buildingCount={buildings.length}
       />
 
-      <aside
-        data-testid="results-panel-mobile"
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-40 overflow-hidden rounded-t-2xl bg-white text-slate-950 shadow-2xl lg:hidden",
-          PANEL_HEIGHT_CLASS[snap],
-          !isDragging && "transition-[height,transform] duration-200 ease-out",
+      <DraggableBottomDrawer
+        snap={snap}
+        onSnapChange={setSnap}
+        testId="results-panel-mobile"
+        ariaLabel="Building search results"
+        contentRef={mobileScrollRootRef}
+        contentClassName={cn(
+          "h-[calc(100%-76px)]",
+          activePage !== "filters" && "pb-20",
         )}
-        style={{ transform: `translateY(${dragY}px)` }}
+        header={(dragHandle) => (
+          <MobilePanelHeader
+            title={panelTitle}
+            canGoBack={hasPanelBack}
+            selectedListers={selectedListers}
+            onBack={handlePanelBack}
+            onRemoveLister={removeLister}
+            onHeaderButtonPointerDown={stopHeaderButtonDrag}
+            {...dragHandle}
+          />
+        )}
       >
-        <MobilePanelHeader
-          title={panelTitle}
-          canGoBack={hasPanelBack}
-          selectedListers={selectedListers}
-          onBack={handlePanelBack}
-          onRemoveLister={removeLister}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onHeaderButtonPointerDown={stopHeaderButtonDrag}
-        />
-
-        {snap !== "peek" && (
-          <div
-            ref={mobileScrollRootRef}
-            className={cn(
-              "h-[calc(100%-76px)] overflow-y-auto",
-              activePage !== "filters" && "pb-20",
-            )}
-          >
-            {renderContent(mobileScrollRootRef, false, false)}
-          </div>
-        )}
-      </aside>
+        {renderContent(mobileScrollRootRef, false, false)}
+      </DraggableBottomDrawer>
 
       <aside
         data-testid="results-panel-desktop"
