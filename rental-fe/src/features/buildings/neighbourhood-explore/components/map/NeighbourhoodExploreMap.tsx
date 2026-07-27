@@ -1,22 +1,26 @@
-import { memo, useMemo } from "react"
+import { memo, useEffect, useMemo } from "react"
 import {
   AdvancedMarker,
-  APIProvider,
   Circle,
   Map,
+  useApiIsLoaded,
 } from "@vis.gl/react-google-maps"
 
 import { useGoogleMapsLoadState } from "@/features/map-search/hooks/useGoogleMapsLoadState"
 import { getNearbyZoom } from "@/features/map-search/utils/map-camera"
 import { isValidMapPosition } from "@/features/map-search/utils/map-position"
+import {
+  GOOGLE_MAPS_API_KEY,
+  GOOGLE_MAPS_MAP_ID,
+  hasGoogleMapsApiKey,
+  shouldUseClientMapStyles,
+} from "@/shared/google-maps/googleMapsConfig"
+import { GoogleMapsApiProvider, useGoogleMapsApiScope } from "@/shared/google-maps/GoogleMapsApiProvider"
 
 import { useNeighbourhoodExplore } from "../../NeighbourhoodExploreContext"
 import { NEIGHBOURHOOD_MAP_STYLES } from "../../constants/neighbourhoodMapStyles"
 import { NeighbourhoodOriginMarker } from "./NeighbourhoodOriginMarker"
 import { NeighbourhoodPlaceMarker } from "./NeighbourhoodPlaceMarker"
-
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? ""
-const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID"
 
 const NeighbourhoodExploreMapContent = memo(
   function NeighbourhoodExploreMapContent() {
@@ -46,6 +50,9 @@ const NeighbourhoodExploreMapContent = memo(
         ),
       [visiblePlaces],
     )
+    const clientMapStyles = shouldUseClientMapStyles(GOOGLE_MAPS_MAP_ID)
+      ? NEIGHBOURHOOD_MAP_STYLES
+      : undefined
 
     if (!origin || !isValidMapPosition(origin)) {
       return (
@@ -57,13 +64,13 @@ const NeighbourhoodExploreMapContent = memo(
 
     return (
       <Map
-        mapId={mapId}
+        mapId={GOOGLE_MAPS_MAP_ID}
         defaultCenter={center}
         defaultZoom={zoom}
         gestureHandling="greedy"
         disableDefaultUI
         clickableIcons={false}
-        styles={NEIGHBOURHOOD_MAP_STYLES}
+        styles={clientMapStyles}
         className="h-full w-full [&_.gm-style-cc]:opacity-70"
       >
         <Circle
@@ -105,11 +112,63 @@ const NeighbourhoodExploreMapContent = memo(
   },
 )
 
-export function NeighbourhoodExploreMap() {
-  const hasApiKey = Boolean(apiKey)
-  const { status, markReady, markFailed } = useGoogleMapsLoadState(hasApiKey)
+type NeighbourhoodExploreMapFrameProps = {
+  status: ReturnType<typeof useGoogleMapsLoadState>["status"]
+}
 
-  if (!hasApiKey) {
+function NeighbourhoodExploreMapFrame({
+  status,
+}: NeighbourhoodExploreMapFrameProps) {
+  return (
+    <div className="relative h-full w-full">
+      {status === "loading" && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/90 text-sm font-medium text-slate-600"
+          role="status"
+        >
+          Loading map...
+        </div>
+      )}
+      {status === "error" ? (
+        <div className="flex h-full items-center justify-center bg-slate-100 px-6 text-center text-sm text-slate-500">
+          Map could not be loaded.
+        </div>
+      ) : (
+        <NeighbourhoodExploreMapContent />
+      )}
+    </div>
+  )
+}
+
+function NeighbourhoodExploreMapInExistingScope() {
+  const apiIsLoaded = useApiIsLoaded()
+  const { status, markReady } = useGoogleMapsLoadState(hasGoogleMapsApiKey())
+
+  useEffect(() => {
+    if (apiIsLoaded) {
+      markReady()
+    }
+  }, [apiIsLoaded, markReady])
+
+  return <NeighbourhoodExploreMapFrame status={status} />
+}
+
+function NeighbourhoodExploreMapWithOwnProvider() {
+  const { status, markReady, markFailed } = useGoogleMapsLoadState(
+    hasGoogleMapsApiKey(),
+  )
+
+  return (
+    <GoogleMapsApiProvider onLoad={markReady} onError={markFailed}>
+      <NeighbourhoodExploreMapFrame status={status} />
+    </GoogleMapsApiProvider>
+  )
+}
+
+export function NeighbourhoodExploreMap() {
+  const hasParentScope = useGoogleMapsApiScope()
+
+  if (!hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)) {
     return (
       <div className="flex h-full items-center justify-center bg-slate-100 px-6 text-center text-sm text-slate-500">
         Map configuration is missing.
@@ -117,30 +176,9 @@ export function NeighbourhoodExploreMap() {
     )
   }
 
-  return (
-    <APIProvider
-      apiKey={apiKey}
-      libraries={["places"]}
-      onLoad={markReady}
-      onError={markFailed}
-    >
-      <div className="relative h-full w-full">
-        {status === "loading" && (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/90 text-sm font-medium text-slate-600"
-            role="status"
-          >
-            Loading map...
-          </div>
-        )}
-        {status === "error" ? (
-          <div className="flex h-full items-center justify-center bg-slate-100 px-6 text-center text-sm text-slate-500">
-            Map could not be loaded.
-          </div>
-        ) : (
-          <NeighbourhoodExploreMapContent />
-        )}
-      </div>
-    </APIProvider>
-  )
+  if (hasParentScope) {
+    return <NeighbourhoodExploreMapInExistingScope />
+  }
+
+  return <NeighbourhoodExploreMapWithOwnProvider />
 }
