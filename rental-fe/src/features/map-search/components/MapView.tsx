@@ -1,11 +1,16 @@
 import { AlertTriangle, MapPin, RotateCw } from "lucide-react"
 import { memo, useCallback, useEffect, useRef } from "react"
 import {
-  APIProvider,
   AdvancedMarker,
   Map,
   useAdvancedMarkerRef,
 } from "@vis.gl/react-google-maps"
+
+import {
+  GOOGLE_MAPS_API_KEY,
+  GOOGLE_MAPS_MAP_ID,
+  hasGoogleMapsApiKey,
+} from "@/shared/google-maps/googleMapsConfig"
 
 import { PlaceSearch } from "./place-search/PlaceSearch"
 import { useMapSearchCanvas } from "../context/MapSearchSessionContext"
@@ -26,8 +31,6 @@ import {
 import { getNearbyZoom } from "../utils/map-camera"
 import { isValidMapPosition } from "../utils/map-position"
 
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID"
 const DEFAULT_MAP_CENTER = { lat: 13.7653, lng: 100.642 }
 
 function getBoundsCenter(bounds: SearchBounds) {
@@ -130,9 +133,8 @@ export const MapView = memo(function MapView() {
   const { mode, selectedPin, currentLocation } = useMapInteraction()
   const [pinMarkerRef, pinMarker] = useAdvancedMarkerRef()
   const isProgrammaticCameraMoveRef = useRef(cameraRestoreVersion > 0)
-  const hasApiKey = Boolean(apiKey?.trim())
-  const { status, markReady, markFailed } =
-    useGoogleMapsLoadState(hasApiKey)
+  const hasApiKey = hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)
+  const { status, markReady } = useGoogleMapsLoadState(hasApiKey)
 
   const handleMapClick = useCallback((event: unknown) => {
     const position = getPositionFromEvent(event)
@@ -197,12 +199,7 @@ export const MapView = memo(function MapView() {
   if (!hasApiKey) return <MapUnavailableState hasApiKey={false} />
 
   return (
-    <APIProvider
-      apiKey={apiKey}
-      libraries={["places"]}
-      authReferrerPolicy="origin"
-      onError={markFailed}
-    >
+    <>
       {status === "error" ? (
         <MapUnavailableState hasApiKey />
       ) : (
@@ -212,7 +209,7 @@ export const MapView = memo(function MapView() {
             defaultZoom={defaultZoom}
             gestureHandling="greedy"
             disableDefaultUI
-            mapId={mapId}
+            mapId={GOOGLE_MAPS_MAP_ID}
             className="h-full w-full"
             onClick={handleMapClick}
             onDragstart={onMapMove}
@@ -290,6 +287,6 @@ export const MapView = memo(function MapView() {
       )}
 
       <PlaceSearch />
-    </APIProvider>
+    </>
   )
 })
