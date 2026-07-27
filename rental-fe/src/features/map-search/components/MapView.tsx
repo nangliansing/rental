@@ -219,71 +219,72 @@ export const MapView = memo(function MapView() {
             onZoomChanged={handleZoomChanged}
             onIdle={handleMapIdle}
             onTilesLoaded={markReady}
-          />
-          <MapCameraRestorer
-            restoreVersion={cameraRestoreVersion}
-            bounds={committedBounds}
-            pin={selectedPin}
-            radiusMeters={nearbyRadiusMeters}
-            selectedBuilding={selectedBuilding}
-            onRestoreStart={handleCameraRestoreStart}
-          />
-          <MapStatusOverlay status={status} />
-
-          <BuildingMarkerLayer
-            buildings={buildings}
-            isListingSearch={isListingSearch}
-            onSelect={handleBuildingSelect}
-          />
-
-          {mode === "line" && (
-            <LineSearchOverlays
-              points={linePoints}
-              distanceMeters={lineDistanceMeters}
-            />
-          )}
-
-          {mode === "area" && searchedPlace && (
-            <AreaPlaceMarker place={searchedPlace} />
-          )}
-
-          {mode === "pin" && selectedPin && (
-            <PinRadiusOverlay
-              position={selectedPin}
+          >
+            <MapCameraRestorer
+              restoreVersion={cameraRestoreVersion}
+              bounds={committedBounds}
+              pin={selectedPin}
               radiusMeters={nearbyRadiusMeters}
+              selectedBuilding={selectedBuilding}
+              onRestoreStart={handleCameraRestoreStart}
             />
-          )}
 
-          {mode === "pin" && selectedPin && (
-        <AdvancedMarker
-          ref={pinMarkerRef}
-          position={selectedPin}
-          zIndex={30}
-          draggable
-          clickable
-          title="Move search pin. Use arrow keys for small steps or Shift plus arrow keys for larger steps."
-          onDragEnd={handlePinDragEnd}
-        >
-          <div className="focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
-            {currentLocation ? (
-              <span
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-lg"
-                aria-hidden="true"
-              >
-                <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-600 ring-4 ring-blue-500/25" />
-              </span>
-            ) : (
-              <span className="relative flex flex-col items-center" aria-hidden="true">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg ring-4 ring-rose-100">
-                  <MapPin className="h-6 w-6" />
-                </span>
-                <span className="h-3 w-0.5 bg-rose-600" />
-                <span className="h-2 w-2 rounded-full bg-rose-600 shadow" />
-              </span>
+            <BuildingMarkerLayer
+              buildings={buildings}
+              isListingSearch={isListingSearch}
+              onSelect={handleBuildingSelect}
+            />
+
+            {mode === "line" && (
+              <LineSearchOverlays
+                points={linePoints}
+                distanceMeters={lineDistanceMeters}
+              />
             )}
-          </div>
-        </AdvancedMarker>
-          )}
+
+            {mode === "area" && searchedPlace && (
+              <AreaPlaceMarker place={searchedPlace} />
+            )}
+
+            {mode === "pin" && selectedPin && (
+              <PinRadiusOverlay
+                position={selectedPin}
+                radiusMeters={nearbyRadiusMeters}
+              />
+            )}
+
+            {mode === "pin" && selectedPin && (
+              <AdvancedMarker
+                ref={pinMarkerRef}
+                position={selectedPin}
+                zIndex={30}
+                draggable
+                clickable
+                title="Move search pin. Use arrow keys for small steps or Shift plus arrow keys for larger steps."
+                onDragEnd={handlePinDragEnd}
+              >
+                <div className="focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+                  {currentLocation ? (
+                    <span
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-lg"
+                      aria-hidden="true"
+                    >
+                      <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-600 ring-4 ring-blue-500/25" />
+                    </span>
+                  ) : (
+                    <span className="relative flex flex-col items-center" aria-hidden="true">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg ring-4 ring-rose-100">
+                        <MapPin className="h-6 w-6" />
+                      </span>
+                      <span className="h-3 w-0.5 bg-rose-600" />
+                      <span className="h-2 w-2 rounded-full bg-rose-600 shadow" />
+                    </span>
+                  )}
+                </div>
+              </AdvancedMarker>
+            )}
+          </Map>
+          <MapStatusOverlay status={status} />
 
           {!isPlaceSearchOpen && <SearchAreaButton />}
         </>

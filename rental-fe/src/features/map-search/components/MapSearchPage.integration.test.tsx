@@ -232,6 +232,7 @@ const updatedLineMockBuilding: SearchBuilding = {
 vi.mock("@vis.gl/react-google-maps", () => ({
   APIProvider: ({ children }: { children: ReactNode }) => children,
   Map: ({
+    children,
     onDragstart,
     onClick,
   }: {
@@ -241,7 +242,7 @@ vi.mock("@vis.gl/react-google-maps", () => ({
   }) => {
     googleMapsMocks.handlers.onDragstart = onDragstart
     googleMapsMocks.handlers.onClick = onClick
-    return <div data-testid="map" />
+    return <div data-testid="map">{children}</div>
   },
   AdvancedMarker: ({
     children,
