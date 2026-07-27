@@ -16,7 +16,6 @@ export function isElementVisibleInScrollContainer(
 }
 
 export function resolveScrollContainer(
-  element: HTMLElement,
   preferredContainer: HTMLElement,
 ): HTMLElement {
   if (preferredContainer.scrollHeight > preferredContainer.clientHeight) {
@@ -46,7 +45,7 @@ export function scrollElementIntoViewIfNeeded(
   container: HTMLElement,
   { behavior = "smooth" }: ScrollElementIntoViewIfNeededOptions = {},
 ): boolean {
-  const scrollContainer = resolveScrollContainer(element, container)
+  const scrollContainer = resolveScrollContainer(container)
 
   if (isElementVisibleInScrollContainer(element, scrollContainer)) {
     return false

@@ -81,7 +81,7 @@ describe("scrollElementIntoViewIfNeeded", () => {
       parentElement: { value: ancestor },
     })
 
-    expect(resolveScrollContainer({} as HTMLElement, preferred)).toBe(ancestor)
+    expect(resolveScrollContainer(preferred)).toBe(ancestor)
   })
 
   it("does not scroll when the element is already visible", () => {

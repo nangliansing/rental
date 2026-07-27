@@ -13,7 +13,7 @@ import {
   shouldUseClientMapStyles,
 } from "@/shared/google-maps/googleMapsConfig"
 
-import type { NeighbourhoodPlace } from "../../api/getBuildingNeighbourhood"
+import type { NeighbourhoodPlace } from "../../../api/getBuildingNeighbourhood"
 import { useNeighbourhoodExploreData } from "../../NeighbourhoodExploreContext"
 import { useNeighbourhoodExplorePlaceSelection } from "../../hooks/useNeighbourhoodExplorePlaceSelection"
 import { NEIGHBOURHOOD_MAP_STYLES } from "../../constants/neighbourhoodMapStyles"

@@ -10,7 +10,7 @@ import {
 
 import { cn } from "@/lib/utils"
 
-import type { NeighbourhoodPlace } from "../../api/getBuildingNeighbourhood"
+import type { NeighbourhoodPlace } from "../../../api/getBuildingNeighbourhood"
 import { scrollElementIntoViewIfNeeded } from "../../utils/scrollElementIntoViewIfNeeded"
 import { NeighbourhoodPlaceListItem } from "./NeighbourhoodPlaceListItem"
 

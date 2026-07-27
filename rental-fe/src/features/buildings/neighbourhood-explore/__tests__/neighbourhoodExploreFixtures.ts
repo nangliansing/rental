@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw"
 
-import type { BuildingNeighbourhood } from "../api/getBuildingNeighbourhood"
+import type { BuildingNeighbourhood } from "../../api/getBuildingNeighbourhood"
 import { server } from "@/test/server"
 
 export const NEIGHBOURHOOD_EXPLORE_TEST_BUILDING_ID = "building-1"

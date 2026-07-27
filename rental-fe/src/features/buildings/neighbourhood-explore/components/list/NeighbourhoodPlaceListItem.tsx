@@ -3,7 +3,7 @@ import { memo, useCallback } from "react"
 
 import { cn } from "@/lib/utils"
 
-import type { NeighbourhoodPlace } from "../../api/getBuildingNeighbourhood"
+import type { NeighbourhoodPlace } from "../../../api/getBuildingNeighbourhood"
 import { formatNeighbourhoodPlaceSubtitle } from "../../utils/formatNeighbourhoodPlaceSubtitle"
 import { NeighbourhoodCategoryIcon } from "../NeighbourhoodCategoryIcon"
 

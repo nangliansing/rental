@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
-import type { NeighbourhoodPlace } from "../../api/getBuildingNeighbourhood"
+import type { NeighbourhoodPlace } from "../../../api/getBuildingNeighbourhood"
 import {
   mockNeighbourhoodExploreResponse,
   NEIGHBOURHOOD_EXPLORE_TEST_BUILDING_ID,
