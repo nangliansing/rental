@@ -387,10 +387,8 @@ describe("resolveNeighbourhoodPlaces", () => {
   });
 
   test("falls back to static transit when Overpass fails and no stale cache exists", async () => {
-    const origin = { lat: 13.6963, lng: 100.6051 };
-
     const result = await resolveNeighbourhoodPlaces({
-      origin,
+      origin: { lat: 13.6963, lng: 100.6051 },
       fetchRadiusMeters: 2000,
       overpassEnabled: true,
       queryOverpassFn: async () => {
@@ -408,13 +406,11 @@ describe("resolveNeighbourhoodPlaces", () => {
     );
     assert.ok(result.places.every((place) => place.category === "public_transport"));
 
-    const cached = await NeighbourhoodCache.findOne({
-      cacheKey: buildNeighbourhoodCacheKey({
-        origin,
-        fetchRadiusMeters: 2000,
-      }),
-    }).lean();
-
-    assert.equal(cached, null);
+    const cacheKey = buildNeighbourhoodCacheKey({
+      origin: { lat: 13.6963, lng: 100.6051 },
+      fetchRadiusMeters: 2000,
+    });
+    const cachedEntry = await NeighbourhoodCache.findOne({ cacheKey }).lean();
+    assert.equal(cachedEntry, null);
   });
 });

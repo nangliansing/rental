@@ -8,11 +8,13 @@ import {
 } from "../shared/geo/index.js";
 import { buildNeighbourhoodCacheKey } from "../modules/neighbourhood/cache/build-neighbourhood-cache-key.js";
 import {
-  MAX_CACHED_PLACES,
+  MAX_BUS_STOPS_RETURNED,
   MAX_RETURNED_PLACES,
   MIN_RADIUS_METERS,
+  DENSE_POI_CATEGORY_CAPS,
   NEIGHBOURHOOD_CATEGORIES,
   OSM_NEIGHBOURHOOD_CATEGORIES,
+  OSM_WAY_QUERY_CATEGORY_KEYS,
 } from "../modules/neighbourhood/neighbourhood.constants.js";
 import { buildGetBuildingNeighbourhoodParams } from "../modules/neighbourhood/params/build-get-building-neighbourhood-params.js";
 import { buildNeighbourhoodSummary } from "../modules/neighbourhood/services/build-neighbourhood-summary.service.js";
@@ -21,6 +23,7 @@ import {
   classifyOsmPlace,
   isPublicTransportStation,
 } from "../modules/neighbourhood/services/classify-osm-place.service.js";
+import { dedupeNearbyOsmPlaces } from "../modules/neighbourhood/services/dedupe-nearby-osm-places.service.js";
 import { dedupeTransitPlaces } from "../modules/neighbourhood/services/dedupe-transit-places.service.js";
 import {
   enrichTransitPlace,
@@ -30,6 +33,11 @@ import {
 import { filterPlacesByRadius } from "../modules/neighbourhood/services/filter-places-by-radius.service.js";
 import { loadStaticTransitPlaces } from "../modules/neighbourhood/services/load-static-transit-places.service.js";
 import { normalizeOverpassResponse } from "../modules/neighbourhood/services/normalize-overpass-response.service.js";
+import { dedupeNearbyBusStops } from "../modules/neighbourhood/services/partition-transit-places.service.js";
+import {
+  isValidNeighbourhoodPlace,
+  sanitizeNeighbourhoodPlaces,
+} from "../modules/neighbourhood/services/neighbourhood-place.utils.js";
 
 const validBuildingId = "6790f1f2f1d2c3b4a5e6d7c8";
 
@@ -48,7 +56,7 @@ test("buildNeighbourhoodCacheKey rounds coordinates for shared cache entries", (
       origin: { lat: 13.75678, lng: 100.64231 },
       fetchRadiusMeters: 2000,
     }),
-    "3:13.757:100.642:2000",
+    "13.757:100.642:2000:v5",
   );
 
   assert.equal(
@@ -63,14 +71,53 @@ test("buildNeighbourhoodCacheKey rounds coordinates for shared cache entries", (
   );
 });
 
+test("buildNeighbourhoodCacheKey changes when cache version changes", () => {
+  assert.notEqual(
+    buildNeighbourhoodCacheKey({
+      origin: { lat: 13.765, lng: 100.641 },
+      fetchRadiusMeters: 2000,
+      cacheVersion: 1,
+    }),
+    buildNeighbourhoodCacheKey({
+      origin: { lat: 13.765, lng: 100.641 },
+      fetchRadiusMeters: 2000,
+      cacheVersion: 2,
+    }),
+  );
+});
+
 test("classifyOsmPlace maps every configured OSM category", () => {
   for (const category of OSM_NEIGHBOURHOOD_CATEGORIES) {
-    const tags = Object.fromEntries([
-      [category.osmTagRules[0].key, category.osmTagRules[0].value],
-    ]);
+    for (const rule of category.osmTagRules) {
+      const tags = { [rule.key]: rule.value };
 
-    assert.equal(classifyOsmPlace(tags), category.key);
+      assert.equal(classifyOsmPlace(tags), category.key);
+    }
   }
+});
+
+test("classifyOsmPlace maps department stores and wholesalers as supermarkets", () => {
+  assert.equal(classifyOsmPlace({ shop: "department_store" }), "supermarket");
+  assert.equal(classifyOsmPlace({ shop: "wholesale" }), "supermarket");
+});
+
+test("classifyOsmPlace recognizes bus stops and bus stations", () => {
+  assert.equal(
+    classifyOsmPlace({ highway: "bus_stop", name: "Route 36" }),
+    "public_transport",
+  );
+  assert.equal(
+    classifyOsmPlace({
+      public_transport: "platform",
+      bus: "yes",
+      name: "BMTA Platform",
+    }),
+    "public_transport",
+  );
+  assert.equal(
+    classifyOsmPlace({ amenity: "bus_station", name: "Bangkok Bus Terminal" }),
+    "public_transport",
+  );
 });
 
 test("classifyOsmPlace uses category priority when multiple tags match", () => {
@@ -326,6 +373,57 @@ test("normalizeOverpassResponse supports nodes, centered ways, and name fallback
   );
 });
 
+test("normalizeOverpassResponse dedupes nearby node and way POIs for the same place", () => {
+  const places = normalizeOverpassResponse({
+    elements: [
+      {
+        type: "node",
+        id: 100,
+        lat: 13.76461,
+        lon: 100.64168,
+        tags: {
+          amenity: "marketplace",
+          name: "Tawanna shopping park",
+        },
+      },
+      {
+        type: "way",
+        id: 316166705,
+        center: { lat: 13.76463, lon: 100.6417 },
+        tags: {
+          amenity: "marketplace",
+          "name:en": "Tawanna shopping park",
+        },
+      },
+    ],
+  });
+
+  assert.equal(places.length, 1);
+  assert.equal(places[0].id, "osm-way-316166705");
+  assert.equal(places[0].category, "market");
+});
+
+test("dedupeNearbyOsmPlaces keeps distinct same-category places when names differ", () => {
+  const places = dedupeNearbyOsmPlaces([
+    {
+      id: "osm-node-1",
+      name: "7-Eleven",
+      category: "convenience",
+      lat: 13.75,
+      lng: 100.5,
+    },
+    {
+      id: "osm-node-2",
+      name: "FamilyMart",
+      category: "convenience",
+      lat: 13.75001,
+      lng: 100.50001,
+    },
+  ]);
+
+  assert.equal(places.length, 2);
+});
+
 test("buildOverpassQuery includes all configured OSM categories", () => {
   const query = buildOverpassQuery({
     origin: { lat: 13.75, lng: 100.5 },
@@ -345,6 +443,32 @@ test("buildOverpassQuery includes all configured OSM categories", () => {
     /node\["public_transport"="station"\]\["station"="monorail"\]/,
   );
   assert.match(query, /around:2000,13\.75,100\.5/);
+});
+
+test("buildOverpassQuery requests area ways for large retail and healthcare POIs", () => {
+  const query = buildOverpassQuery({
+    origin: { lat: 13.7646, lng: 100.6417 },
+    fetchRadiusMeters: 2000,
+  });
+
+  for (const categoryKey of OSM_WAY_QUERY_CATEGORY_KEYS) {
+    const category = OSM_NEIGHBOURHOOD_CATEGORIES.find(
+      (entry) => entry.key === categoryKey,
+    );
+
+    assert.ok(category);
+
+    for (const rule of category.osmTagRules) {
+      assert.match(
+        query,
+        new RegExp(`way\\["${rule.key}"="${rule.value}"\\]`),
+      );
+    }
+  }
+
+  assert.doesNotMatch(query, /way\["shop"="convenience"\]/);
+  assert.match(query, /node\["highway"="bus_stop"\]/);
+  assert.match(query, /node\["amenity"="bus_station"\]/);
 });
 
 test("buildNeighbourhoodSummary excludes zero-count categories from tabs", () => {
@@ -451,26 +575,50 @@ test("filterPlacesByRadius sorts by straight-line distance and applies radius", 
   assert.ok(places[0].distanceMeters > 0);
 });
 
-test("filterPlacesByRadius caps the number of returned places", () => {
+test("filterPlacesByRadius caps dense convenience POIs per category", () => {
   const origin = { lat: 13.75, lng: 100.5 };
-  const places = Array.from({ length: MAX_RETURNED_PLACES + 25 }, (_, index) => ({
+  const conveniencePlaces = Array.from({ length: 30 }, (_, index) => ({
     id: `place-${index}`,
     name: `Place ${index}`,
     category: "convenience",
-    lat: 13.75 + index * 0.00001,
+    lat: 13.75 + index * 0.0006,
     lng: 100.5,
   }));
 
-  const { places: filtered, truncated, totalWithinRadius } = filterPlacesByRadius({
+  const { places, truncation } = filterPlacesByRadius({
     origin,
     radiusMeters: 2000,
-    places,
+    places: conveniencePlaces,
   });
 
-  assert.equal(filtered.length, MAX_RETURNED_PLACES);
-  assert.equal(truncated, true);
-  assert.equal(totalWithinRadius, MAX_RETURNED_PLACES + 25);
-  assert.ok(filtered[0].distanceMeters <= filtered.at(-1).distanceMeters);
+  assert.equal(places.length, DENSE_POI_CATEGORY_CAPS.convenience);
+  assert.equal(truncation.truncated, true);
+  assert.equal(truncation.categories.convenience, true);
+});
+
+test("filterPlacesByRadius applies a global non-transit backstop after category caps", () => {
+  const origin = { lat: 13.75, lng: 100.5 };
+  const supermarketPlaces = Array.from(
+    { length: MAX_RETURNED_PLACES + 25 },
+    (_, index) => ({
+      id: `supermarket-${index}`,
+      name: `Supermarket ${index}`,
+      category: "supermarket",
+      lat: 13.75 + index * 0.00001,
+      lng: 100.5,
+    }),
+  );
+
+  const { places, truncation } = filterPlacesByRadius({
+    origin,
+    radiusMeters: 2000,
+    places: supermarketPlaces,
+  });
+
+  assert.equal(places.length, MAX_RETURNED_PLACES);
+  assert.equal(truncation.truncated, true);
+  assert.equal(truncation.globalBackstopApplied, true);
+  assert.ok(places[0].distanceMeters <= places.at(-1).distanceMeters);
 });
 
 test("filterPlacesByRadius always keeps public transport even when POI cap is reached", () => {
@@ -486,7 +634,7 @@ test("filterPlacesByRadius always keeps public transport even when POI cap is re
     }),
   );
 
-  const { places: filtered } = filterPlacesByRadius({
+  const { places } = filterPlacesByRadius({
     origin,
     radiusMeters: 2000,
     places: [
@@ -502,15 +650,197 @@ test("filterPlacesByRadius always keeps public transport even when POI cap is re
   });
 
   assert.equal(
-    filtered.filter((place) => place.category !== "public_transport").length,
-    MAX_RETURNED_PLACES,
+    places.filter((place) => place.category !== "public_transport").length,
+    DENSE_POI_CATEGORY_CAPS.convenience,
   );
   assert.ok(
-    filtered.some(
+    places.some(
       (place) =>
         place.id === "mrt-bang-kapi" && place.category === "public_transport",
     ),
   );
+});
+
+test("normalizeOverpassResponse enriches bus stops with mode and fallback labels", () => {
+  const [busStop, busStation] = normalizeOverpassResponse({
+    elements: [
+      {
+        type: "node",
+        id: 501,
+        lat: 13.75,
+        lon: 100.5,
+        tags: { highway: "bus_stop", ref: "142" },
+      },
+      {
+        type: "node",
+        id: 502,
+        lat: 13.751,
+        lon: 100.501,
+        tags: { amenity: "bus_station", name: "Bangkok Bus Terminal" },
+      },
+    ],
+  });
+
+  assert.equal(busStop.name, "Bus stop 142");
+  assert.equal(busStop.mode, "bus");
+  assert.equal(busStop.transitRole, "bus_stop");
+  assert.equal(busStation.name, "Bangkok Bus Terminal");
+  assert.equal(busStation.mode, "bus");
+  assert.equal(busStation.transitRole, "bus_station");
+});
+
+test("dedupeNearbyBusStops keeps the nearest stop when duplicates are close together", () => {
+  const deduped = dedupeNearbyBusStops([
+    {
+      id: "bus-1",
+      name: "Bus stop 1",
+      category: "public_transport",
+      mode: "bus",
+      transitRole: "bus_stop",
+      lat: 13.75,
+      lng: 100.5,
+      distanceMeters: 80,
+    },
+    {
+      id: "bus-2",
+      name: "Bus stop 2",
+      category: "public_transport",
+      mode: "bus",
+      transitRole: "bus_stop",
+      lat: 13.75001,
+      lng: 100.50001,
+      distanceMeters: 120,
+    },
+  ]);
+
+  assert.equal(deduped.length, 1);
+  assert.equal(deduped[0].id, "bus-1");
+});
+
+test("filterPlacesByRadius marks public transport truncated when bus stops are capped", () => {
+  const origin = { lat: 13.75, lng: 100.5 };
+  const busStops = Array.from({ length: MAX_BUS_STOPS_RETURNED + 5 }, (_, index) => ({
+    id: `bus-${index}`,
+    name: `Bus stop ${index}`,
+    category: "public_transport",
+    mode: "bus",
+    transitRole: "bus_stop",
+    lat: 13.75 + index * 0.0006,
+    lng: 100.5,
+  }));
+
+  const { truncation } = filterPlacesByRadius({
+    origin,
+    radiusMeters: 2000,
+    places: busStops,
+  });
+
+  assert.equal(truncation.truncated, true);
+  assert.equal(truncation.categories.public_transport, true);
+});
+
+test("filterPlacesByRadius ignores invalid cached places safely", () => {
+  const origin = { lat: 13.75, lng: 100.5 };
+  const { places } = filterPlacesByRadius({
+    origin,
+    radiusMeters: 2000,
+    places: [
+      {
+        id: "valid",
+        name: "Valid Store",
+        category: "convenience",
+        lat: 13.751,
+        lng: 100.501,
+      },
+      {
+        id: "",
+        name: "Missing id",
+        category: "convenience",
+        lat: 13.751,
+        lng: 100.501,
+      },
+      {
+        id: "bad-coords",
+        name: "Bad Coords",
+        category: "convenience",
+        lat: Number.NaN,
+        lng: 100.501,
+      },
+      {
+        id: "unknown-category",
+        name: "Unknown",
+        category: "bank",
+        lat: 13.751,
+        lng: 100.501,
+      },
+    ],
+  });
+
+  assert.equal(places.length, 1);
+  assert.equal(places[0].id, "valid");
+});
+
+test("sanitizeNeighbourhoodPlaces keeps valid transit metadata", () => {
+  const [place] = sanitizeNeighbourhoodPlaces([
+    {
+      id: "bts-asok",
+      name: "BTS Asok",
+      category: "public_transport",
+      lat: 13.737,
+      lng: 100.5603,
+      mode: "bts",
+      line: "Sukhumvit Line",
+      transitRole: "rail",
+    },
+  ]);
+
+  assert.equal(isValidNeighbourhoodPlace(place), true);
+  assert.equal(place.line, "Sukhumvit Line");
+});
+
+test("filterPlacesByRadius caps bus stops but keeps rail and bus stations", () => {
+  const origin = { lat: 13.75, lng: 100.5 };
+  const busStops = Array.from({ length: MAX_BUS_STOPS_RETURNED + 5 }, (_, index) => ({
+    id: `bus-${index}`,
+    name: `Bus stop ${index}`,
+    category: "public_transport",
+    mode: "bus",
+    transitRole: "bus_stop",
+    lat: 13.75 + index * 0.0006,
+    lng: 100.5,
+  }));
+
+  const { places } = filterPlacesByRadius({
+    origin,
+    radiusMeters: 2000,
+    places: [
+      ...busStops,
+      {
+        id: "bts-asok",
+        name: "BTS Asok",
+        category: "public_transport",
+        mode: "bts",
+        lat: 13.75,
+        lng: 100.5,
+      },
+      {
+        id: "bus-terminal",
+        name: "Main Bus Terminal",
+        category: "public_transport",
+        mode: "bus",
+        transitRole: "bus_station",
+        lat: 13.751,
+        lng: 100.501,
+      },
+    ],
+  });
+
+  assert.equal(
+    places.filter((place) => place.transitRole === "bus_stop").length,
+    MAX_BUS_STOPS_RETURNED,
+  );
+  assert.ok(places.some((place) => place.id === "bts-asok"));
+  assert.ok(places.some((place) => place.id === "bus-terminal"));
 });
 
 test("classifyOsmPlace recognizes ferry terminals", () => {
@@ -741,7 +1071,7 @@ test("buildNeighbourhoodSummary count matches number of places provided", () => 
 });
 
 test("filterPlacesByRadius returns an empty list when nothing is inside radius", () => {
-  const { places: filtered } = filterPlacesByRadius({
+  const { places } = filterPlacesByRadius({
     origin: { lat: 13.75, lng: 100.5 },
     radiusMeters: 10,
     places: [
@@ -755,7 +1085,7 @@ test("filterPlacesByRadius returns an empty list when nothing is inside radius",
     ],
   });
 
-  assert.deepEqual(filtered, []);
+  assert.deepEqual(places, []);
 });
 
 test("buildGetBuildingNeighbourhoodParams accepts minimum supported radius", () => {
@@ -817,64 +1147,27 @@ test("filterPlacesByRadius rounds distanceMeters to whole meters", () => {
   assert.equal(place.distanceMeters, Math.round(place.distanceMeters));
 });
 
-test("filterPlacesByRadius reports truncated=false when under cap", () => {
-  const { truncated, totalWithinRadius } = filterPlacesByRadius({
-    origin: { lat: 13.75, lng: 100.5 },
-    radiusMeters: 2000,
-    places: [
-      {
-        id: "near",
-        name: "Near Place",
-        category: "convenience",
-        lat: 13.751,
-        lng: 100.501,
-      },
-    ],
-  });
-
-  assert.equal(truncated, false);
-  assert.equal(totalWithinRadius, 1);
-});
-
-test("buildNeighbourhoodSummary includes truncation metadata", () => {
-  const { summary } = buildNeighbourhoodSummary(
-    [
-      {
-        id: "place-1",
-        name: "Restaurant",
-        category: "restaurant",
-        lat: 13.75,
-        lng: 100.5,
-        distanceMeters: 100,
-      },
-    ],
-    { truncated: true, totalWithinRadius: 347 },
+test("buildNeighbourhoodSummary marks truncated dense categories", () => {
+  const { summary, categories } = buildNeighbourhoodSummary(
+    Array.from({ length: DENSE_POI_CATEGORY_CAPS.convenience }, (_, index) => ({
+      id: `c-${index}`,
+      name: `Store ${index}`,
+      category: "convenience",
+      lat: 13.75,
+      lng: 100.5,
+      distanceMeters: index * 10,
+    })),
+    {
+      truncated: true,
+      totalWithinRadius: 30,
+      truncatedCategories: { convenience: true },
+    },
   );
 
+  assert.equal(summary.all, DENSE_POI_CATEGORY_CAPS.convenience);
   assert.equal(summary.truncated, true);
-  assert.equal(summary.totalWithinRadius, 347);
-  assert.equal(summary.all, 1);
-});
-
-test("filterPlacesByRadius supports cache ingest cap", () => {
-  const origin = { lat: 13.75, lng: 100.5 };
-  const places = Array.from({ length: MAX_CACHED_PLACES + 40 }, (_, index) => ({
-    id: `place-${index}`,
-    name: `Place ${index}`,
-    category: "convenience",
-    lat: 13.75 + index * 0.00001,
-    lng: 100.5,
-  }));
-
-  const { places: filtered, truncated } = filterPlacesByRadius({
-    origin,
-    radiusMeters: 2000,
-    places,
-    maxPlaces: MAX_CACHED_PLACES,
-  });
-
-  assert.equal(filtered.length, MAX_CACHED_PLACES);
-  assert.equal(truncated, true);
+  assert.equal(summary.totalWithinRadius, 30);
+  assert.equal(categories[0]?.truncated, true);
 });
 
 test("buildGetBuildingNeighbourhoodParams throws AppError instances", () => {

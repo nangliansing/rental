@@ -52,7 +52,9 @@ export function useNeighbourhoodExploreState({
       },
       ...neighbourhood.categories.map((category) => ({
         value: category.key,
-        label: `${category.label} (${category.count})`,
+        label: `${category.label} (${formatNeighbourhoodCategoryCount(category.count, {
+          truncated: category.truncated,
+        })})`,
       })),
     ]
   }, [neighbourhood])

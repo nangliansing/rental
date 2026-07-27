@@ -7,9 +7,10 @@ import {
 export const buildNeighbourhoodCacheKey = ({
   origin,
   fetchRadiusMeters,
+  cacheVersion = NEIGHBOURHOOD_CACHE_VERSION,
 }) => {
   const lat = roundCoordinate(origin.lat, CACHE_COORDINATE_DECIMALS);
   const lng = roundCoordinate(origin.lng, CACHE_COORDINATE_DECIMALS);
 
-  return `${NEIGHBOURHOOD_CACHE_VERSION}:${lat}:${lng}:${fetchRadiusMeters}`;
+  return `${lat}:${lng}:${fetchRadiusMeters}:v${cacheVersion}`;
 };

@@ -40,6 +40,7 @@ export type NeighbourhoodCategory = {
   label: string
   priority: number
   count: number
+  truncated?: boolean
 }
 
 export type BuildingNeighbourhood = {
@@ -171,7 +172,13 @@ function parseNeighbourhoodCategory(
     return null
   }
 
-  return { key, label, priority, count }
+  return {
+    key,
+    label,
+    priority,
+    count,
+    ...(category.truncated === true ? { truncated: true } : {}),
+  }
 }
 
 function parseNeighbourhoodSummary(value: unknown) {

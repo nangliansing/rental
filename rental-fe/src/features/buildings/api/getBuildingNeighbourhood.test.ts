@@ -139,6 +139,15 @@ describe("getBuildingNeighbourhood", () => {
               truncated: true,
               totalWithinRadius: 347,
             },
+            categories: [
+              {
+                key: "convenience",
+                label: "Convenience Stores",
+                priority: 2,
+                count: 15,
+                truncated: true,
+              },
+            ],
           },
         }),
       ),
@@ -151,6 +160,13 @@ describe("getBuildingNeighbourhood", () => {
         all: 215,
         truncated: true,
         totalWithinRadius: 347,
+      }),
+    )
+    expect(result.categories[0]).toEqual(
+      expect.objectContaining({
+        key: "convenience",
+        count: 15,
+        truncated: true,
       }),
     )
   })
