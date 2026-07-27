@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
+import { getHorizontalScrollRowClass } from "@/shared/components/layout/horizontalScrollRow"
+
 import { getReviewTagDetails } from "./review-tag-details"
 
 type ReviewTagCount = {
@@ -96,9 +98,8 @@ export function ReviewTagBadges({
   return (
     <TooltipProvider>
       <div
-        className={cn(
-          "flex max-w-full flex-wrap items-center gap-1.5",
-          className,
+        className={getHorizontalScrollRowClass(
+          cn("max-w-full items-center gap-1.5", className),
         )}
         aria-label="Lister review highlights and actions"
       >
@@ -138,7 +139,7 @@ function ReviewTagBadge({
           type="button"
           className={cn(
             REVIEW_BADGE_CLASS_NAME,
-            "max-w-48 truncate px-2.5 py-1 text-xs font-semibold",
+            "shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-semibold",
           )}
           style={{
             animationDelay: `${index * -REVIEW_BADGE_STAGGER_SECONDS}s`,
