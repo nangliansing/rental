@@ -30,14 +30,24 @@ vi.mock("@/features/buildings/components/BuildingSummaryCard", () => ({
     <h1>{building.name}</h1>
   ),
 }))
-vi.mock("@/features/buildings/neighbourhood-explore", () => ({
-  BuildingNeighbourhoodExploreModal: () => null,
-  useNeighbourhoodExploreDialog: () => ({
+vi.mock("@/features/buildings/neighbourhood-explore", () => {
+  const exploreControl = {
     isOpen: false,
     open: vi.fn(),
     close: vi.fn(),
-  }),
-}))
+  }
+
+  return {
+    BuildingNeighbourhoodExploreModal: () => null,
+    NeighbourhoodExploreDialogProvider: ({
+      children,
+    }: {
+      children: React.ReactNode
+    }) => children,
+    useNeighbourhoodExploreDialog: () => exploreControl,
+    useNeighbourhoodExploreDialogContext: () => exploreControl,
+  }
+})
 vi.mock("@/features/listing/components/ListingDetailModal", () => ({
   ListingDetailModal: ({
     listingId,

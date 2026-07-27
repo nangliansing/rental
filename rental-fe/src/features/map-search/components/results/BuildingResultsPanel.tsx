@@ -22,6 +22,7 @@ import { SearchStateMessage } from "./SearchStateMessage"
 import { SelectedListerRail } from "./SelectedListerRail"
 import { useResultsPanelFocus } from "../../hooks/useResultsPanelFocus"
 import { formatBuildingResultsTitle } from "../../utils/map-search-presentation"
+import { RESULTS_PANEL_CONTENT_INSET_CLASS } from "../../utils/building-list-layout"
 import { MapSearchResultsAnnouncement } from "./MapSearchResultsAnnouncement"
 
 type PanelSnap = "peek" | "half" | "full"
@@ -347,7 +348,7 @@ export function BuildingResultsPanel() {
           {listingIntentContent}
           {filtersContent}
 
-          <div className="pb-4">
+          <div className={cn(RESULTS_PANEL_CONTENT_INSET_CLASS, "pb-4")}>
             <BuildingDetailPage
               scrollRootRef={scrollRootRef}
               showInlineBack={showInlineNavigation}
@@ -365,7 +366,7 @@ export function BuildingResultsPanel() {
           {listingIntentContent}
           {filtersContent}
 
-          <div className="px-4 pb-4">
+          <div className={cn(RESULTS_PANEL_CONTENT_INSET_CLASS, "pb-4")}>
             {listingActionContent}
 
             {isPendingBuildingUnresolved && (

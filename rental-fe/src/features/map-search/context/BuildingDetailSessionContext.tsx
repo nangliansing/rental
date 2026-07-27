@@ -1,19 +1,12 @@
-import { createContext, useContext, type ReactNode } from "react"
+import { type ReactNode } from "react"
 
 import {
-  BuildingNeighbourhoodExploreModal,
-  useNeighbourhoodExploreDialog,
+  NeighbourhoodExploreDialogProvider,
+  useNeighbourhoodExploreDialogContext,
 } from "@/features/buildings/neighbourhood-explore"
 import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
 
 import { useMapSearchResults } from "./MapSearchSessionContext"
-
-type BuildingDetailSessionContextValue = ReturnType<
-  typeof useNeighbourhoodExploreDialog
->
-
-const BuildingDetailSessionContext =
-  createContext<BuildingDetailSessionContextValue | null>(null)
 
 export function BuildingDetailSessionProvider({
   children,
@@ -26,10 +19,12 @@ export function BuildingDetailSessionProvider({
     onListingSelect,
     onListingClose,
   } = useMapSearchResults()
-  const exploreNeighbourhood = useNeighbourhoodExploreDialog()
 
   return (
-    <BuildingDetailSessionContext.Provider value={exploreNeighbourhood}>
+    <NeighbourhoodExploreDialogProvider
+      buildingId={selectedBuilding?._id}
+      trackBrowserHistory={false}
+    >
       {children}
 
       <ListingDetailModal
@@ -38,21 +33,12 @@ export function BuildingDetailSessionProvider({
         onListingSelect={onListingSelect}
         trackBrowserHistory={false}
       />
-
-      {selectedBuilding && (
-        <BuildingNeighbourhoodExploreModal
-          buildingId={selectedBuilding._id}
-          isOpen={exploreNeighbourhood.isOpen}
-          onClose={exploreNeighbourhood.close}
-          trackBrowserHistory={false}
-        />
-      )}
-    </BuildingDetailSessionContext.Provider>
+    </NeighbourhoodExploreDialogProvider>
   )
 }
 
 export function useBuildingDetailSession() {
-  const context = useContext(BuildingDetailSessionContext)
+  const context = useNeighbourhoodExploreDialogContext()
 
   if (!context) {
     throw new Error(

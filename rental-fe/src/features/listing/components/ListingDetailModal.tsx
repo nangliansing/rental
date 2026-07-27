@@ -1,10 +1,10 @@
 import { FileQuestion, Loader2 } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
+import { NeighbourhoodExploreDialogProvider } from "@/features/buildings/neighbourhood-explore"
 import { useMyAgentProfile } from "@/features/profile/api"
-import { ModalPortal } from "@/shared/components/ModalPortal"
 import { ModalDismissHeader } from "@/shared/components/navigation/ModalDismissHeader"
-import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
+import { ResponsiveScreenModal } from "@/shared/components/modals/ResponsiveScreenModal"
 
 import { useListingDetailData } from "../hooks/useListingDetailData"
 import { ListingDetailContent } from "./ListingDetailContent"
@@ -22,11 +22,6 @@ export function ListingDetailModal({
   onListingSelect,
   trackBrowserHistory = true,
 }: ListingDetailModalProps) {
-  const { containerRef, onBackdropClick, requestClose } = useAccessibleModal<HTMLElement>({
-    isOpen: Boolean(listingId),
-    onClose,
-    trackBrowserHistory,
-  })
   const { isAuthenticated } = useAuth()
   const agentProfileQuery = useMyAgentProfile({
     enabled: isAuthenticated,
@@ -38,19 +33,14 @@ export function ListingDetailModal({
   if (!listingId) return null
 
   return (
-    <ModalPortal>
-      <div
-        className="fixed inset-0 z-[1000] bg-slate-950/45 md:flex md:items-center md:justify-center md:p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Listing details"
-        onClick={onBackdropClick}
-      >
-        <section
-          ref={containerRef}
-          tabIndex={-1}
-          className="flex h-dvh w-full flex-col overflow-hidden bg-white text-slate-950 md:h-[min(860px,calc(100dvh-2rem))] md:max-w-2xl md:rounded-2xl md:shadow-2xl"
-        >
+    <ResponsiveScreenModal
+      isOpen
+      onClose={onClose}
+      ariaLabel="Listing details"
+      trackBrowserHistory={trackBrowserHistory}
+    >
+      {({ requestClose }) => (
+        <>
           <ModalDismissHeader
             onClose={requestClose}
             closeLabel="Close listing details"
@@ -63,13 +53,18 @@ export function ListingDetailModal({
                 Loading listing...
               </div>
             ) : listing ? (
-              <ListingDetailContent
-                listing={listing}
-                currentUserId={viewerUserId}
-                canCreateListing={agentProfileQuery.canCreateListing}
-                onDeleted={onClose}
-                onListingSelect={onListingSelect}
-              />
+              <NeighbourhoodExploreDialogProvider
+                buildingId={listing.buildingId}
+                trackBrowserHistory={false}
+              >
+                <ListingDetailContent
+                  listing={listing}
+                  currentUserId={viewerUserId}
+                  canCreateListing={agentProfileQuery.canCreateListing}
+                  onDeleted={onClose}
+                  onListingSelect={onListingSelect}
+                />
+              </NeighbourhoodExploreDialogProvider>
             ) : (
               <div className="flex min-h-[58vh] flex-col items-center justify-center px-6 text-center">
                 <FileQuestion className="h-14 w-14 text-slate-400" />
@@ -83,8 +78,8 @@ export function ListingDetailModal({
               </div>
             )}
           </div>
-        </section>
-      </div>
-    </ModalPortal>
+        </>
+      )}
+    </ResponsiveScreenModal>
   )
 }

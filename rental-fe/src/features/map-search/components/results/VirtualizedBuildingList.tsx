@@ -2,31 +2,27 @@ import { useLayoutEffect, useRef, useState } from "react"
 import type React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
+import { cn } from "@/lib/utils"
 import type { SearchBuilding } from "../../types"
-import { BuildingCard } from "./BuildingCard"
+import {
+  BUILDING_LIST_CONTAINER_CLASS,
+  getBuildingAtIndex,
+  getEstimatedBuildingListItemHeightPx,
+} from "../../utils/building-list-layout"
+import { BuildingListRow, type BuildingListRowProps } from "./BuildingListRow"
 
-const ESTIMATED_BUILDING_CARD_HEIGHT = 290
-
-type VirtualizedBuildingListProps = {
+type VirtualizedBuildingListProps = Omit<
+  BuildingListRowProps,
+  "building" | "index" | "className" | "style" | "listItemRef" | "dataIndex"
+> & {
   buildings: SearchBuilding[]
-  selectedBuildingId: string | null
-  isListingSearch: boolean
-  canCreateListing: boolean
   scrollRootRef?: React.RefObject<HTMLElement | null>
-  onBuildingSelect: (building: SearchBuilding) => void
-  onBuildingHoverChange: (buildingId: string | null) => void
-  onListExistingBuilding: (building: SearchBuilding) => void
 }
 
 export function VirtualizedBuildingList({
   buildings,
-  selectedBuildingId,
-  isListingSearch,
-  canCreateListing,
   scrollRootRef,
-  onBuildingSelect,
-  onBuildingHoverChange,
-  onListExistingBuilding,
+  ...rowProps
 }: VirtualizedBuildingListProps) {
   "use no memo"
 
@@ -63,45 +59,42 @@ export function VirtualizedBuildingList({
   const virtualizer = useVirtualizer({
     count: buildings.length,
     getScrollElement: () => scrollRootRef?.current ?? null,
-    estimateSize: () => ESTIMATED_BUILDING_CARD_HEIGHT,
-    getItemKey: (index) => buildings[index]._id,
+    estimateSize: getEstimatedBuildingListItemHeightPx,
+    getItemKey: (index) => buildings[index]?._id ?? index,
     measureElement: (element) => element.getBoundingClientRect().height,
     overscan: 3,
     scrollMargin,
   })
+
+  if (buildings.length === 0) {
+    return null
+  }
 
   return (
     <div
       ref={listRef}
       role="list"
       aria-label="Buildings"
-      className="relative w-full"
+      className={cn("relative w-full", BUILDING_LIST_CONTAINER_CLASS)}
       style={{ height: virtualizer.getTotalSize() }}
     >
       {virtualizer.getVirtualItems().map((virtualItem) => {
-        const building = buildings[virtualItem.index]
+        const building = getBuildingAtIndex(buildings, virtualItem.index)
+        if (!building) return null
 
         return (
-          <div
+          <BuildingListRow
             key={building._id}
-            ref={virtualizer.measureElement}
-            data-index={virtualItem.index}
-            role="listitem"
+            building={building}
+            index={virtualItem.index}
+            listItemRef={virtualizer.measureElement}
+            dataIndex={virtualItem.index}
             className="absolute left-0 top-0 w-full"
             style={{
               transform: `translateY(${virtualItem.start - scrollMargin}px)`,
             }}
-          >
-            <BuildingCard
-              building={building}
-              isSelected={selectedBuildingId === building._id}
-              isListingSearch={isListingSearch}
-              onSelect={onBuildingSelect}
-              onHoverChange={onBuildingHoverChange}
-              canCreateListing={canCreateListing}
-              onListHere={onListExistingBuilding}
-            />
-          </div>
+            {...rowProps}
+          />
         )
       })}
     </div>
