@@ -1,21 +1,17 @@
-import { memo, useEffect, useMemo } from "react"
-import {
-  AdvancedMarker,
-  Circle,
-  Map,
-  useApiIsLoaded,
-} from "@vis.gl/react-google-maps"
+import { memo, useMemo } from "react"
+import { AdvancedMarker, Circle, Map } from "@vis.gl/react-google-maps"
 
 import { useGoogleMapsLoadState } from "@/features/map-search/hooks/useGoogleMapsLoadState"
 import { getNearbyZoom } from "@/features/map-search/utils/map-camera"
 import { isValidMapPosition } from "@/features/map-search/utils/map-position"
+import { GoogleMapsApiProvider } from "@/shared/google-maps/GoogleMapsApiProvider"
 import {
   GOOGLE_MAPS_API_KEY,
   GOOGLE_MAPS_MAP_ID,
   hasGoogleMapsApiKey,
+  NEIGHBOURHOOD_EXPLORE_MAP_INSTANCE_ID,
   shouldUseClientMapStyles,
 } from "@/shared/google-maps/googleMapsConfig"
-import { GoogleMapsApiProvider, useGoogleMapsApiScope } from "@/shared/google-maps/GoogleMapsApiProvider"
 
 import { useNeighbourhoodExplore } from "../../NeighbourhoodExploreContext"
 import { NEIGHBOURHOOD_MAP_STYLES } from "../../constants/neighbourhoodMapStyles"
@@ -64,6 +60,8 @@ const NeighbourhoodExploreMapContent = memo(
 
     return (
       <Map
+        id={NEIGHBOURHOOD_EXPLORE_MAP_INSTANCE_ID}
+        reuseMaps={false}
         mapId={GOOGLE_MAPS_MAP_ID}
         defaultCenter={center}
         defaultZoom={zoom}
@@ -140,33 +138,10 @@ function NeighbourhoodExploreMapFrame({
   )
 }
 
-function NeighbourhoodExploreMapInExistingScope() {
-  const apiIsLoaded = useApiIsLoaded()
-  const { status, markReady } = useGoogleMapsLoadState(hasGoogleMapsApiKey())
-
-  useEffect(() => {
-    if (apiIsLoaded) {
-      markReady()
-    }
-  }, [apiIsLoaded, markReady])
-
-  return <NeighbourhoodExploreMapFrame status={status} />
-}
-
-function NeighbourhoodExploreMapWithOwnProvider() {
-  const { status, markReady, markFailed } = useGoogleMapsLoadState(
-    hasGoogleMapsApiKey(),
-  )
-
-  return (
-    <GoogleMapsApiProvider onLoad={markReady} onError={markFailed}>
-      <NeighbourhoodExploreMapFrame status={status} />
-    </GoogleMapsApiProvider>
-  )
-}
-
 export function NeighbourhoodExploreMap() {
-  const hasParentScope = useGoogleMapsApiScope()
+  const { status, markReady, markFailed } = useGoogleMapsLoadState(
+    hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY),
+  )
 
   if (!hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)) {
     return (
@@ -176,9 +151,9 @@ export function NeighbourhoodExploreMap() {
     )
   }
 
-  if (hasParentScope) {
-    return <NeighbourhoodExploreMapInExistingScope />
-  }
-
-  return <NeighbourhoodExploreMapWithOwnProvider />
+  return (
+    <GoogleMapsApiProvider onLoad={markReady} onError={markFailed}>
+      <NeighbourhoodExploreMapFrame status={status} />
+    </GoogleMapsApiProvider>
+  )
 }
