@@ -5,6 +5,7 @@ const env = loadEnv("development", process.cwd(), "")
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173"
 const skipWebServer = Boolean(process.env.PLAYWRIGHT_SKIP_WEBSERVER)
 const browserChannel = process.env.PLAYWRIGHT_CHANNEL
+const isCi = Boolean(process.env.CI)
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,10 +32,12 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: "npm run dev -- --host 127.0.0.1 --port 5173",
+          command: isCi
+            ? "npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort"
+            : "npm run dev -- --host 127.0.0.1 --port 5173",
           url: baseURL,
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
+          reuseExistingServer: !isCi,
+          timeout: isCi ? 180_000 : 120_000,
           env: {
             ...process.env,
             ...env,

@@ -175,7 +175,7 @@ export async function installMapSearchApiMocks(
 
 export async function waitForMapReady(page: Page) {
   const mapCanvas = page.locator(".gm-style").first()
-  const maxAttempts = 2
+  const maxAttempts = 3
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     await page.getByText("Loading map...").waitFor({
@@ -202,6 +202,13 @@ export async function waitForMapReady(page: Page) {
       return
     }
 
-    await page.reload({ waitUntil: "domcontentloaded" })
+    try {
+      await page.reload({ waitUntil: "domcontentloaded" })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `Failed to reload page during map readiness check on attempt ${attempt}: ${message}`,
+      )
+    }
   }
 }
