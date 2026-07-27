@@ -8,6 +8,9 @@ export const GOOGLE_MAPS_MAP_ID =
 
 export const GOOGLE_MAPS_LIBRARIES = ["places"] as const
 
+export const MAP_SEARCH_MAP_INSTANCE_ID = "map-search"
+export const NEIGHBOURHOOD_EXPLORE_MAP_INSTANCE_ID = "neighbourhood-explore"
+
 export const GOOGLE_MAPS_API_PROVIDER_PROPS = {
   apiKey: GOOGLE_MAPS_API_KEY,
   libraries: [...GOOGLE_MAPS_LIBRARIES],

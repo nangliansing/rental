@@ -10,7 +10,9 @@ import {
   GOOGLE_MAPS_API_KEY,
   GOOGLE_MAPS_MAP_ID,
   hasGoogleMapsApiKey,
+  MAP_SEARCH_MAP_INSTANCE_ID,
 } from "@/shared/google-maps/googleMapsConfig"
+import { GoogleMapsApiProvider } from "@/shared/google-maps/GoogleMapsApiProvider"
 
 import { PlaceSearch } from "./place-search/PlaceSearch"
 import { useMapSearchCanvas } from "../context/MapSearchSessionContext"
@@ -134,7 +136,7 @@ export const MapView = memo(function MapView() {
   const [pinMarkerRef, pinMarker] = useAdvancedMarkerRef()
   const isProgrammaticCameraMoveRef = useRef(cameraRestoreVersion > 0)
   const hasApiKey = hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)
-  const { status, markReady } = useGoogleMapsLoadState(hasApiKey)
+  const { status, markReady, markFailed } = useGoogleMapsLoadState(hasApiKey)
 
   const handleMapClick = useCallback((event: unknown) => {
     const position = getPositionFromEvent(event)
@@ -199,12 +201,13 @@ export const MapView = memo(function MapView() {
   if (!hasApiKey) return <MapUnavailableState hasApiKey={false} />
 
   return (
-    <>
+    <GoogleMapsApiProvider onError={markFailed}>
       {status === "error" ? (
         <MapUnavailableState hasApiKey />
       ) : (
         <>
           <Map
+            id={MAP_SEARCH_MAP_INSTANCE_ID}
             defaultCenter={defaultCenter}
             defaultZoom={defaultZoom}
             gestureHandling="greedy"
@@ -287,6 +290,6 @@ export const MapView = memo(function MapView() {
       )}
 
       <PlaceSearch />
-    </>
+    </GoogleMapsApiProvider>
   )
 })
