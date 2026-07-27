@@ -1,6 +1,5 @@
 import { Building2, MapPin } from "lucide-react"
 
-import { ExploreNeighbourhoodButton } from "@/features/buildings/neighbourhood-explore/components/ExploreNeighbourhoodButton"
 import { cn } from "@/lib/utils"
 
 import { BuildingAmenityRail } from "./BuildingAmenityRail"
@@ -16,7 +15,7 @@ export type { BuildingSummaryData } from "../utils/buildingSummaryDisplay"
 
 type BuildingSummaryCardProps = {
   building: BuildingSummaryData
-  variant?: "panel" | "contained"
+  variant?: "panel" | "contained" | "embedded"
   titleLevel?: 1 | 2 | 3
   hideActions?: boolean
   hideEmptyRent?: boolean
@@ -34,6 +33,7 @@ type BuildingSummaryCardProps = {
 const VARIANT_CLASS_NAME = {
   panel: "border-b border-slate-100 px-4 pb-4",
   contained: "rounded-xl border border-slate-200 bg-white p-4",
+  embedded: "",
 } as const
 
 export function BuildingSummaryCard({
@@ -86,13 +86,6 @@ export function BuildingSummaryCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {onExploreNeighbourhood && (
-            <ExploreNeighbourhoodButton
-              isOpen={isExploreOpen}
-              onClick={onExploreNeighbourhood}
-            />
-          )}
-
           {shouldShowRent && (
             <div className="text-right">
               <p
@@ -130,6 +123,8 @@ export function BuildingSummaryCard({
         facilities={summary.facilities}
         security={summary.security}
         className="mt-3"
+        onExploreNeighbourhood={onExploreNeighbourhood}
+        isExploreOpen={isExploreOpen}
       />
 
       <BuildingSummaryActionBar

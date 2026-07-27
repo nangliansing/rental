@@ -13,7 +13,7 @@ describe("ExploreNeighbourhoodButton", () => {
     ).toHaveTextContent("Explore")
   })
 
-  it("renders the footer icon variant", () => {
+  it("renders the footer action as a compact labeled pill", () => {
     render(
       <ExploreNeighbourhoodButton variant="footer" onClick={vi.fn()} />,
     )
@@ -22,8 +22,19 @@ describe("ExploreNeighbourhoodButton", () => {
       name: "Explore neighbourhood",
     })
 
-    expect(button).toHaveClass("size-10")
-    expect(button).not.toHaveTextContent("Explore")
+    expect(button).toHaveClass("h-10", "rounded-full", "shadow-sm")
+    expect(button).toHaveTextContent("Explore")
+  })
+
+  it("renders the rail variant with a vertical icon and label", () => {
+    render(<ExploreNeighbourhoodButton variant="rail" onClick={vi.fn()} />)
+
+    const button = screen.getByRole("button", {
+      name: "Explore neighbourhood",
+    })
+
+    expect(button).toHaveClass("flex-col")
+    expect(button).toHaveTextContent("Explore")
   })
 
   it("passes the trigger element to onClick", async () => {

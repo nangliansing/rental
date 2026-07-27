@@ -3,6 +3,11 @@ import { CollectionRefreshStatus } from "@/shared/components/collections/Listing
 import { cn } from "@/lib/utils"
 
 import { useNeighbourhoodExplore } from "../NeighbourhoodExploreContext"
+import {
+  NEIGHBOURHOOD_CATEGORY_BAR_GRADIENT_CLASS,
+  shouldShowNeighbourhoodCategoryBar,
+  shouldShowNeighbourhoodCategoryDivider,
+} from "../utils/neighbourhoodExploreUi"
 
 export function NeighbourhoodExploreCategoryBar() {
   const {
@@ -12,14 +17,16 @@ export function NeighbourhoodExploreCategoryBar() {
     setCategory,
   } = useNeighbourhoodExplore()
 
-  if (categoryPillOptions.length === 0 && !isBackgroundFetching) {
+  const categoryCount = categoryPillOptions.length
+
+  if (!shouldShowNeighbourhoodCategoryBar(categoryCount, isBackgroundFetching)) {
     return null
   }
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10">
-      {categoryPillOptions.length > 0 && (
-        <div className="pointer-events-auto bg-gradient-to-b from-white/95 via-white/70 to-transparent pb-4 pt-2.5">
+      {categoryCount > 0 && (
+        <div className={NEIGHBOURHOOD_CATEGORY_BAR_GRADIENT_CLASS}>
           <FilterPills
             aria-label="Neighbourhood categories"
             options={categoryPillOptions}
@@ -38,7 +45,10 @@ export function NeighbourhoodExploreCategoryBar() {
           label="Updating nearby places..."
           className={cn(
             "pointer-events-auto px-3",
-            categoryPillOptions.length > 0 && "mt-1",
+            shouldShowNeighbourhoodCategoryDivider(
+              categoryCount,
+              isBackgroundFetching,
+            ) && "mt-1",
           )}
         />
       )}

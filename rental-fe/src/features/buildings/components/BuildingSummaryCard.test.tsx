@@ -96,6 +96,7 @@ describe("BuildingSummaryCard", () => {
     it.each([
       ["panel", ["border-b", "border-slate-100"]],
       ["contained", ["rounded-xl", "border", "bg-white"]],
+      ["embedded", []],
     ] as const)("renders the %s variant", (variant, classes) => {
       const { container } = renderCard({ building, variant })
       for (const className of classes) {
