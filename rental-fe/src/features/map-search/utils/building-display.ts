@@ -22,6 +22,13 @@ export function formatBuildingMarkerLabel(building: SearchBuilding) {
   return formatCompactBaht(building.minRent)
 }
 
+export function isListingOnlyBuilding(
+  building: SearchBuilding,
+  isListingSearch: boolean,
+) {
+  return isListingSearch && building.listings.length === 0
+}
+
 export function formatDistance(distanceMeters?: number) {
   if (!isNonNegativeFiniteNumber(distanceMeters)) return null
 

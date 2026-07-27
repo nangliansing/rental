@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useEffect } from "react"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClientProvider } from "@tanstack/react-query"
@@ -27,6 +28,7 @@ const googleMapsMocks = vi.hoisted(() => {
   const handlers: {
     onDragstart?: () => void
     onClick?: (event: unknown) => void
+    onIdle?: () => void
   } = {}
 
   let bounds: SearchBounds = {
@@ -73,6 +75,7 @@ const googleMapsMocks = vi.hoisted(() => {
     },
     triggerMapPan: () => {
       handlers.onDragstart?.()
+      handlers.onIdle?.()
     },
     triggerMapClick: (position = { lat: 13.8, lng: 100.7 }) => {
       handlers.onClick?.({
@@ -235,13 +238,21 @@ vi.mock("@vis.gl/react-google-maps", () => ({
     children,
     onDragstart,
     onClick,
+    onIdle,
   }: {
     children?: ReactNode
     onDragstart?: () => void
     onClick?: (event: unknown) => void
+    onIdle?: () => void
   }) => {
     googleMapsMocks.handlers.onDragstart = onDragstart
     googleMapsMocks.handlers.onClick = onClick
+    googleMapsMocks.handlers.onIdle = onIdle
+
+    useEffect(() => {
+      onIdle?.()
+    }, [onIdle])
+
     return <div data-testid="map">{children}</div>
   },
   AdvancedMarker: ({

@@ -2,6 +2,7 @@ import { memo, useEffect, useRef } from "react"
 import { useMapSearchMap } from "../../hooks/useMapSearchMap"
 
 import type { SearchBounds } from "../../hooks/useMapBounds"
+import { useMapProgrammaticMove } from "../../context/MapProgrammaticMoveContext"
 import { useMapCameraTransition } from "../../hooks/useMapCameraTransition"
 import type { MapPosition, SearchBuilding } from "../../types"
 import {
@@ -23,16 +24,15 @@ export const MapCameraRestorer = memo(function MapCameraRestorer({
   pin,
   radiusMeters,
   selectedBuilding,
-  onRestoreStart,
 }: {
   restoreVersion: number
   bounds: SearchBounds | null
   pin: MapPosition | null
   radiusMeters: number
   selectedBuilding: SearchBuilding | null
-  onRestoreStart: () => void
 }) {
   const map = useMapSearchMap()
+  const { beginProgrammaticMove } = useMapProgrammaticMove()
   const camera = useMapCameraTransition(map)
   const restoredVersionRef = useRef(0)
   const focusedBuildingIdRef = useRef<string | null>(null)
@@ -52,26 +52,25 @@ export const MapCameraRestorer = memo(function MapCameraRestorer({
     focusedBuildingIdRef.current = selectedBuilding._id
 
     const cameraBounds = getMapCameraBoundsFromGoogleMap(map)
-    if (
-      isPositionInsideMapCameraBounds(buildingPosition, cameraBounds)
-    ) {
+    if (isPositionInsideMapCameraBounds(buildingPosition, cameraBounds)) {
       return
     }
 
-    onRestoreStart()
+    beginProgrammaticMove()
     map.panTo(buildingPosition)
-  }, [map, onRestoreStart, selectedBuilding])
+  }, [beginProgrammaticMove, map, selectedBuilding])
 
   useEffect(() => {
     if (!map || restoreVersion === 0) return
     if (restoredVersionRef.current === restoreVersion) return
     restoredVersionRef.current = restoreVersion
-    onRestoreStart()
+    beginProgrammaticMove()
 
     if (isValidMapPosition(pin)) {
       camera.flyTo(pin, getNearbyZoom(radiusMeters))
       return
     }
+
     if (isValidSearchBounds(bounds)) {
       map.fitBounds(
         {
@@ -83,7 +82,15 @@ export const MapCameraRestorer = memo(function MapCameraRestorer({
         BUILDING_FOCUS_PADDING,
       )
     }
-  }, [bounds, camera, map, onRestoreStart, pin, radiusMeters, restoreVersion])
+  }, [
+    beginProgrammaticMove,
+    bounds,
+    camera,
+    map,
+    pin,
+    radiusMeters,
+    restoreVersion,
+  ])
 
   return null
 })

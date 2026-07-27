@@ -63,6 +63,38 @@ export function getPositionFromBuildingLocation(
   return isValidMapPosition(position) ? position : null
 }
 
+export function getSearchBoundsCenter(bounds: SearchBounds): MapPosition {
+  return {
+    lat: (bounds.northEast.lat + bounds.southWest.lat) / 2,
+    lng: (bounds.northEast.lng + bounds.southWest.lng) / 2,
+  }
+}
+
+export function getPositionFromMapEvent(event: unknown): MapPosition | null {
+  const mapEvent = event as {
+    detail?: {
+      latLng?: MapPosition
+    }
+    latLng?: google.maps.LatLng | null
+  }
+
+  if (mapEvent.detail?.latLng) {
+    return isValidMapPosition(mapEvent.detail.latLng)
+      ? mapEvent.detail.latLng
+      : null
+  }
+
+  if (mapEvent.latLng) {
+    const position = {
+      lat: mapEvent.latLng.lat(),
+      lng: mapEvent.latLng.lng(),
+    }
+    return isValidMapPosition(position) ? position : null
+  }
+
+  return null
+}
+
 export function areMapPositionsEqual(
   left: MapPosition[],
   right: MapPosition[],

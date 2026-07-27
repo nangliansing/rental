@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest"
 import {
   areMapPositionsEqual,
   getPositionFromBuildingLocation,
+  getPositionFromMapEvent,
+  getSearchBoundsCenter,
   isValidLineStringGeometry,
   isValidMapPosition,
   isValidSearchBounds,
@@ -70,5 +72,28 @@ describe("map position validation", () => {
         coordinates: [200, 13.7],
       }),
     ).toBeNull()
+  })
+
+  it("extracts valid positions from map events", () => {
+    expect(
+      getPositionFromMapEvent({
+        detail: { latLng: { lat: 13.7, lng: 100.6 } },
+      }),
+    ).toEqual({ lat: 13.7, lng: 100.6 })
+    expect(
+      getPositionFromMapEvent({
+        latLng: { lat: () => 13.7, lng: () => 100.6 },
+      }),
+    ).toEqual({ lat: 13.7, lng: 100.6 })
+    expect(getPositionFromMapEvent({})).toBeNull()
+  })
+
+  it("returns the center of valid search bounds", () => {
+    expect(
+      getSearchBoundsCenter({
+        northEast: { lat: 14, lng: 101 },
+        southWest: { lat: 13, lng: 100 },
+      }),
+    ).toEqual({ lat: 13.5, lng: 100.5 })
   })
 })

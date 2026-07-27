@@ -1,5 +1,5 @@
 import { AlertTriangle, MapPin, RotateCw } from "lucide-react"
-import { memo, useCallback, useEffect, useRef } from "react"
+import { memo, useCallback, useEffect } from "react"
 import {
   AdvancedMarker,
   Map,
@@ -17,12 +17,14 @@ import { GoogleMapsApiProvider } from "@/shared/google-maps/GoogleMapsApiProvide
 import { PlaceSearch } from "./place-search/PlaceSearch"
 import { useMapSearchCanvas } from "../context/MapSearchSessionContext"
 import { useMapInteraction } from "../context/MapInteractionContext"
-import type { MapPosition } from "../types"
+import {
+  MapProgrammaticMoveProvider,
+  useMapProgrammaticMove,
+} from "../context/MapProgrammaticMoveContext"
 import { SearchAreaButton } from "./SearchAreaButton"
 import { useGoogleMapsLoadState } from "../hooks/useGoogleMapsLoadState"
 import type { SearchBuilding } from "../types"
 import { getKeyboardMovedPin } from "../utils/move-map-pin"
-import type { SearchBounds } from "../hooks/useMapBounds"
 import { BuildingMarkerLayer } from "./BuildingMarkerLayer"
 import { MapCameraRestorer } from "./map/MapCameraRestorer"
 import {
@@ -31,44 +33,12 @@ import {
   PinRadiusOverlay,
 } from "./map/MapSearchOverlays"
 import { getNearbyZoom } from "../utils/map-camera"
-import { isValidMapPosition } from "../utils/map-position"
+import {
+  getPositionFromMapEvent,
+  getSearchBoundsCenter,
+} from "../utils/map-position"
 
 const DEFAULT_MAP_CENTER = { lat: 13.7653, lng: 100.642 }
-
-function getBoundsCenter(bounds: SearchBounds) {
-  return {
-    lat: (bounds.northEast.lat + bounds.southWest.lat) / 2,
-    lng: (bounds.northEast.lng + bounds.southWest.lng) / 2,
-  }
-}
-
-function getPositionFromEvent(event: unknown): MapPosition | null {
-  const mapEvent = event as {
-    detail?: {
-      latLng?: {
-        lat: number
-        lng: number
-      }
-    }
-    latLng?: google.maps.LatLng | null
-  }
-
-  if (mapEvent.detail?.latLng) {
-    return isValidMapPosition(mapEvent.detail.latLng)
-      ? mapEvent.detail.latLng
-      : null
-  }
-
-  if (mapEvent.latLng) {
-    const position = {
-      lat: mapEvent.latLng.lat(),
-      lng: mapEvent.latLng.lng(),
-    }
-    return isValidMapPosition(position) ? position : null
-  }
-
-  return null
-}
 
 function MapStatusOverlay({ status }: { status: "loading" | "ready" }) {
   if (status === "ready") return null
@@ -115,7 +85,7 @@ function MapUnavailableState({ hasApiKey }: { hasApiKey: boolean }) {
   )
 }
 
-export const MapView = memo(function MapView() {
+const MapViewContent = memo(function MapViewContent() {
   const {
     searchedPlace,
     buildings,
@@ -133,28 +103,35 @@ export const MapView = memo(function MapView() {
     onMapMove,
   } = useMapSearchCanvas()
   const { mode, selectedPin, currentLocation } = useMapInteraction()
+  const { isProgrammaticCameraMove, endProgrammaticMove } =
+    useMapProgrammaticMove()
   const [pinMarkerRef, pinMarker] = useAdvancedMarkerRef()
-  const isProgrammaticCameraMoveRef = useRef(cameraRestoreVersion > 0)
   const hasApiKey = hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)
   const { status, markReady, markFailed } = useGoogleMapsLoadState(hasApiKey)
 
-  const handleMapClick = useCallback((event: unknown) => {
-    const position = getPositionFromEvent(event)
+  const handleMapClick = useCallback(
+    (event: unknown) => {
+      const position = getPositionFromMapEvent(event)
 
-    if (position && mode === "line") {
-      onAddLinePoint(position)
-    } else if (position && selectedPin) {
-      onPinChange(position)
-    }
-  }, [mode, onAddLinePoint, onPinChange, selectedPin])
+      if (position && mode === "line") {
+        onAddLinePoint(position)
+      } else if (position && mode === "pin" && selectedPin) {
+        onPinChange(position)
+      }
+    },
+    [mode, onAddLinePoint, onPinChange, selectedPin],
+  )
 
-  const handlePinDragEnd = useCallback((event: unknown) => {
-    const position = getPositionFromEvent(event)
+  const handlePinDragEnd = useCallback(
+    (event: unknown) => {
+      const position = getPositionFromMapEvent(event)
 
-    if (position) {
-      onPinChange(position)
-    }
-  }, [onPinChange])
+      if (position) {
+        onPinChange(position)
+      }
+    },
+    [onPinChange],
+  )
 
   useEffect(() => {
     const markerElement = pinMarker?.element
@@ -182,22 +159,24 @@ export const MapView = memo(function MapView() {
     (building: SearchBuilding) => onBuildingSelect(building),
     [onBuildingSelect],
   )
-  const handleCameraRestoreStart = useCallback(() => {
-    isProgrammaticCameraMoveRef.current = true
-  }, [])
-  const handleZoomChanged = useCallback(() => {
-    if (!isProgrammaticCameraMoveRef.current) onMapMove()
-  }, [onMapMove])
+
+  const handleUserMapMove = useCallback(() => {
+    if (!isProgrammaticCameraMove()) {
+      onMapMove()
+    }
+  }, [isProgrammaticCameraMove, onMapMove])
+
   const handleMapIdle = useCallback(() => {
-    isProgrammaticCameraMoveRef.current = false
-  }, [])
+    endProgrammaticMove()
+  }, [endProgrammaticMove])
 
   const defaultCenter = selectedPin
     ? selectedPin
     : committedBounds
-      ? getBoundsCenter(committedBounds)
+      ? getSearchBoundsCenter(committedBounds)
       : DEFAULT_MAP_CENTER
   const defaultZoom = selectedPin ? getNearbyZoom(nearbyRadiusMeters) : 15
+
   if (!hasApiKey) return <MapUnavailableState hasApiKey={false} />
 
   return (
@@ -215,8 +194,8 @@ export const MapView = memo(function MapView() {
             mapId={GOOGLE_MAPS_MAP_ID}
             className="h-full w-full"
             onClick={handleMapClick}
-            onDragstart={onMapMove}
-            onZoomChanged={handleZoomChanged}
+            onDragstart={handleUserMapMove}
+            onZoomChanged={handleUserMapMove}
             onIdle={handleMapIdle}
             onTilesLoaded={markReady}
           >
@@ -226,7 +205,6 @@ export const MapView = memo(function MapView() {
               pin={selectedPin}
               radiusMeters={nearbyRadiusMeters}
               selectedBuilding={selectedBuilding}
-              onRestoreStart={handleCameraRestoreStart}
             />
 
             <BuildingMarkerLayer
@@ -272,7 +250,10 @@ export const MapView = memo(function MapView() {
                       <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-600 ring-4 ring-blue-500/25" />
                     </span>
                   ) : (
-                    <span className="relative flex flex-col items-center" aria-hidden="true">
+                    <span
+                      className="relative flex flex-col items-center"
+                      aria-hidden="true"
+                    >
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg ring-4 ring-rose-100">
                         <MapPin className="h-6 w-6" />
                       </span>
@@ -283,14 +264,22 @@ export const MapView = memo(function MapView() {
                 </div>
               </AdvancedMarker>
             )}
+
+            {!isPlaceSearchOpen && <SearchAreaButton />}
           </Map>
           <MapStatusOverlay status={status} />
-
-          {!isPlaceSearchOpen && <SearchAreaButton />}
         </>
       )}
 
       <PlaceSearch />
     </GoogleMapsApiProvider>
+  )
+})
+
+export const MapView = memo(function MapView() {
+  return (
+    <MapProgrammaticMoveProvider>
+      <MapViewContent />
+    </MapProgrammaticMoveProvider>
   )
 })
