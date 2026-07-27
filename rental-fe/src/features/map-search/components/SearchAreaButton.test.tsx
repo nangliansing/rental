@@ -1,15 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useMap } from "@vis.gl/react-google-maps"
-
 import { useMapSearchControls } from "../context/MapSearchSessionContext"
 import { useMapInteraction } from "../context/MapInteractionContext"
 import { useMapBounds } from "../hooks/useMapBounds"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 import { useCurrentLocation } from "../hooks/useCurrentLocation"
 import { SearchAreaButton } from "./SearchAreaButton"
 
-vi.mock("@vis.gl/react-google-maps")
+vi.mock("../hooks/useMapSearchMap")
 vi.mock("../context/MapSearchSessionContext")
 vi.mock("../context/MapInteractionContext")
 vi.mock("../hooks/useMapBounds")
@@ -17,7 +16,7 @@ vi.mock("../hooks/useCurrentLocation")
 
 describe("SearchAreaButton", () => {
   beforeEach(() => {
-    vi.mocked(useMap).mockReturnValue(null)
+    vi.mocked(useMapSearchMap).mockReturnValue(null)
     vi.mocked(useMapBounds).mockReturnValue({
       getCurrentBounds: vi.fn(),
     } as never)

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react"
-import { useMap } from "@vis.gl/react-google-maps"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 
 import type { SearchedPlace } from "../types"
 
@@ -15,7 +15,7 @@ type SearchPlaceInput = {
 }
 
 export function usePlaceSearch() {
-  const map = useMap()
+  const map = useMapSearchMap()
   const [predictions, setPredictions] = useState<PlacePrediction[]>([])
   const [predictionError, setPredictionError] = useState<string | null>(null)
   const sessionTokenRef =

@@ -1,4 +1,4 @@
-import { useMap } from "@vis.gl/react-google-maps"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 
 import { isValidSearchBounds } from "../utils/map-position"
 
@@ -14,7 +14,7 @@ export type SearchBounds = {
 }
 
 export function useMapBounds() {
-  const map = useMap()
+  const map = useMapSearchMap()
 
   const getCurrentBounds = (): SearchBounds | null => {
     const bounds = map?.getBounds()

@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from "react"
-import { useMap } from "@vis.gl/react-google-maps"
+import { useMapSearchMap } from "../../hooks/useMapSearchMap"
 
 import type { SearchBounds } from "../../hooks/useMapBounds"
 import { useMapCameraTransition } from "../../hooks/useMapCameraTransition"
@@ -32,7 +32,7 @@ export const MapCameraRestorer = memo(function MapCameraRestorer({
   selectedBuilding: SearchBuilding | null
   onRestoreStart: () => void
 }) {
-  const map = useMap()
+  const map = useMapSearchMap()
   const camera = useMapCameraTransition(map)
   const restoredVersionRef = useRef(0)
   const focusedBuildingIdRef = useRef<string | null>(null)

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useReducer, useRef } from "react"
 import {
   AdvancedMarker,
-  useMap,
   type AdvancedMarkerRef,
 } from "@vis.gl/react-google-maps"
 import { MarkerClusterer, type Renderer } from "@googlemaps/markerclusterer"
@@ -9,6 +8,7 @@ import { MarkerClusterer, type Renderer } from "@googlemaps/markerclusterer"
 import { cn } from "@/lib/utils"
 
 import { useMapSearchMarkerHighlight } from "../context/MapSearchMarkerHighlightContext"
+import { useMapSearchMap } from "../hooks/useMapSearchMap"
 import type { SearchBuilding } from "../types"
 import { formatBuildingMarkerLabel } from "../utils/building-display"
 import { getPositionFromBuildingLocation } from "../utils/map-position"
@@ -142,7 +142,7 @@ export const BuildingMarkerLayer = memo(function BuildingMarkerLayer({
   isListingSearch: boolean
   onSelect: (building: SearchBuilding) => void
 }) {
-  const map = useMap()
+  const map = useMapSearchMap()
   const { hoveredBuildingId, selectedBuildingId } = useMapSearchMarkerHighlight()
   const clustererRef = useRef<MarkerClusterer | null>(null)
   const markersRef = useRef(
