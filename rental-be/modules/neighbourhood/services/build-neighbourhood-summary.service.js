@@ -2,7 +2,11 @@ import { NEIGHBOURHOOD_CATEGORIES } from "../neighbourhood.constants.js";
 
 export const buildNeighbourhoodSummary = (
   places,
-  { truncated = false, totalWithinRadius = places.length } = {},
+  {
+    truncated = false,
+    totalWithinRadius = places.length,
+    truncatedCategories = {},
+  } = {},
 ) => {
   const counts = Object.fromEntries(
     NEIGHBOURHOOD_CATEGORIES.map((category) => [category.key, 0]),
@@ -19,14 +23,17 @@ export const buildNeighbourhoodSummary = (
     label: category.label,
     priority: category.priority,
     count: counts[category.key],
+    ...(truncatedCategories[category.key] ? { truncated: true } : {}),
   })).filter((category) => category.count > 0);
 
   return {
     summary: {
       all: places.length,
+      ...(truncated ? { truncated: true } : {}),
+      ...(totalWithinRadius > places.length
+        ? { totalWithinRadius }
+        : {}),
       ...counts,
-      truncated,
-      totalWithinRadius,
     },
     categories,
   };

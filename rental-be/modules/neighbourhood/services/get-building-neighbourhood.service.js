@@ -1,11 +1,15 @@
 import { toLatLngFromGeoJsonCoordinates } from "../../../shared/geo/index.js";
-import { validateNullableObject } from "../../../shared/validators/index.js";
+import {
+  validateCoordinates,
+  validateNullableObject,
+} from "../../../shared/validators/index.js";
 
 import { getBuildingByIdService } from "../../building/services/index.js";
 import { buildGetBuildingNeighbourhoodParams } from "../params/build-get-building-neighbourhood-params.js";
 import { NEIGHBOURHOOD_SOURCE } from "../neighbourhood.constants.js";
 import { buildNeighbourhoodSummary } from "./build-neighbourhood-summary.service.js";
 import { filterPlacesByRadius } from "./filter-places-by-radius.service.js";
+import { validateNeighbourhoodOrigin } from "./neighbourhood-place.utils.js";
 import { resolveNeighbourhoodPlaces } from "./resolve-neighbourhood-places.service.js";
 
 export const getBuildingNeighbourhoodService = async ({
@@ -20,21 +24,28 @@ export const getBuildingNeighbourhoodService = async ({
     queryInput,
   });
   const building = await getBuildingByIdService(params.buildingId, session);
-  const origin = toLatLngFromGeoJsonCoordinates(building.location.coordinates);
+  const coordinates = validateCoordinates(
+    building.location?.coordinates,
+    "building.location.coordinates",
+  );
+  const origin = validateNeighbourhoodOrigin(
+    toLatLngFromGeoJsonCoordinates(coordinates),
+  );
   const { places: cachedPlaces, fetchedAt, cacheStatus } =
     await resolveNeighbourhoodPlaces({
       origin,
       fetchRadiusMeters: params.fetchRadiusMeters,
       session,
     });
-  const { places, truncated, totalWithinRadius } = filterPlacesByRadius({
+  const { places, truncation } = filterPlacesByRadius({
     origin,
     places: cachedPlaces,
     radiusMeters: params.radiusMeters,
   });
   const { summary, categories } = buildNeighbourhoodSummary(places, {
-    truncated,
-    totalWithinRadius,
+    truncated: truncation.truncated,
+    totalWithinRadius: truncation.totalWithinRadius,
+    truncatedCategories: truncation.categories,
   });
 
   return {

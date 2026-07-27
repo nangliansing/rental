@@ -1,4 +1,5 @@
 import { OSM_NEIGHBOURHOOD_CATEGORIES } from "../neighbourhood.constants.js";
+import { isBusTransitTags } from "./bus-transit.utils.js";
 
 const matchesTagRule = (tags, rule) => tags?.[rule.key] === rule.value;
 
@@ -87,6 +88,10 @@ export const classifyOsmPlace = (tags) => {
   }
 
   if (isPublicTransportStation(tags)) {
+    return "public_transport";
+  }
+
+  if (isBusTransitTags(tags)) {
     return "public_transport";
   }
 

@@ -76,12 +76,22 @@ MongoDB version.
 Neighbourhood-specific automated coverage lives in:
 
 ```txt
-test/neighbourhood.test.js
-test/neighbourhood.integration.test.js
+test/neighbourhood.test.js                       # 55 unit tests
+test/neighbourhood.integration.test.js           # 13 service + Mongo tests
+test/neighbourhood.scenarios.integration.test.js # 21 HTTP scenario tests
+```
+
+Run only neighbourhood tests (from the `rental-be` repository root):
+
+```bash
+node --test \
+  test/neighbourhood.test.js \
+  test/neighbourhood.integration.test.js \
+  test/neighbourhood.scenarios.integration.test.js
 ```
 
 See `docs/building/get-building-neighbourhood.md` for the API contract and
-Postman checklist.
+test checklist.
 
 The security and observability suites additionally cover security headers,
 request limits, Redis-ready production configuration, lifecycle behavior,

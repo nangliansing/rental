@@ -8,11 +8,14 @@ import {
   findStaleNeighbourhoodCacheByKey,
   upsertNeighbourhoodCache,
 } from "../cache/neighbourhood-cache.repository.js";
-import { MAX_CACHED_PLACES } from "../neighbourhood.constants.js";
 import { queryOverpass } from "../providers/overpass.provider.js";
 import { dedupeTransitPlaces } from "./dedupe-transit-places.service.js";
-import { filterPlacesByRadius } from "./filter-places-by-radius.service.js";
 import { loadStaticTransitPlaces } from "./load-static-transit-places.service.js";
+import {
+  sanitizeNeighbourhoodPlaces,
+  toFetchedAtDate,
+  validateNeighbourhoodOrigin,
+} from "./neighbourhood-place.utils.js";
 
 const buildCacheExpiry = (cacheTtlDays) => {
   const expiresAt = new Date();
@@ -48,22 +51,27 @@ const mergeWithStaticTransitPlaces = ({
     ]),
   );
 
-const stripDistanceMeters = (place) => {
-  const { distanceMeters: _distanceMeters, ...placeWithoutDistance } = place;
-
-  return placeWithoutDistance;
-};
-
-const capPlacesForCache = ({ places, origin, fetchRadiusMeters }) => {
-  const { places: cappedPlaces } = filterPlacesByRadius({
+const buildResolvedPayload = ({
+  places,
+  origin,
+  fetchRadiusMeters,
+  fetchedAt,
+  cacheStatus,
+}) => ({
+  places: mergeWithStaticTransitPlaces({
+    places: sanitizeNeighbourhoodPlaces(places),
     origin,
-    places,
-    radiusMeters: fetchRadiusMeters,
-    maxPlaces: MAX_CACHED_PLACES,
-  });
+    fetchRadiusMeters,
+  }),
+  fetchedAt: toFetchedAtDate(fetchedAt),
+  cacheStatus,
+});
 
-  return cappedPlaces.map(stripDistanceMeters);
-};
+const buildMergedPayload = ({ places, fetchedAt, cacheStatus }) => ({
+  places,
+  fetchedAt: toFetchedAtDate(fetchedAt),
+  cacheStatus,
+});
 
 export const resolveNeighbourhoodPlaces = async ({
   origin,
@@ -73,6 +81,7 @@ export const resolveNeighbourhoodPlaces = async ({
   overpassEnabled: overpassEnabledOverride = null,
 }) => {
   validateNullableObject(session, "session");
+  validateNeighbourhoodOrigin(origin);
 
   const config = getEnvironment();
   const cacheTtlDays = config.neighbourhood?.cacheTtlDays ?? 14;
@@ -82,15 +91,13 @@ export const resolveNeighbourhoodPlaces = async ({
   const cachedEntry = await findNeighbourhoodCacheByKey({ cacheKey, session });
 
   if (cachedEntry) {
-    return {
-      places: mergeWithStaticTransitPlaces({
-        places: cachedEntry.places,
-        origin,
-        fetchRadiusMeters,
-      }),
+    return buildResolvedPayload({
+      places: cachedEntry.places,
+      origin,
+      fetchRadiusMeters,
       fetchedAt: cachedEntry.fetchedAt,
       cacheStatus: "hit",
-    };
+    });
   }
 
   let osmPlaces = [];
@@ -101,22 +108,19 @@ export const resolveNeighbourhoodPlaces = async ({
       osmPlaces = await queryOverpassFn({ origin, fetchRadiusMeters });
     } catch (error) {
       overpassFetchFailed = true;
-
       const staleEntry = await findStaleNeighbourhoodCacheByKey({
         cacheKey,
         session,
       });
 
       if (staleEntry) {
-        return {
-          places: mergeWithStaticTransitPlaces({
-            places: staleEntry.places,
-            origin,
-            fetchRadiusMeters,
-          }),
+        return buildResolvedPayload({
+          places: staleEntry.places,
+          origin,
+          fetchRadiusMeters,
           fetchedAt: staleEntry.fetchedAt,
           cacheStatus: "stale",
-        };
+        });
       }
 
       if (!(error instanceof AppError)) {
@@ -130,38 +134,35 @@ export const resolveNeighbourhoodPlaces = async ({
   }
 
   const places = mergeWithStaticTransitPlaces({
-    places: osmPlaces,
+    places: sanitizeNeighbourhoodPlaces(osmPlaces),
     origin,
     fetchRadiusMeters,
   });
   const fetchedAt = new Date();
 
-  if (!overpassFetchFailed) {
-    const expiresAt = buildCacheExpiry(cacheTtlDays);
-    const placesForCache = capPlacesForCache({
+  if (overpassEnabled && overpassFetchFailed && osmPlaces.length === 0) {
+    return buildMergedPayload({
       places,
-      origin,
-      fetchRadiusMeters,
-    });
-
-    await upsertNeighbourhoodCache({
-      cacheKey,
-      origin,
-      fetchRadiusMeters,
-      places: placesForCache,
       fetchedAt,
-      expiresAt,
-      session,
+      cacheStatus: "bypass",
     });
   }
 
-  return {
+  const expiresAt = buildCacheExpiry(cacheTtlDays);
+
+  await upsertNeighbourhoodCache({
+    cacheKey,
+    origin,
+    fetchRadiusMeters,
     places,
     fetchedAt,
-    cacheStatus: overpassFetchFailed
-      ? "bypass"
-      : overpassEnabled
-        ? "miss"
-        : "bypass",
-  };
+    expiresAt,
+    session,
+  });
+
+  return buildMergedPayload({
+    places,
+    fetchedAt,
+    cacheStatus: overpassEnabled ? "miss" : "bypass",
+  });
 };

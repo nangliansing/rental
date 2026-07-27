@@ -1,11 +1,7 @@
 import { classifyOsmPlace } from "./classify-osm-place.service.js";
+import { dedupeNearbyOsmPlaces } from "./dedupe-nearby-osm-places.service.js";
 import { enrichTransitPlace } from "./enrich-transit-place.service.js";
-
-const resolvePlaceName = (tags) =>
-  tags.name?.trim() ||
-  tags["name:en"]?.trim() ||
-  tags.brand?.trim() ||
-  "Unnamed place";
+import { resolveOsmPlaceName } from "./neighbourhood-place.utils.js";
 
 export const normalizeOverpassElement = (element) => {
   const lat = element.lat ?? element.center?.lat;
@@ -25,7 +21,7 @@ export const normalizeOverpassElement = (element) => {
   return enrichTransitPlace(
     {
       id: `osm-${element.type}-${element.id}`,
-      name: resolvePlaceName(tags),
+      name: resolveOsmPlaceName(tags),
       lat,
       lng,
       category,
@@ -37,7 +33,9 @@ export const normalizeOverpassElement = (element) => {
 export const normalizeOverpassResponse = (response) => {
   const elements = Array.isArray(response?.elements) ? response.elements : [];
 
-  return elements
-    .map((element) => normalizeOverpassElement(element))
-    .filter(Boolean);
+  return dedupeNearbyOsmPlaces(
+    elements
+      .map((element) => normalizeOverpassElement(element))
+      .filter(Boolean),
+  );
 };

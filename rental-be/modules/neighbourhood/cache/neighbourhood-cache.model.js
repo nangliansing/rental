@@ -32,6 +32,7 @@ const neighbourhoodCacheSchema = new Schema(
           category: { type: String, required: true },
           mode: { type: String, default: undefined },
           line: { type: String, default: undefined },
+          transitRole: { type: String, default: undefined },
           _id: false,
         },
       ],

@@ -1,4 +1,10 @@
 import { findNearbyStaticTransitStation } from "./load-static-transit-places.service.js";
+import {
+  isBusTransitTags,
+  resolveBusLineLabel,
+  resolveBusStopLabel,
+  resolveBusTransitRole,
+} from "./bus-transit.utils.js";
 
 const BTS_NAME_PATTERN = /\bbts\b/i;
 const MRT_NAME_PATTERN = /\bmrt\b/i;
@@ -46,6 +52,10 @@ export const resolveTransitMode = (tags = {}, name = "") => {
     return "rail";
   }
 
+  if (isBusTransitTags(tags)) {
+    return "bus";
+  }
+
   if (
     tags.amenity === "ferry_terminal" ||
     tags.ferry === "yes" ||
@@ -75,6 +85,10 @@ export const resolveTransitMode = (tags = {}, name = "") => {
 
 export const resolveTransitLine = (tags = {}, name = "") => {
   const context = buildTransitContext(tags, name);
+
+  if (isBusTransitTags(tags)) {
+    return resolveBusLineLabel(tags);
+  }
 
   if (context.line) {
     return context.line;
@@ -146,6 +160,7 @@ export const enrichTransitPlace = (place, tags = {}) => {
     return place;
   }
 
+  const busTransitRole = resolveBusTransitRole(tags);
   const nearbyStaticStation = findNearbyStaticTransitStation({
     lat: place.lat,
     lng: place.lng,
@@ -158,15 +173,18 @@ export const enrichTransitPlace = (place, tags = {}) => {
       : nearbyStaticStation?.mode ?? resolvedMode;
   const line =
     resolveTransitLine(tags, place.name) ?? nearbyStaticStation?.line ?? undefined;
+  const fallbackName =
+    busTransitRole === "bus_stop"
+      ? resolveBusStopLabel(tags)
+      : nearbyStaticStation?.name;
   const name =
-    place.name === "Unnamed place" && nearbyStaticStation?.name
-      ? nearbyStaticStation.name
-      : place.name;
+    place.name === "Unnamed place" && fallbackName ? fallbackName : place.name;
 
   return {
     ...place,
     name,
     ...(mode ? { mode } : {}),
     ...(line ? { line } : {}),
+    ...(busTransitRole ? { transitRole: busTransitRole } : {}),
   };
 };
