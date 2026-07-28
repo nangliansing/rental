@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 import { NeighbourhoodPlaceMarkerSurface } from "./NeighbourhoodPlaceMarkerSurface"
 
 describe("NeighbourhoodPlaceMarkerSurface", () => {
-  it("calls onSelect when the pin surface is clicked", async () => {
+  it("calls onSelect when the pin surface is tapped", async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
 
@@ -20,7 +20,7 @@ describe("NeighbourhoodPlaceMarkerSurface", () => {
     expect(onSelect).toHaveBeenCalledOnce()
   })
 
-  it("stops click propagation so the map does not receive the event", async () => {
+  it("stops click propagation after a tap so the map does not receive it", async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
     const onMapClick = vi.fn()
@@ -39,32 +39,27 @@ describe("NeighbourhoodPlaceMarkerSurface", () => {
     expect(onMapClick).not.toHaveBeenCalled()
   })
 
-  it("stops pointer and mouse down propagation", () => {
+  it("allows pointer down to propagate so the map can start panning", () => {
     const onSelect = vi.fn()
     const onMapPointerDown = vi.fn()
-    const onMapMouseDown = vi.fn()
 
     render(
-      <div
-        onPointerDown={onMapPointerDown}
-        onMouseDown={onMapMouseDown}
-      >
+      <div onPointerDown={onMapPointerDown}>
         <NeighbourhoodPlaceMarkerSurface label="Local Cafe" onSelect={onSelect}>
           <span>Pin</span>
         </NeighbourhoodPlaceMarkerSurface>
       </div>,
     )
 
-    const surface = screen.getByLabelText("Local Cafe")
-
-    surface.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
+    screen.getByLabelText("Local Cafe").dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 1,
+        button: 0,
+      }),
     )
-    surface.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
-    )
 
-    expect(onMapPointerDown).not.toHaveBeenCalled()
-    expect(onMapMouseDown).not.toHaveBeenCalled()
+    expect(onMapPointerDown).toHaveBeenCalledOnce()
   })
 })

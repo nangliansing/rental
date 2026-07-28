@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+import { useMapOverlayTapSelect } from "@/shared/google-maps/useMapOverlayTapSelect"
 
 import { getBuildingMarkerClassName } from "../BuildingMarkerLayer"
 
@@ -23,6 +24,8 @@ export function BuildingMarkerButton({
   ariaCurrent?: boolean | "true"
   onSelect: () => void
 }) {
+  const { onPointerDown, onClick } = useMapOverlayTapSelect(onSelect)
+
   return (
     <button
       type="button"
@@ -36,13 +39,8 @@ export function BuildingMarkerButton({
         }),
         className,
       )}
-      onPointerDown={(event) => event.stopPropagation()}
-      onMouseDown={(event) => event.stopPropagation()}
-      onTouchStart={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation()
-        onSelect()
-      }}
+      onPointerDown={onPointerDown}
+      onClick={onClick}
     >
       {children}
     </button>
