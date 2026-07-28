@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 
+import { useMapOverlayTapSelect } from "@/shared/google-maps/useMapOverlayTapSelect"
+
 type NeighbourhoodPlaceMarkerSurfaceProps = {
   label: string
   onSelect: () => void
@@ -11,17 +13,14 @@ export function NeighbourhoodPlaceMarkerSurface({
   onSelect,
   children,
 }: NeighbourhoodPlaceMarkerSurfaceProps) {
+  const { onPointerDown, onClick } = useMapOverlayTapSelect(onSelect)
+
   return (
     <div
       aria-label={label}
       className="cursor-pointer"
-      onPointerDown={(event) => event.stopPropagation()}
-      onMouseDown={(event) => event.stopPropagation()}
-      onTouchStart={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation()
-        onSelect()
-      }}
+      onPointerDown={onPointerDown}
+      onClick={onClick}
     >
       {children}
     </div>
