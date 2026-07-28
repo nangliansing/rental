@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { createRef, type RefObject } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { createRef, useState, type RefObject } from "react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   DraggableBottomDrawer,
@@ -9,7 +9,13 @@ import {
   preventDraggableBottomDrawerPropagation,
   type DraggableBottomDrawerSnap,
 } from "./DraggableBottomDrawer"
-import { DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS } from "./draggable-bottom-drawer.utils"
+import {
+  DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION,
+  DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
+  getDraggableBottomDrawerMetrics,
+} from "./draggable-bottom-drawer.utils"
+
+const TEST_VIEWPORT_HEIGHT = 800
 
 function mockPointerCapture(element: HTMLElement) {
   element.setPointerCapture = vi.fn()
@@ -21,17 +27,34 @@ function renderDrawer({
   snap = "half" as DraggableBottomDrawerSnap,
   onSnapChange = vi.fn(),
   hideContentWhenPeek,
+  allowContentDrag,
   ariaLabel,
   contentRef,
   useDragRegion = false,
+  controlled = false,
 }: {
   snap?: DraggableBottomDrawerSnap
   onSnapChange?: (snap: DraggableBottomDrawerSnap) => void
   hideContentWhenPeek?: boolean
+  allowContentDrag?: boolean
   ariaLabel?: string
   contentRef?: RefObject<HTMLDivElement | null>
   useDragRegion?: boolean
+  controlled?: boolean
 } = {}) {
+  if (controlled) {
+    return render(
+      <ControlledDrawer
+        initialSnap={snap}
+        onSnapChange={onSnapChange}
+        hideContentWhenPeek={hideContentWhenPeek}
+        ariaLabel={ariaLabel}
+        contentRef={contentRef}
+        useDragRegion={useDragRegion}
+      />,
+    )
+  }
+
   return render(
     <DraggableBottomDrawer
       snap={snap}
@@ -58,6 +81,52 @@ function renderDrawer({
   )
 }
 
+function ControlledDrawer({
+  initialSnap,
+  onSnapChange,
+  hideContentWhenPeek,
+  ariaLabel,
+  contentRef,
+  useDragRegion,
+}: {
+  initialSnap: DraggableBottomDrawerSnap
+  onSnapChange?: (snap: DraggableBottomDrawerSnap) => void
+  hideContentWhenPeek?: boolean
+  ariaLabel?: string
+  contentRef?: RefObject<HTMLDivElement | null>
+  useDragRegion?: boolean
+}) {
+  const [snap, setSnap] = useState(initialSnap)
+
+  return (
+    <DraggableBottomDrawer
+      snap={snap}
+      onSnapChange={(nextSnap) => {
+        setSnap(nextSnap)
+        onSnapChange?.(nextSnap)
+      }}
+      testId="drawer"
+      contentClassName="h-40"
+      hideContentWhenPeek={hideContentWhenPeek}
+      ariaLabel={ariaLabel}
+      contentRef={contentRef}
+      header={(dragHandle) =>
+        useDragRegion ? (
+          <DraggableBottomDrawerDragRegion dragHandle={dragHandle}>
+            Header
+          </DraggableBottomDrawerDragRegion>
+        ) : (
+          <div data-testid="drawer-header" {...dragHandle}>
+            Header
+          </div>
+        )
+      }
+    >
+      <p>Drawer body</p>
+    </DraggableBottomDrawer>
+  )
+}
+
 async function dragHeader(
   user: ReturnType<typeof userEvent.setup>,
   header: HTMLElement,
@@ -78,22 +147,67 @@ async function dragHeader(
 }
 
 describe("DraggableBottomDrawer", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      (callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      },
+    )
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: TEST_VIEWPORT_HEIGHT,
+    })
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        height: TEST_VIEWPORT_HEIGHT,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   describe("rendering", () => {
+    it("uses a fixed shell height for all snaps", () => {
+      renderDrawer({ snap: "half" })
+
+      expect(screen.getByTestId("drawer")).toHaveClass(
+        DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
+      )
+    })
+
     it.each(["peek", "half", "full"] as const)(
-      "applies the %s snap height class",
+      "positions the %s snap with a transform offset",
       (snap) => {
         renderDrawer({ snap })
 
-        expect(screen.getByTestId("drawer")).toHaveClass(
-          DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS[snap],
-        )
+        const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
+
+        expect(screen.getByTestId("drawer")).toHaveStyle({
+          transform: `translate3d(0, ${metrics.snapOffsets[snap]}px, 0)`,
+        })
+        expect(screen.getByTestId("drawer")).toHaveAttribute("data-snap", snap)
       },
     )
 
-    it("hides children at peek by default", () => {
+    it("visually hides children at peek while keeping them mounted", () => {
       renderDrawer({ snap: "peek" })
 
-      expect(screen.queryByText("Drawer body")).not.toBeInTheDocument()
+      const content = screen.getByText("Drawer body")
+      expect(content).toBeInTheDocument()
+      expect(content.closest(".overflow-y-auto")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      )
+      expect(content.closest(".overflow-y-auto")).toHaveClass("invisible")
     })
 
     it("shows children at half and full", () => {
@@ -151,30 +265,30 @@ describe("DraggableBottomDrawer", () => {
     })
   })
 
-  describe("drag gestures from half", () => {
-    it("advances to full after a strong upward drag", async () => {
+  describe("closest snap on release", () => {
+    it("settles to full after dragging up from half past the midpoint", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "half", onSnapChange })
 
-      await dragHeader(user, screen.getByTestId("drawer-header"), 200, 120)
+      await dragHeader(user, screen.getByTestId("drawer-header"), 200, 10)
 
       expect(onSnapChange).toHaveBeenCalledOnce()
       expect(onSnapChange).toHaveBeenCalledWith("full")
     })
 
-    it("advances to peek after a strong downward drag", async () => {
+    it("settles to peek after dragging down from half past the midpoint", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "half", onSnapChange })
 
-      await dragHeader(user, screen.getByTestId("drawer-header"), 120, 200)
+      await dragHeader(user, screen.getByTestId("drawer-header"), 120, 340)
 
       expect(onSnapChange).toHaveBeenCalledOnce()
       expect(onSnapChange).toHaveBeenCalledWith("peek")
     })
 
-    it("ignores small drags below the snap threshold", async () => {
+    it("settles back to half after a small drag", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "half", onSnapChange })
@@ -183,20 +297,18 @@ describe("DraggableBottomDrawer", () => {
 
       expect(onSnapChange).not.toHaveBeenCalled()
     })
-  })
 
-  describe("drag gestures from peek", () => {
-    it("advances to half after a strong upward drag", async () => {
+    it("settles to half after dragging up from peek", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "peek", onSnapChange })
 
-      await dragHeader(user, screen.getByTestId("drawer-header"), 200, 120)
+      await dragHeader(user, screen.getByTestId("drawer-header"), 200, 0)
 
       expect(onSnapChange).toHaveBeenCalledWith("half")
     })
 
-    it("stays at peek after a strong downward drag", async () => {
+    it("stays at peek after dragging down from peek", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "peek", onSnapChange })
@@ -205,20 +317,19 @@ describe("DraggableBottomDrawer", () => {
 
       expect(onSnapChange).not.toHaveBeenCalled()
     })
-  })
 
-  describe("drag gestures from full", () => {
-    it("advances to half after a strong downward drag", async () => {
+    it("settles to half after dragging down from full past the midpoint", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
-      renderDrawer({ snap: "full", onSnapChange })
+      renderDrawer({ snap: "full", onSnapChange, controlled: true })
 
-      await dragHeader(user, screen.getByTestId("drawer-header"), 120, 200)
+      await dragHeader(user, screen.getByTestId("drawer-header"), 120, 340)
 
       expect(onSnapChange).toHaveBeenCalledWith("half")
+      expect(screen.getByTestId("drawer")).toHaveAttribute("data-snap", "half")
     })
 
-    it("stays at full after a strong upward drag", async () => {
+    it("stays at full after a small downward drag", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "full", onSnapChange })
@@ -230,15 +341,18 @@ describe("DraggableBottomDrawer", () => {
   })
 
   describe("pointer lifecycle", () => {
-    it("applies translateY while dragging and resets on release", async () => {
+    it("applies translateY while dragging and settles on release", async () => {
       const user = userEvent.setup()
       renderDrawer({ snap: "half" })
 
       const header = screen.getByTestId("drawer-header")
       const drawer = screen.getByTestId("drawer")
+      const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
       mockPointerCapture(header)
 
-      expect(drawer).toHaveStyle({ transform: "translateY(0px)" })
+      expect(drawer).toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+      })
 
       await user.pointer([
         {
@@ -249,21 +363,61 @@ describe("DraggableBottomDrawer", () => {
         { coords: { clientX: 0, clientY: 130 } },
       ])
 
-      expect(drawer).toHaveStyle({ transform: "translateY(-20px)" })
-      expect(drawer.className).not.toContain("transition-[height,transform]")
+      expect(drawer).toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.half - 20}px, 0)`,
+      })
+      expect(drawer.style.transition).toBe("none")
 
       await user.pointer([{ keys: "[/MouseLeft]" }])
 
-      expect(drawer).toHaveStyle({ transform: "translateY(0px)" })
-      expect(drawer.className).toContain("transition-[height,transform]")
+      expect(drawer).toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+      })
+      expect(drawer.style.transition).toBe(DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION)
     })
 
-    it("resolves snap on pointer cancel when drag exceeds threshold", async () => {
+    it("animates directly to the closest snap without resetting to the old snap", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
-      renderDrawer({ snap: "half", onSnapChange })
+      renderDrawer({ snap: "full", onSnapChange, controlled: true })
 
       const header = screen.getByTestId("drawer-header")
+      const drawer = screen.getByTestId("drawer")
+      const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
+      mockPointerCapture(header)
+
+      await user.pointer([
+        {
+          keys: "[MouseLeft>]",
+          target: header,
+          coords: { clientX: 0, clientY: 120 },
+        },
+        { coords: { clientX: 0, clientY: 340 } },
+      ])
+
+      expect(drawer).toHaveStyle({
+        transform: "translate3d(0, 220px, 0)",
+      })
+
+      await user.pointer([{ keys: "[/MouseLeft]" }])
+
+      expect(onSnapChange).toHaveBeenCalledWith("half")
+      expect(drawer).toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+      })
+      expect(drawer).toHaveAttribute("data-snap", "half")
+      expect(drawer).not.toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.full}px, 0)`,
+      })
+    })
+
+    it("resolves to the closest snap on pointer cancel", async () => {
+      const user = userEvent.setup()
+      const onSnapChange = vi.fn()
+      renderDrawer({ snap: "half", onSnapChange, controlled: true })
+
+      const header = screen.getByTestId("drawer-header")
+      const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
       mockPointerCapture(header)
 
       await user.pointer([
@@ -272,23 +426,25 @@ describe("DraggableBottomDrawer", () => {
           target: header,
           coords: { clientX: 0, clientY: 200 },
         },
-        { coords: { clientX: 0, clientY: 120 } },
+        { coords: { clientX: 0, clientY: 0 } },
       ])
 
       fireEvent.pointerCancel(header, { pointerId: 1 })
 
       expect(onSnapChange).toHaveBeenCalledWith("full")
       expect(screen.getByTestId("drawer")).toHaveStyle({
-        transform: "translateY(0px)",
+        transform: `translate3d(0, ${metrics.snapOffsets.full}px, 0)`,
       })
+      expect(screen.getByTestId("drawer")).toHaveAttribute("data-snap", "full")
     })
 
-    it("does not change snap on pointer cancel below threshold", async () => {
+    it("settles back to the current snap on a small pointer cancel", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
       renderDrawer({ snap: "half", onSnapChange })
 
       const header = screen.getByTestId("drawer-header")
+      const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
       mockPointerCapture(header)
 
       await user.pointer([
@@ -304,7 +460,7 @@ describe("DraggableBottomDrawer", () => {
 
       expect(onSnapChange).not.toHaveBeenCalled()
       expect(screen.getByTestId("drawer")).toHaveStyle({
-        transform: "translateY(0px)",
+        transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
       })
     })
 
@@ -348,21 +504,93 @@ describe("DraggableBottomDrawer", () => {
       renderDrawer({ snap: "half" })
 
       const header = screen.getByTestId("drawer-header")
+      const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
       fireEvent.pointerMove(header, { clientY: 100, pointerId: 1 })
 
       expect(screen.getByTestId("drawer")).toHaveStyle({
-        transform: "translateY(0px)",
+        transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
       })
     })
+  })
 
-    it("does not call onSnapChange when snap would remain unchanged", async () => {
+  describe("nested content drag", () => {
+    function getDrawerContent() {
+      const content = screen.getByText("Drawer body").closest(".overflow-y-auto")
+
+      if (!(content instanceof HTMLElement)) {
+        throw new Error("Expected drawer scroll content")
+      }
+
+      return content
+    }
+
+    it("expands from half when dragging up on scrolled list content", async () => {
+      const onSnapChange = vi.fn()
+      renderDrawer({ snap: "half", onSnapChange, controlled: true })
+
+      const content = getDrawerContent()
+      Object.defineProperty(content, "scrollTop", {
+        configurable: true,
+        get: () => 40,
+      })
+      mockPointerCapture(content)
+
+      fireEvent.pointerDown(content, {
+        button: 0,
+        clientY: 200,
+        pointerId: 1,
+      })
+      fireEvent.pointerMove(content, { clientY: 0, pointerId: 1 })
+      fireEvent.pointerUp(content, { clientY: 0, pointerId: 1 })
+
+      expect(onSnapChange).toHaveBeenCalledWith("full")
+    })
+
+    it("does not collapse when pulling down on scrolled list content", async () => {
       const user = userEvent.setup()
       const onSnapChange = vi.fn()
-      renderDrawer({ snap: "half", onSnapChange })
+      renderDrawer({ snap: "full", onSnapChange })
 
-      await dragHeader(user, screen.getByTestId("drawer-header"), 150, 140)
+      const content = getDrawerContent()
+      Object.defineProperty(content, "scrollTop", {
+        configurable: true,
+        get: () => 120,
+      })
+      mockPointerCapture(content)
+
+      await user.pointer([
+        {
+          keys: "[MouseLeft>]",
+          target: content,
+          coords: { clientX: 0, clientY: 200 },
+        },
+        { coords: { clientX: 0, clientY: 340 } },
+        { keys: "[/MouseLeft]" },
+      ])
 
       expect(onSnapChange).not.toHaveBeenCalled()
+    })
+
+    it("collapses from full when pulling down at scroll top", async () => {
+      const onSnapChange = vi.fn()
+      renderDrawer({ snap: "full", onSnapChange, controlled: true })
+
+      const content = getDrawerContent()
+      Object.defineProperty(content, "scrollTop", {
+        configurable: true,
+        get: () => 0,
+      })
+      mockPointerCapture(content)
+
+      fireEvent.pointerDown(content, {
+        button: 0,
+        clientY: 200,
+        pointerId: 1,
+      })
+      fireEvent.pointerMove(content, { clientY: 420, pointerId: 1 })
+      fireEvent.pointerUp(content, { clientY: 420, pointerId: 1 })
+
+      expect(onSnapChange).toHaveBeenCalledWith("half")
     })
   })
 

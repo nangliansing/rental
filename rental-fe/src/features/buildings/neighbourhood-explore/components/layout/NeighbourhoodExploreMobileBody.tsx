@@ -31,7 +31,6 @@ export function NeighbourhoodExploreMobileBody() {
         onSnapChange={setSnap}
         testId="neighbourhood-explore-results-drawer"
         ariaLabel="Nearby places"
-        className="absolute inset-x-0 bottom-0 z-10 lg:static"
         contentRef={listScrollRootRef}
         contentClassName="h-[calc(100%-52px)]"
         header={(dragHandle) => (

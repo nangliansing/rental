@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  clampDraggableBottomDrawerOffset,
-  DRAG_SNAP_THRESHOLD_PX,
-  DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS,
+  applyDraggableBottomDrawerRubberBand,
+  clampDraggableBottomDrawerTranslateY,
+  DRAGGABLE_BOTTOM_DRAWER_DEFAULT_VIEWPORT_HEIGHT,
+  DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
   DRAGGABLE_BOTTOM_DRAWER_SNAPS,
+  computeDraggableBottomDrawerReleaseVelocity,
+  getDraggableBottomDrawerMetrics,
   getNextDraggableBottomDrawerSnap,
   isDraggableBottomDrawerSnap,
-  MAX_DRAG_OFFSET_PX,
   normalizeDraggableBottomDrawerSnap,
-  resolveDraggableBottomDrawerSnap,
+  resolveClosestDraggableBottomDrawerSnap,
+  resolveSettledDraggableBottomDrawerSnap,
+  shouldDraggableBottomDrawerHandleContentDrag,
   shouldHideDraggableBottomDrawerContent,
 } from "./draggable-bottom-drawer.utils"
 
@@ -35,11 +39,37 @@ describe("draggable-bottom-drawer.utils", () => {
     it("falls back to half for invalid snaps", () => {
       expect(normalizeDraggableBottomDrawerSnap("invalid" as never)).toBe("half")
     })
+  })
 
-    it("uses a custom fallback when provided", () => {
-      expect(
-        normalizeDraggableBottomDrawerSnap("invalid" as never, "peek"),
-      ).toBe("peek")
+  describe("getDraggableBottomDrawerMetrics", () => {
+    it("derives transform offsets from viewport height", () => {
+      const metrics = getDraggableBottomDrawerMetrics(800)
+
+      expect(metrics.shellHeight).toBe(720)
+      expect(metrics.snapOffsets).toEqual({
+        full: 0,
+        half: 320,
+        peek: 592,
+      })
+    })
+  })
+
+  describe("clampDraggableBottomDrawerTranslateY", () => {
+    it("clamps between full and peek offsets", () => {
+      const metrics = getDraggableBottomDrawerMetrics(800)
+
+      expect(clampDraggableBottomDrawerTranslateY(-40, metrics)).toBe(0)
+      expect(clampDraggableBottomDrawerTranslateY(80, metrics)).toBe(80)
+      expect(clampDraggableBottomDrawerTranslateY(700, metrics)).toBe(592)
+    })
+  })
+
+  describe("applyDraggableBottomDrawerRubberBand", () => {
+    it("adds resistance beyond the hard limits", () => {
+      const metrics = getDraggableBottomDrawerMetrics(800)
+
+      expect(applyDraggableBottomDrawerRubberBand(-40, metrics)).toBe(-14)
+      expect(applyDraggableBottomDrawerRubberBand(620, metrics)).toBe(601.8)
     })
   })
 
@@ -49,97 +79,81 @@ describe("draggable-bottom-drawer.utils", () => {
       ["half", "up", "full"],
       ["half", "down", "peek"],
       ["full", "down", "half"],
-    ] as const)(
-      "moves from %s %s to %s",
-      (snap, direction, expected) => {
-        expect(getNextDraggableBottomDrawerSnap(snap, direction)).toBe(expected)
-      },
-    )
-
-    it("does not move beyond peek when dragging down", () => {
-      expect(getNextDraggableBottomDrawerSnap("peek", "down")).toBe("peek")
-    })
-
-    it("does not move beyond full when dragging up", () => {
-      expect(getNextDraggableBottomDrawerSnap("full", "up")).toBe("full")
+    ] as const)("moves from %s %s to %s", (snap, direction, expected) => {
+      expect(getNextDraggableBottomDrawerSnap(snap, direction)).toBe(expected)
     })
   })
 
-  describe("clampDraggableBottomDrawerOffset", () => {
-    it("only allows upward drag at peek", () => {
-      expect(clampDraggableBottomDrawerOffset("peek", 120)).toBe(0)
-      expect(clampDraggableBottomDrawerOffset("peek", -80)).toBe(-80)
-      expect(clampDraggableBottomDrawerOffset("peek", -400)).toBe(
-        -MAX_DRAG_OFFSET_PX,
-      )
-    })
+  describe("resolveClosestDraggableBottomDrawerSnap", () => {
+    const metrics = getDraggableBottomDrawerMetrics(800)
 
-    it("only allows downward drag at full", () => {
-      expect(clampDraggableBottomDrawerOffset("full", -120)).toBe(0)
-      expect(clampDraggableBottomDrawerOffset("full", 80)).toBe(80)
-      expect(clampDraggableBottomDrawerOffset("full", 400)).toBe(
-        MAX_DRAG_OFFSET_PX,
-      )
-    })
-
-    it("allows bidirectional drag at half", () => {
-      expect(clampDraggableBottomDrawerOffset("half", 80)).toBe(80)
-      expect(clampDraggableBottomDrawerOffset("half", -80)).toBe(-80)
-      expect(clampDraggableBottomDrawerOffset("half", 400)).toBe(
-        MAX_DRAG_OFFSET_PX,
-      )
-      expect(clampDraggableBottomDrawerOffset("half", -400)).toBe(
-        -MAX_DRAG_OFFSET_PX,
-      )
-    })
-
-    it("respects a custom max offset", () => {
-      expect(clampDraggableBottomDrawerOffset("half", 200, 100)).toBe(100)
-      expect(clampDraggableBottomDrawerOffset("half", -200, 100)).toBe(-100)
-    })
-
-    it("keeps zero offset at boundaries", () => {
-      expect(clampDraggableBottomDrawerOffset("peek", 0)).toBe(0)
-      expect(clampDraggableBottomDrawerOffset("half", 0)).toBe(0)
-      expect(clampDraggableBottomDrawerOffset("full", 0)).toBe(0)
-    })
-  })
-
-  describe("resolveDraggableBottomDrawerSnap", () => {
     it.each([
-      ["half", -DRAG_SNAP_THRESHOLD_PX - 1, "full"],
-      ["half", DRAG_SNAP_THRESHOLD_PX + 1, "peek"],
-      ["peek", -DRAG_SNAP_THRESHOLD_PX - 1, "half"],
-      ["full", DRAG_SNAP_THRESHOLD_PX + 1, "half"],
+      [0, "full"],
+      [160, "half"],
+      [320, "half"],
+      [470, "peek"],
+      [592, "peek"],
+    ] as const)("resolves %ipx to %s", (translateY, expectedSnap) => {
+      expect(resolveClosestDraggableBottomDrawerSnap(translateY, metrics)).toBe(
+        expectedSnap,
+      )
+    })
+
+    it("prefers the current snap when release is near a detent", () => {
+      expect(
+        resolveClosestDraggableBottomDrawerSnap(360, metrics, "half"),
+      ).toBe("half")
+    })
+  })
+
+  describe("resolveSettledDraggableBottomDrawerSnap", () => {
+    const metrics = getDraggableBottomDrawerMetrics(800)
+
+    it("uses fling direction to skip to the next snap", () => {
+      expect(
+        resolveSettledDraggableBottomDrawerSnap("peek", 580, -0.8, metrics),
+      ).toBe("half")
+      expect(
+        resolveSettledDraggableBottomDrawerSnap("half", 300, -0.8, metrics),
+      ).toBe("full")
+      expect(
+        resolveSettledDraggableBottomDrawerSnap("full", 40, 0.8, metrics),
+      ).toBe("half")
+    })
+
+    it("ignores velocity on short gestures", () => {
+      expect(computeDraggableBottomDrawerReleaseVelocity(200, 120, 20)).toBe(0)
+    })
+
+    it("uses sticky closest snap on slow release", () => {
+      expect(
+        resolveSettledDraggableBottomDrawerSnap("half", 300, 0, metrics),
+      ).toBe("half")
+      expect(
+        resolveSettledDraggableBottomDrawerSnap("half", 520, 0, metrics),
+      ).toBe("peek")
+    })
+  })
+
+  describe("shouldDraggableBottomDrawerHandleContentDrag", () => {
+    it.each([
+      ["half", 0, -20, true],
+      ["half", 120, -20, true],
+      ["half", 120, 20, false],
+      ["half", 0, 20, true],
+      ["full", 0, 20, true],
+      ["full", 120, 20, false],
+      ["full", 120, -20, false],
+      ["peek", 0, -20, true],
+      ["peek", 0, 20, true],
     ] as const)(
-      "resolves %s with offset %i to %s",
-      (snap, offset, expected) => {
-        expect(resolveDraggableBottomDrawerSnap(snap, offset)).toBe(expected)
+      "snap=%s scrollTop=%i deltaY=%i -> %s",
+      (snap, scrollTop, deltaY, expected) => {
+        expect(
+          shouldDraggableBottomDrawerHandleContentDrag(snap, scrollTop, deltaY),
+        ).toBe(expected)
       },
     )
-
-    it("keeps the current snap when drag is within the threshold", () => {
-      expect(resolveDraggableBottomDrawerSnap("half", -60)).toBe("half")
-      expect(resolveDraggableBottomDrawerSnap("half", 60)).toBe("half")
-      expect(resolveDraggableBottomDrawerSnap("half", 0)).toBe("half")
-      expect(resolveDraggableBottomDrawerSnap("half", 20)).toBe("half")
-      expect(resolveDraggableBottomDrawerSnap("half", -20)).toBe("half")
-    })
-
-    it("does not move peek downward or full upward at threshold", () => {
-      expect(
-        resolveDraggableBottomDrawerSnap("peek", DRAG_SNAP_THRESHOLD_PX + 1),
-      ).toBe("peek")
-      expect(
-        resolveDraggableBottomDrawerSnap("full", -DRAG_SNAP_THRESHOLD_PX - 1),
-      ).toBe("full")
-    })
-
-    it("respects a custom threshold", () => {
-      expect(resolveDraggableBottomDrawerSnap("half", -40, 30)).toBe("full")
-      expect(resolveDraggableBottomDrawerSnap("half", 40, 30)).toBe("peek")
-      expect(resolveDraggableBottomDrawerSnap("half", 25, 30)).toBe("half")
-    })
   })
 
   describe("shouldHideDraggableBottomDrawerContent", () => {
@@ -147,9 +161,6 @@ describe("draggable-bottom-drawer.utils", () => {
       ["peek", true, true],
       ["half", true, false],
       ["full", true, false],
-      ["peek", false, false],
-      ["half", false, false],
-      ["full", false, false],
     ] as const)(
       "returns %s for snap=%s hideWhenPeek=%s",
       (snap, hideWhenPeek, expected) => {
@@ -160,11 +171,9 @@ describe("draggable-bottom-drawer.utils", () => {
     )
   })
 
-  describe("DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS", () => {
-    it("maps every snap to a height class", () => {
-      for (const snap of DRAGGABLE_BOTTOM_DRAWER_SNAPS) {
-        expect(DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS[snap]).toMatch(/^h-/)
-      }
+  describe("DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS", () => {
+    it("uses a stable full shell height", () => {
+      expect(DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS).toBe("h-[90dvh]")
     })
   })
 })

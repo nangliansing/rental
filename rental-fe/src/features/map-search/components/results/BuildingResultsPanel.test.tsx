@@ -1,9 +1,13 @@
 import type { ReactNode, Ref } from "react"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import {
+  DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
+  getDraggableBottomDrawerMetrics,
+} from "@/shared/components/navigation/draggable-bottom-drawer.utils"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
 import type { SearchBuilding } from "../../types"
@@ -265,13 +269,41 @@ function mockMobilePanelPointerCapture(panel: HTMLElement) {
 }
 
 describe("BuildingResultsPanel mobile drawer", () => {
+  const TEST_VIEWPORT_HEIGHT = 800
+
   beforeEach(() => {
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      (callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      },
+    )
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: TEST_VIEWPORT_HEIGHT,
+    })
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        height: TEST_VIEWPORT_HEIGHT,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    })
+
     vi.mocked(useMediaQuery).mockReturnValue(false)
     vi.mocked(useMapSearchFilters).mockReturnValue({
       selectedListers: [],
       removeLister: vi.fn(),
     } as never)
     mockResultsSession()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it("exposes an accessible label on the mobile drawer", () => {
@@ -288,8 +320,13 @@ describe("BuildingResultsPanel mobile drawer", () => {
 
     const mobilePanel = screen.getByTestId("results-panel-mobile")
     const dragRegion = mockMobilePanelPointerCapture(mobilePanel)
+    const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
 
-    expect(mobilePanel).toHaveClass("h-[50vh]")
+    expect(mobilePanel).toHaveClass(DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS)
+    expect(mobilePanel).toHaveStyle({
+      transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+    })
+    expect(mobilePanel).toHaveAttribute("data-snap", "half")
 
     await user.pointer([
       {
@@ -297,11 +334,14 @@ describe("BuildingResultsPanel mobile drawer", () => {
         target: dragRegion,
         coords: { clientX: 0, clientY: 220 },
       },
-      { coords: { clientX: 0, clientY: 140 } },
+      { coords: { clientX: 0, clientY: 20 } },
       { keys: "[/MouseLeft]" },
     ])
 
-    expect(mobilePanel).toHaveClass("h-[90vh]")
+    expect(mobilePanel).toHaveStyle({
+      transform: `translate3d(0, ${metrics.snapOffsets.full}px, 0)`,
+    })
+    expect(mobilePanel).toHaveAttribute("data-snap", "full")
   })
 
   it("collapses to peek on downward drag from half", async () => {
@@ -310,6 +350,7 @@ describe("BuildingResultsPanel mobile drawer", () => {
 
     const mobilePanel = screen.getByTestId("results-panel-mobile")
     const dragRegion = mockMobilePanelPointerCapture(mobilePanel)
+    const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
 
     await user.pointer([
       {
@@ -317,14 +358,18 @@ describe("BuildingResultsPanel mobile drawer", () => {
         target: dragRegion,
         coords: { clientX: 0, clientY: 140 },
       },
-      { coords: { clientX: 0, clientY: 220 } },
+      { coords: { clientX: 0, clientY: 340 } },
       { keys: "[/MouseLeft]" },
     ])
 
-    expect(mobilePanel).toHaveClass("h-32")
+    expect(mobilePanel).toHaveStyle({
+      transform: `translate3d(0, ${metrics.snapOffsets.peek}px, 0)`,
+    })
+    expect(mobilePanel).toHaveAttribute("data-snap", "peek")
+    expect(within(mobilePanel).getByText("Building one")).toBeInTheDocument()
     expect(
-      within(mobilePanel).queryByRole("button", { name: "Building one" }),
-    ).not.toBeInTheDocument()
+      within(mobilePanel).getByText("Building one").closest(".overflow-y-auto"),
+    ).toHaveAttribute("aria-hidden", "true")
   })
 
   it("does not start a drag from the header back button", async () => {
@@ -338,6 +383,7 @@ describe("BuildingResultsPanel mobile drawer", () => {
     mockResultsSession({ onBuildingSelect })
     const view = renderPanel()
     const mobilePanel = screen.getByTestId("results-panel-mobile")
+    const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
 
     await user.click(
       within(mobilePanel).getByRole("button", { name: "Building one" }),
@@ -359,6 +405,9 @@ describe("BuildingResultsPanel mobile drawer", () => {
       { keys: "[/MouseLeft]" },
     ])
 
-    expect(mobilePanel).toHaveClass("h-[50vh]")
+    expect(mobilePanel).toHaveStyle({
+      transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+    })
+    expect(mobilePanel).toHaveAttribute("data-snap", "half")
   })
 })
