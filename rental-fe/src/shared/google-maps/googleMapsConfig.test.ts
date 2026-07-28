@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  GOOGLE_MAPS_MAP_ID,
-  shouldUseClientMapStyles,
-} from "./googleMapsConfig"
+import { shouldUseClientMapStyles } from "./googleMapsConfig"
 
 describe("googleMapsConfig", () => {
-  it("allows client styles only for demo map ids", () => {
-    expect(shouldUseClientMapStyles("DEMO_MAP_ID")).toBe(true)
-    expect(shouldUseClientMapStyles("")).toBe(true)
+  it("allows client styles only when no map id is configured", () => {
+    expect(shouldUseClientMapStyles("DEMO_MAP_ID")).toBe(false)
     expect(shouldUseClientMapStyles("production-map-id")).toBe(false)
-    expect(shouldUseClientMapStyles(GOOGLE_MAPS_MAP_ID)).toBeTypeOf("boolean")
+    expect(shouldUseClientMapStyles("")).toBe(true)
   })
 })

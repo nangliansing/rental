@@ -125,7 +125,7 @@ const NeighbourhoodExploreMapContent = memo(
         gestureHandling="greedy"
         disableDefaultUI
         clickableIcons={false}
-        styles={clientMapStyles}
+        {...(clientMapStyles ? { styles: clientMapStyles } : {})}
         className="h-full w-full [&_.gm-style-cc]:opacity-70"
       >
         <Circle
