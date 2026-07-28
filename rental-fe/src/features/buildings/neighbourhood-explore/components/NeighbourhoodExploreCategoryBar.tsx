@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 import { useNeighbourhoodExploreData } from "../NeighbourhoodExploreContext"
 import {
-  NEIGHBOURHOOD_CATEGORY_BAR_GRADIENT_CLASS,
+  NEIGHBOURHOOD_CATEGORY_BAR_CONTAINER_CLASS,
   shouldShowNeighbourhoodCategoryBar,
   shouldShowNeighbourhoodCategoryDivider,
 } from "../utils/neighbourhoodExploreUi"
@@ -26,7 +26,7 @@ export function NeighbourhoodExploreCategoryBar() {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10">
       {categoryCount > 0 && (
-        <div className={NEIGHBOURHOOD_CATEGORY_BAR_GRADIENT_CLASS}>
+        <div className={NEIGHBOURHOOD_CATEGORY_BAR_CONTAINER_CLASS}>
           <FilterPills
             aria-label="Neighbourhood categories"
             options={categoryPillOptions}
