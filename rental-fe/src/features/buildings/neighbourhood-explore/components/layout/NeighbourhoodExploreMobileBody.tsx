@@ -13,25 +13,25 @@ import { NeighbourhoodExploreMapStack } from "./NeighbourhoodExploreMapStack"
 
 export function NeighbourhoodExploreMobileBody() {
   const [snap, setSnap] = useState<DraggableBottomDrawerSnap>("half")
-  const [isDrawerSettled, setIsDrawerSettled] = useState(true)
+  const [suppressListUntilSettled, setSuppressListUntilSettled] = useState(false)
   const { selectedPlaceId } = useNeighbourhoodExploreSelection()
   const listScrollRootRef = useRef<HTMLDivElement>(null)
   const isDrawerExpanded = snap !== "peek"
 
   const handleSnapChange = useCallback((nextSnap: DraggableBottomDrawerSnap) => {
-    setIsDrawerSettled(false)
     setSnap(nextSnap)
   }, [])
 
   const handleSnapSettled = useCallback(() => {
-    setIsDrawerSettled(true)
+    setSuppressListUntilSettled(false)
   }, [])
 
   useEffect(() => {
     if (selectedPlaceId && snap === "peek") {
-      handleSnapChange("half")
+      setSuppressListUntilSettled(true)
+      setSnap("half")
     }
-  }, [handleSnapChange, selectedPlaceId, snap])
+  }, [selectedPlaceId, snap])
 
   return (
     <div className="relative min-h-0 flex-1 bg-slate-50">
@@ -45,9 +45,7 @@ export function NeighbourhoodExploreMobileBody() {
         ariaLabel="Nearby places"
         contentRef={listScrollRootRef}
         contentClassName={cn(
-          isDrawerExpanded &&
-            !isDrawerSettled &&
-            "pointer-events-none invisible",
+          suppressListUntilSettled && "pointer-events-none invisible",
         )}
         header={(dragHandle) => (
           <DraggableBottomDrawerDragRegion
