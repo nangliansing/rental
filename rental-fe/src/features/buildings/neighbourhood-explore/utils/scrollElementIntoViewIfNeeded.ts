@@ -1,17 +1,35 @@
+export type ScrollElementIntoViewAlign = "nearest" | "start"
+
 export type ScrollElementIntoViewIfNeededOptions = {
   behavior?: ScrollBehavior
+  align?: ScrollElementIntoViewAlign
+}
+
+/** Skip programmatic scroll when the target position is already close enough. */
+export const SCROLL_ALIGN_TOLERANCE_PX = 4
+
+/** Map/list sync: top-align instantly without smooth scrolling. */
+export const NEIGHBOURHOOD_ACTIVE_PLACE_SCROLL_OPTIONS = {
+  behavior: "auto",
+  align: "start",
+} as const satisfies ScrollElementIntoViewIfNeededOptions
+
+type ScrollLayout = {
+  elementRect: DOMRect
+  containerRect: DOMRect
+  relativeTop: number
+  relativeBottom: number
 }
 
 export function isElementVisibleInScrollContainer(
   element: HTMLElement,
   container: HTMLElement,
 ): boolean {
-  const elementRect = element.getBoundingClientRect()
-  const containerRect = container.getBoundingClientRect()
+  const layout = getScrollLayout(element, container)
 
   return (
-    elementRect.top >= containerRect.top &&
-    elementRect.bottom <= containerRect.bottom
+    layout.elementRect.top >= layout.containerRect.top &&
+    layout.elementRect.bottom <= layout.containerRect.bottom
   )
 }
 
@@ -40,31 +58,73 @@ export function resolveScrollContainer(
   return preferredContainer
 }
 
-export function scrollElementIntoViewIfNeeded(
+function getScrollLayout(
   element: HTMLElement,
-  container: HTMLElement,
-  { behavior = "smooth" }: ScrollElementIntoViewIfNeededOptions = {},
-): boolean {
-  const scrollContainer = resolveScrollContainer(container)
-
-  if (isElementVisibleInScrollContainer(element, scrollContainer)) {
-    return false
-  }
-
+  scrollContainer: HTMLElement,
+): ScrollLayout {
   const elementRect = element.getBoundingClientRect()
   const containerRect = scrollContainer.getBoundingClientRect()
   const relativeTop =
     elementRect.top - containerRect.top + scrollContainer.scrollTop
-  const relativeBottom = relativeTop + element.offsetHeight
+
+  return {
+    elementRect,
+    containerRect,
+    relativeTop,
+    relativeBottom: relativeTop + element.offsetHeight,
+  }
+}
+
+function clampScrollTop(scrollContainer: HTMLElement, scrollTop: number) {
+  const maxScrollTop = Math.max(
+    0,
+    scrollContainer.scrollHeight - scrollContainer.clientHeight,
+  )
+
+  return Math.max(0, Math.min(scrollTop, maxScrollTop))
+}
+
+export function scrollElementIntoViewIfNeeded(
+  element: HTMLElement,
+  container: HTMLElement,
+  {
+    behavior = "smooth",
+    align = "nearest",
+  }: ScrollElementIntoViewIfNeededOptions = {},
+): boolean {
+  const scrollContainer = resolveScrollContainer(container)
+  const layout = getScrollLayout(element, scrollContainer)
+
+  if (align === "start") {
+    const nextScrollTop = clampScrollTop(scrollContainer, layout.relativeTop)
+
+    if (
+      Math.abs(scrollContainer.scrollTop - nextScrollTop) <=
+      SCROLL_ALIGN_TOLERANCE_PX
+    ) {
+      return false
+    }
+
+    scrollContainer.scrollTo({ top: nextScrollTop, behavior })
+    return true
+  }
+
+  if (
+    layout.elementRect.top >= layout.containerRect.top &&
+    layout.elementRect.bottom <= layout.containerRect.bottom
+  ) {
+    return false
+  }
+
   const viewTop = scrollContainer.scrollTop
   const viewBottom = viewTop + scrollContainer.clientHeight
 
   let nextScrollTop = viewTop
 
-  if (relativeTop < viewTop) {
-    nextScrollTop = relativeTop
-  } else if (relativeBottom > viewBottom) {
-    nextScrollTop = relativeBottom - scrollContainer.clientHeight
+  if (layout.relativeTop < viewTop) {
+    nextScrollTop = layout.relativeTop
+  } else if (layout.relativeBottom > viewBottom) {
+    nextScrollTop = layout.relativeBottom - scrollContainer.clientHeight
   }
 
   scrollContainer.scrollTo({ top: nextScrollTop, behavior })

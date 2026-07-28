@@ -109,11 +109,20 @@ describe("NeighbourhoodExploreProvider", () => {
       sampleNeighbourhood.places[1],
     )
     expect(result.current.selection.selectedPlaceRevision).toBe(1)
+    expect(result.current.selection.shouldScrollSelectedPlaceIntoView).toBe(true)
+
+    result.current.selection.selectPlace("place-cafe", { scrollIntoView: false })
+
+    await waitFor(() => {
+      expect(result.current.selection.selectedPlaceRevision).toBe(2)
+      expect(result.current.selection.shouldScrollSelectedPlaceIntoView).toBe(false)
+    })
 
     result.current.selection.selectPlace("place-cafe")
 
     await waitFor(() => {
-      expect(result.current.selection.selectedPlaceRevision).toBe(2)
+      expect(result.current.selection.selectedPlaceRevision).toBe(3)
+      expect(result.current.selection.shouldScrollSelectedPlaceIntoView).toBe(true)
     })
   })
 

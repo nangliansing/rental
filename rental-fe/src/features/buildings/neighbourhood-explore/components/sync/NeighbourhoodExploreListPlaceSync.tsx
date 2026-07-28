@@ -1,62 +1,58 @@
-import { memo, useLayoutEffect, type RefObject } from "react"
+import { memo, useEffect, type RefObject } from "react"
 
 import { useNeighbourhoodExplorePlaceSelection } from "../../hooks/useNeighbourhoodExplorePlaceSelection"
 import type { NeighbourhoodPlaceListHandle } from "../list/NeighbourhoodPlaceList"
 
-const LIST_SCROLL_RETRY_DELAYS_MS = [0, 16, 120, 240] as const
+const MAX_SCROLL_TO_PLACE_ATTEMPTS = 3
 
 type NeighbourhoodExploreListPlaceSyncProps = {
   listRef: RefObject<NeighbourhoodPlaceListHandle | null>
   isListScrollEnabled?: boolean
-  syncKey?: string | number | boolean
 }
 
 function scrollActivePlaceIntoView(
   listRef: RefObject<NeighbourhoodPlaceListHandle | null>,
   placeId: string,
+  attempt = 0,
 ) {
-  for (const delay of LIST_SCROLL_RETRY_DELAYS_MS) {
-    if (delay === 0) {
-      if (listRef.current?.scrollToPlace(placeId)) {
-        return true
-      }
-      continue
-    }
-
-    window.setTimeout(() => {
-      listRef.current?.scrollToPlace(placeId)
-    }, delay)
+  if (
+    listRef.current?.scrollToPlace(placeId) ||
+    attempt + 1 >= MAX_SCROLL_TO_PLACE_ATTEMPTS
+  ) {
+    return
   }
 
-  return false
+  requestAnimationFrame(() => {
+    scrollActivePlaceIntoView(listRef, placeId, attempt + 1)
+  })
 }
 
 /**
- * When the shared active place changes, scroll the matching list item into view
- * only if it is outside the list viewport.
+ * Scrolls the active list item into view for map-driven selections only.
  */
 export const NeighbourhoodExploreListPlaceSync = memo(
   function NeighbourhoodExploreListPlaceSync({
     listRef,
     isListScrollEnabled = true,
-    syncKey,
   }: NeighbourhoodExploreListPlaceSyncProps) {
-    const { selectedPlaceId, selectedPlaceRevision } =
-      useNeighbourhoodExplorePlaceSelection()
+    const {
+      selectedPlaceId,
+      selectedPlaceRevision,
+      shouldScrollSelectedPlaceIntoView,
+    } = useNeighbourhoodExplorePlaceSelection()
 
-    useLayoutEffect(() => {
-      if (!selectedPlaceId || !isListScrollEnabled) {
+    const shouldSyncListScroll =
+      Boolean(selectedPlaceId) &&
+      isListScrollEnabled &&
+      shouldScrollSelectedPlaceIntoView
+
+    useEffect(() => {
+      if (!shouldSyncListScroll || !selectedPlaceId) {
         return
       }
 
       scrollActivePlaceIntoView(listRef, selectedPlaceId)
-    }, [
-      isListScrollEnabled,
-      listRef,
-      selectedPlaceId,
-      selectedPlaceRevision,
-      syncKey,
-    ])
+    }, [listRef, selectedPlaceId, selectedPlaceRevision, shouldSyncListScroll])
 
     return null
   },

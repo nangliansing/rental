@@ -116,6 +116,68 @@ describe("scrollElementIntoViewIfNeeded", () => {
     })
   })
 
+  it("aligns the element to the top when align is start", () => {
+    const container = createScrollContainer({})
+    const element = {
+      offsetHeight: 40,
+      getBoundingClientRect: () => createRect(220, 260),
+    } as HTMLElement
+
+    expect(
+      scrollElementIntoViewIfNeeded(element, container, {
+        align: "start",
+        behavior: "auto",
+      }),
+    ).toBe(true)
+    expect(container.scrollTo).toHaveBeenCalledWith({
+      top: 220,
+      behavior: "auto",
+    })
+  })
+
+  it("clamps start alignment for the last items in the list", () => {
+    const container = createScrollContainer({
+      scrollHeight: 260,
+      clientHeight: 80,
+    })
+    const element = {
+      offsetHeight: 40,
+      getBoundingClientRect: () => createRect(220, 260),
+    } as HTMLElement
+
+    expect(
+      scrollElementIntoViewIfNeeded(element, container, {
+        align: "start",
+        behavior: "auto",
+      }),
+    ).toBe(true)
+    expect(container.scrollTo).toHaveBeenCalledWith({
+      top: 180,
+      behavior: "auto",
+    })
+  })
+
+  it("does not scroll on start alignment when the element is already at the top", () => {
+    const scrollTo = vi.fn()
+    const container = {
+      scrollTop: 120,
+      scrollHeight: 500,
+      clientHeight: 200,
+      parentElement: null,
+      getBoundingClientRect: () => createRect(100, 300),
+      scrollTo,
+    } as unknown as HTMLElement
+    const element = {
+      offsetHeight: 50,
+      getBoundingClientRect: () => createRect(100, 150),
+    } as HTMLElement
+
+    expect(
+      scrollElementIntoViewIfNeeded(element, container, { align: "start" }),
+    ).toBe(false)
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
   it("scrolls the container when the element is above the viewport", () => {
     const container = createScrollContainer({
       scrollTop: 120,
