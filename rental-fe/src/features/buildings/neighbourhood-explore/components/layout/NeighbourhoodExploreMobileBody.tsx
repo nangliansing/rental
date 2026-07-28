@@ -32,7 +32,6 @@ export function NeighbourhoodExploreMobileBody() {
         testId="neighbourhood-explore-results-drawer"
         ariaLabel="Nearby places"
         contentRef={listScrollRootRef}
-        contentClassName="h-[calc(100%-52px)]"
         header={(dragHandle) => (
           <DraggableBottomDrawerDragRegion
             dragHandle={dragHandle}

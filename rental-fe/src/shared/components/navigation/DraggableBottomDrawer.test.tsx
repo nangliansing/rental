@@ -232,6 +232,22 @@ describe("DraggableBottomDrawer", () => {
       expect(screen.getByText("Drawer body")).toBeInTheDocument()
     })
 
+    it("adds a computed scroll-end spacer below drawer content", () => {
+      renderDrawer({ snap: "half" })
+
+      const spacer = screen.getByTestId("drawer-scroll-end-spacer")
+      expect(spacer).toHaveClass("shrink-0")
+      expect(spacer).toHaveStyle({ height: "384px" })
+    })
+
+    it("uses nav clearance only at full open", () => {
+      renderDrawer({ snap: "full" })
+
+      expect(screen.getByTestId("drawer-scroll-end-spacer")).toHaveStyle({
+        height: "64px",
+      })
+    })
+
     it("shows children at peek when hideContentWhenPeek is false", () => {
       renderDrawer({ snap: "peek", hideContentWhenPeek: false })
 

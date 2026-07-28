@@ -434,10 +434,6 @@ export function BuildingResultsPanel() {
         testId="results-panel-mobile"
         ariaLabel="Building search results"
         contentRef={mobileScrollRootRef}
-        contentClassName={cn(
-          "h-[calc(100%-76px)]",
-          activePage !== "filters" && "pb-20",
-        )}
         header={(dragHandle) => (
           <MobilePanelHeader
             title={panelTitle}

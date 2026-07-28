@@ -3,6 +3,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type ReactNode,
   type RefObject,
 } from "react"
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils"
 
 import {
   applyDraggableBottomDrawerRubberBand,
+  areDraggableBottomDrawerMetricsEqual,
   clampDraggableBottomDrawerTranslateY,
   computeDraggableBottomDrawerReleaseVelocity,
   DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION,
@@ -25,6 +27,10 @@ import {
   shouldHideDraggableBottomDrawerContent,
   type DraggableBottomDrawerSnap,
 } from "./draggable-bottom-drawer.utils"
+
+function createDrawerMetrics() {
+  return getDraggableBottomDrawerMetrics(getViewportHeightForDrawer())
+}
 
 export type { DraggableBottomDrawerSnap } from "./draggable-bottom-drawer.utils"
 
@@ -125,9 +131,11 @@ export function DraggableBottomDrawer({
   )
   const asideRef = useRef<HTMLElement>(null)
   const contentElementRef = useRef<HTMLDivElement | null>(null)
-  const metricsRef = useRef(getDraggableBottomDrawerMetrics())
+  const [metrics, setMetrics] = useState(createDrawerMetrics)
+  const metricsRef = useRef(metrics)
+  metricsRef.current = metrics
   const isDraggingRef = useRef(false)
-  const translateYRef = useRef(metricsRef.current.snapOffsets[normalizedSnap])
+  const translateYRef = useRef(metrics.snapOffsets[normalizedSnap])
   const pendingTranslateYRef = useRef<number | null>(null)
   const startYRef = useRef<number | null>(null)
   const startTranslateYRef = useRef(0)
@@ -136,6 +144,7 @@ export function DraggableBottomDrawer({
   const activePointerIdRef = useRef<number | null>(null)
   const dragFrameRef = useRef<number | null>(null)
   const contentGestureRef = useRef<ContentGestureState | null>(null)
+  const scrollEndSpacerPx = metrics.scrollEndSpacerPx[normalizedSnap]
 
   const setContentNode = useCallback(
     (node: HTMLDivElement | null) => {
@@ -187,15 +196,22 @@ export function DraggableBottomDrawer({
     [applyTranslateY],
   )
 
+  const normalizedSnapRef = useRef(normalizedSnap)
+  normalizedSnapRef.current = normalizedSnap
+
   const refreshDrawerMetrics = useCallback(() => {
-    metricsRef.current = getDraggableBottomDrawerMetrics(
-      getViewportHeightForDrawer(),
+    const nextMetrics = getDraggableBottomDrawerMetrics(getViewportHeightForDrawer())
+    metricsRef.current = nextMetrics
+    setMetrics((current) =>
+      areDraggableBottomDrawerMetricsEqual(current, nextMetrics)
+        ? current
+        : nextMetrics,
     )
 
     if (!isDraggingRef.current) {
-      syncToSnap(normalizedSnap)
+      syncToSnap(normalizedSnapRef.current)
     }
-  }, [normalizedSnap, syncToSnap])
+  }, [syncToSnap])
 
   useLayoutEffect(() => {
     refreshDrawerMetrics()
@@ -445,7 +461,7 @@ export function DraggableBottomDrawer({
       data-snap={normalizedSnap}
       aria-label={ariaLabel}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 overflow-hidden rounded-t-2xl bg-white text-slate-950 shadow-2xl will-change-transform lg:hidden",
+        "fixed inset-x-0 bottom-0 z-40 box-border flex flex-col overflow-hidden rounded-t-2xl bg-white text-slate-950 shadow-2xl will-change-transform lg:hidden",
         DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
         className,
       )}
@@ -456,7 +472,7 @@ export function DraggableBottomDrawer({
         ref={setContentNode}
         aria-hidden={isContentHiddenAtPeek}
         className={cn(
-          "overflow-y-auto overscroll-y-contain",
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
           isContentHiddenAtPeek && "pointer-events-none invisible",
           contentClassName,
         )}
@@ -466,6 +482,12 @@ export function DraggableBottomDrawer({
         onPointerCancel={handleContentPointerEnd}
       >
         {children}
+        <div
+          aria-hidden="true"
+          data-testid="drawer-scroll-end-spacer"
+          className="shrink-0"
+          style={{ height: scrollEndSpacerPx }}
+        />
       </div>
     </aside>
   )

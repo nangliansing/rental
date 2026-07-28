@@ -30,9 +30,13 @@ export const DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION =
 
 export const DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS = "h-[90dvh]"
 
+/** Matches `AppNavigation` mobile tab bar height (`h-16`). */
+export const DRAGGABLE_BOTTOM_DRAWER_MOBILE_NAV_HEIGHT_PX = 64
+
 export type DraggableBottomDrawerMetrics = {
   shellHeight: number
   snapOffsets: Record<DraggableBottomDrawerSnap, number>
+  scrollEndSpacerPx: Record<DraggableBottomDrawerSnap, number>
 }
 
 export function getViewportHeightForDrawer(): number {
@@ -60,15 +64,42 @@ export function getDraggableBottomDrawerMetrics(
   const halfVisible = Math.round(
     safeViewportHeight * DRAGGABLE_BOTTOM_DRAWER_HALF_VISIBLE_RATIO,
   )
+  const snapOffsets = {
+    full: 0,
+    half: Math.max(0, shellHeight - halfVisible),
+    peek: Math.max(0, shellHeight - DRAGGABLE_BOTTOM_DRAWER_PEEK_VISIBLE_PX),
+  }
+  const navClearance = DRAGGABLE_BOTTOM_DRAWER_MOBILE_NAV_HEIGHT_PX
 
   return {
     shellHeight,
-    snapOffsets: {
-      full: 0,
-      half: Math.max(0, shellHeight - halfVisible),
-      peek: Math.max(0, shellHeight - DRAGGABLE_BOTTOM_DRAWER_PEEK_VISIBLE_PX),
+    snapOffsets,
+    scrollEndSpacerPx: {
+      full: navClearance,
+      half: snapOffsets.half + navClearance,
+      peek: snapOffsets.peek + navClearance,
     },
   }
+}
+
+export function areDraggableBottomDrawerMetricsEqual(
+  left: DraggableBottomDrawerMetrics,
+  right: DraggableBottomDrawerMetrics,
+): boolean {
+  return (
+    left.shellHeight === right.shellHeight &&
+    left.snapOffsets.full === right.snapOffsets.full &&
+    left.snapOffsets.half === right.snapOffsets.half &&
+    left.snapOffsets.peek === right.snapOffsets.peek
+  )
+}
+
+/** O(1) lookup — values are precomputed in {@link getDraggableBottomDrawerMetrics}. */
+export function getDraggableBottomDrawerScrollEndSpacerPx(
+  snap: DraggableBottomDrawerSnap,
+  metrics: DraggableBottomDrawerMetrics,
+): number {
+  return metrics.scrollEndSpacerPx[snap]
 }
 
 export function clampDraggableBottomDrawerTranslateY(
