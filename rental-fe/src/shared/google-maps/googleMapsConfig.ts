@@ -20,8 +20,9 @@ export const GOOGLE_MAPS_API_PROVIDER_PROPS = {
   "apiKey" | "libraries" | "authReferrerPolicy"
 >
 
+/** Client `styles` are only valid when the map is created without a `mapId`. */
 export function shouldUseClientMapStyles(mapId: string = GOOGLE_MAPS_MAP_ID) {
-  return !mapId || mapId === "DEMO_MAP_ID"
+  return !mapId.trim()
 }
 
 export function hasGoogleMapsApiKey(apiKey: string = GOOGLE_MAPS_API_KEY) {
