@@ -36,11 +36,11 @@ export function getFilterPillButtonClass({
     "rounded-full font-semibold transition",
     scrollable && "shrink-0 scroll-mx-2 whitespace-nowrap",
     getFilterPillSizeClass(variant),
-    variant === "overlay" && "shadow-sm backdrop-blur-md",
+    variant === "overlay" && "shadow-sm",
     isActive
       ? "bg-slate-900 text-white shadow-md"
       : variant === "overlay"
-        ? "bg-white/95 text-slate-700 ring-1 ring-slate-200/70 hover:bg-white"
+        ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-white"
         : "bg-slate-100 text-slate-600 hover:bg-slate-200",
   )
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   getNeighbourhoodTruncationHint,
+  NEIGHBOURHOOD_CATEGORY_BAR_CONTAINER_CLASS,
   shouldShowNeighbourhoodCategoryBar,
   shouldShowNeighbourhoodCategoryDivider,
 } from "./neighbourhoodExploreUi"
@@ -36,6 +37,10 @@ describe("getNeighbourhoodTruncationHint", () => {
 })
 
 describe("neighbourhoodExploreUi", () => {
+  it("uses a padding-only category bar container without a map scrim", () => {
+    expect(NEIGHBOURHOOD_CATEGORY_BAR_CONTAINER_CLASS).not.toMatch(/gradient|blur|white\//)
+  })
+
   it("shows the category bar when tabs or refresh state are present", () => {
     expect(shouldShowNeighbourhoodCategoryBar(0, false)).toBe(false)
     expect(shouldShowNeighbourhoodCategoryBar(2, false)).toBe(true)

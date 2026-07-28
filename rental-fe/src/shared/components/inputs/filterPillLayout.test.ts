@@ -43,6 +43,6 @@ describe("filterPillLayout", () => {
         isActive: false,
         scrollable: true,
       }),
-    ).toContain("backdrop-blur-md")
+    ).toContain("bg-white")
   })
 })
