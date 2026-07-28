@@ -1,11 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { server } from "@/test/server"
 import { renderWithProviders } from "@/test/renderWithProviders"
-import { DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS } from "@/shared/components/navigation/draggable-bottom-drawer.utils"
+import {
+  getDraggableBottomDrawerMetrics,
+} from "@/shared/components/navigation/draggable-bottom-drawer.utils"
 
 import { NeighbourhoodExploreProvider } from "../../NeighbourhoodExploreProvider"
 import { useNeighbourhoodExploreSelection } from "../../NeighbourhoodExploreContext"
@@ -20,6 +22,7 @@ vi.mock("../list/NeighbourhoodPlaceListPanel", () => ({
 }))
 
 const BUILDING_ID = "building-1"
+const TEST_VIEWPORT_HEIGHT = 800
 
 function mockNeighbourhoodResponse() {
   server.use(
@@ -80,7 +83,7 @@ async function dragDrawerDown(user: ReturnType<typeof userEvent.setup>) {
       target: dragRegion,
       coords: { clientX: 0, clientY: 120 },
     },
-    { coords: { clientX: 0, clientY: 200 } },
+    { coords: { clientX: 0, clientY: 340 } },
     { keys: "[/MouseLeft]" },
   ])
 }
@@ -105,6 +108,33 @@ function renderMobileBody() {
 }
 
 describe("NeighbourhoodExploreMobileBody", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      (callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      },
+    )
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: TEST_VIEWPORT_HEIGHT,
+    })
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        height: TEST_VIEWPORT_HEIGHT,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it("starts at the half drawer snap with the list visible", async () => {
     mockNeighbourhoodResponse()
     renderMobileBody()
@@ -113,8 +143,14 @@ describe("NeighbourhoodExploreMobileBody", () => {
       expect(screen.getByTestId("list-panel")).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveClass(
-      DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS.half,
+    const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
+
+    expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveStyle({
+      transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+    })
+    expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveAttribute(
+      "data-snap",
+      "half",
     )
   })
 
@@ -128,18 +164,28 @@ describe("NeighbourhoodExploreMobileBody", () => {
 
     await dragDrawerDown(user)
 
+    const metrics = getDraggableBottomDrawerMetrics(TEST_VIEWPORT_HEIGHT)
+
     await waitFor(() => {
-      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveClass(
-        DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS.peek,
+      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveAttribute(
+        "data-snap",
+        "peek",
       )
+      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.peek}px, 0)`,
+      })
     })
 
     await user.click(screen.getByRole("button", { name: "Select place" }))
 
     await waitFor(() => {
-      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveClass(
-        DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS.half,
+      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveAttribute(
+        "data-snap",
+        "half",
       )
+      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveStyle({
+        transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+      })
     })
   })
 })

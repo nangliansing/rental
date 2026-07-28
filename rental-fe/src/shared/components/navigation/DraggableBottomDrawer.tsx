@@ -1,13 +1,27 @@
-import { useCallback, useRef, useState, type ReactNode, type RefObject } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
 
 import {
-  clampDraggableBottomDrawerOffset,
-  DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS,
+  applyDraggableBottomDrawerRubberBand,
+  clampDraggableBottomDrawerTranslateY,
+  computeDraggableBottomDrawerReleaseVelocity,
+  DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION,
+  DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
+  formatDraggableBottomDrawerTransform,
+  getDraggableBottomDrawerMetrics,
+  getViewportHeightForDrawer,
   normalizeDraggableBottomDrawerSnap,
-  resolveDraggableBottomDrawerSnap,
+  resolveSettledDraggableBottomDrawerSnap,
+  shouldDraggableBottomDrawerHandleContentDrag,
   shouldHideDraggableBottomDrawerContent,
   type DraggableBottomDrawerSnap,
 } from "./draggable-bottom-drawer.utils"
@@ -31,7 +45,15 @@ type DraggableBottomDrawerProps = {
   contentRef?: RefObject<HTMLDivElement | null>
   testId?: string
   hideContentWhenPeek?: boolean
+  allowContentDrag?: boolean
   ariaLabel?: string
+}
+
+type ContentGestureState = {
+  pointerId: number
+  startY: number
+  startScrollTop: number
+  mode: "undecided" | "sheet"
 }
 
 export function preventDraggableBottomDrawerPropagation(
@@ -68,6 +90,21 @@ export function DraggableBottomDrawerDragRegion({
   )
 }
 
+function applyDrawerTranslateY(
+  element: HTMLElement | null,
+  translateY: number,
+) {
+  if (!element) return
+
+  element.style.transform = formatDraggableBottomDrawerTransform(translateY)
+}
+
+function assignRef<T>(ref: RefObject<T | null> | undefined, value: T | null) {
+  if (ref) {
+    ref.current = value
+  }
+}
+
 export function DraggableBottomDrawer({
   snap,
   onSnapChange,
@@ -78,17 +115,119 @@ export function DraggableBottomDrawer({
   contentRef,
   testId,
   hideContentWhenPeek = true,
+  allowContentDrag = true,
   ariaLabel = "Draggable panel",
 }: DraggableBottomDrawerProps) {
   const normalizedSnap = normalizeDraggableBottomDrawerSnap(snap)
-  const [dragY, setDragY] = useState(0)
-  const [isDragging, setIsDragging] = useState(false)
+  const isContentHiddenAtPeek = shouldHideDraggableBottomDrawerContent(
+    normalizedSnap,
+    hideContentWhenPeek,
+  )
+  const asideRef = useRef<HTMLElement>(null)
+  const contentElementRef = useRef<HTMLDivElement | null>(null)
+  const metricsRef = useRef(getDraggableBottomDrawerMetrics())
+  const isDraggingRef = useRef(false)
+  const translateYRef = useRef(metricsRef.current.snapOffsets[normalizedSnap])
+  const pendingTranslateYRef = useRef<number | null>(null)
   const startYRef = useRef<number | null>(null)
-  const dragOffsetRef = useRef(0)
+  const startTranslateYRef = useRef(0)
+  const gestureStartTimeRef = useRef(0)
   const captureTargetRef = useRef<HTMLDivElement | null>(null)
   const activePointerIdRef = useRef<number | null>(null)
+  const dragFrameRef = useRef<number | null>(null)
+  const contentGestureRef = useRef<ContentGestureState | null>(null)
 
-  const resetPointerGesture = useCallback(() => {
+  const setContentNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      contentElementRef.current = node
+      assignRef(contentRef, node)
+    },
+    [contentRef],
+  )
+
+  const setDrawerTransitionEnabled = useCallback((enabled: boolean) => {
+    const element = asideRef.current
+    if (!element) return
+
+    element.style.transition = enabled
+      ? DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION
+      : "none"
+  }, [])
+
+  const applyTranslateY = useCallback((translateY: number) => {
+    translateYRef.current = translateY
+    applyDrawerTranslateY(asideRef.current, translateY)
+  }, [])
+
+  const flushPendingTranslateY = useCallback(() => {
+    if (pendingTranslateYRef.current == null) return
+
+    applyTranslateY(pendingTranslateYRef.current)
+    pendingTranslateYRef.current = null
+  }, [applyTranslateY])
+
+  const scheduleTranslateY = useCallback(
+    (translateY: number) => {
+      pendingTranslateYRef.current = translateY
+
+      if (dragFrameRef.current != null) return
+
+      dragFrameRef.current = requestAnimationFrame(() => {
+        dragFrameRef.current = null
+        flushPendingTranslateY()
+      })
+    },
+    [flushPendingTranslateY],
+  )
+
+  const syncToSnap = useCallback(
+    (targetSnap: DraggableBottomDrawerSnap) => {
+      applyTranslateY(metricsRef.current.snapOffsets[targetSnap])
+    },
+    [applyTranslateY],
+  )
+
+  const refreshDrawerMetrics = useCallback(() => {
+    metricsRef.current = getDraggableBottomDrawerMetrics(
+      getViewportHeightForDrawer(),
+    )
+
+    if (!isDraggingRef.current) {
+      syncToSnap(normalizedSnap)
+    }
+  }, [normalizedSnap, syncToSnap])
+
+  useLayoutEffect(() => {
+    refreshDrawerMetrics()
+  }, [refreshDrawerMetrics])
+
+  useLayoutEffect(() => {
+    if (!isDraggingRef.current) {
+      syncToSnap(normalizedSnap)
+    }
+  }, [normalizedSnap, syncToSnap])
+
+  useEffect(() => {
+    const visualViewport = window.visualViewport
+
+    visualViewport?.addEventListener("resize", refreshDrawerMetrics)
+    window.addEventListener("resize", refreshDrawerMetrics)
+
+    return () => {
+      visualViewport?.removeEventListener("resize", refreshDrawerMetrics)
+      window.removeEventListener("resize", refreshDrawerMetrics)
+    }
+  }, [refreshDrawerMetrics])
+
+  useEffect(() => {
+    return () => {
+      if (dragFrameRef.current != null) {
+        cancelAnimationFrame(dragFrameRef.current)
+      }
+    }
+  }, [])
+
+  const releasePointerCapture = useCallback(() => {
     const captureTarget = captureTargetRef.current
     const pointerId = activePointerIdRef.current
 
@@ -103,55 +242,193 @@ export function DraggableBottomDrawer({
     captureTargetRef.current = null
     activePointerIdRef.current = null
     startYRef.current = null
-    dragOffsetRef.current = 0
-    setIsDragging(false)
-    setDragY(0)
   }, [])
+
+  const settleDrawerAtTranslateY = useCallback(
+    (translateY: number, velocityY: number) => {
+      const metrics = metricsRef.current
+      const settledSnap = resolveSettledDraggableBottomDrawerSnap(
+        normalizedSnap,
+        translateY,
+        velocityY,
+        metrics,
+      )
+      const settledTranslateY = metrics.snapOffsets[settledSnap]
+
+      flushPendingTranslateY()
+      setDrawerTransitionEnabled(true)
+      applyTranslateY(settledTranslateY)
+
+      if (settledSnap !== normalizedSnap) {
+        onSnapChange(settledSnap)
+      }
+    },
+    [
+      applyTranslateY,
+      flushPendingTranslateY,
+      normalizedSnap,
+      onSnapChange,
+      setDrawerTransitionEnabled,
+    ],
+  )
+
+  const beginSheetDrag = useCallback(
+    (
+      event: React.PointerEvent<HTMLDivElement>,
+      startY = event.clientY,
+    ) => {
+      if (dragFrameRef.current != null) {
+        cancelAnimationFrame(dragFrameRef.current)
+        dragFrameRef.current = null
+      }
+
+      pendingTranslateYRef.current = null
+      startYRef.current = startY
+      startTranslateYRef.current = translateYRef.current
+      gestureStartTimeRef.current = performance.now()
+      captureTargetRef.current = event.currentTarget
+      activePointerIdRef.current = event.pointerId
+      isDraggingRef.current = true
+      setDrawerTransitionEnabled(false)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [setDrawerTransitionEnabled],
+  )
+
+  const updateSheetDrag = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (startYRef.current === null) return
+
+      const distance = event.clientY - startYRef.current
+      const rawTranslateY = startTranslateYRef.current + distance
+      const nextTranslateY = applyDraggableBottomDrawerRubberBand(
+        rawTranslateY,
+        metricsRef.current,
+      )
+
+      scheduleTranslateY(nextTranslateY)
+    },
+    [scheduleTranslateY],
+  )
+
+  const finishSheetDrag = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (activePointerIdRef.current !== event.pointerId) return
+
+      const currentTranslateY = clampDraggableBottomDrawerTranslateY(
+        translateYRef.current,
+        metricsRef.current,
+      )
+
+      const releaseVelocity = computeDraggableBottomDrawerReleaseVelocity(
+        startYRef.current ?? event.clientY,
+        event.clientY,
+        performance.now() - gestureStartTimeRef.current,
+      )
+
+      isDraggingRef.current = false
+      releasePointerCapture()
+      settleDrawerAtTranslateY(currentTranslateY, releaseVelocity)
+    },
+    [releasePointerCapture, settleDrawerAtTranslateY],
+  )
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return
 
-      startYRef.current = event.clientY
-      dragOffsetRef.current = 0
-      captureTargetRef.current = event.currentTarget
-      activePointerIdRef.current = event.pointerId
-      setIsDragging(true)
-      setDragY(0)
-      event.currentTarget.setPointerCapture(event.pointerId)
+      contentGestureRef.current = null
+      beginSheetDrag(event)
     },
-    [],
+    [beginSheetDrag],
   )
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (startYRef.current === null) return
+      if (!isDraggingRef.current) return
 
-      const distance = event.clientY - startYRef.current
-      const nextOffset = clampDraggableBottomDrawerOffset(normalizedSnap, distance)
-
-      dragOffsetRef.current = nextOffset
-      setDragY(nextOffset)
+      updateSheetDrag(event)
     },
-    [normalizedSnap],
+    [updateSheetDrag],
   )
 
   const handlePointerEnd = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (activePointerIdRef.current !== event.pointerId) return
+      contentGestureRef.current = null
 
-      const nextSnap = resolveDraggableBottomDrawerSnap(
-        normalizedSnap,
-        dragOffsetRef.current,
-      )
+      if (!isDraggingRef.current) return
 
-      if (nextSnap !== normalizedSnap) {
-        onSnapChange(nextSnap)
+      finishSheetDrag(event)
+    },
+    [finishSheetDrag],
+  )
+
+  const handleContentPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!allowContentDrag || event.button !== 0 || isContentHiddenAtPeek) {
+        return
       }
 
-      resetPointerGesture()
+      contentGestureRef.current = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startScrollTop: contentElementRef.current?.scrollTop ?? 0,
+        mode: "undecided",
+      }
     },
-    [normalizedSnap, onSnapChange, resetPointerGesture],
+    [allowContentDrag, isContentHiddenAtPeek],
+  )
+
+  const handleContentPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const gesture = contentGestureRef.current
+
+      if (!gesture || gesture.pointerId !== event.pointerId) {
+        return
+      }
+
+      if (gesture.mode === "undecided") {
+        const deltaY = event.clientY - gesture.startY
+        const scrollTop = contentElementRef.current?.scrollTop ?? gesture.startScrollTop
+
+        if (
+          !shouldDraggableBottomDrawerHandleContentDrag(
+            normalizedSnap,
+            scrollTop,
+            deltaY,
+          )
+        ) {
+          contentGestureRef.current = null
+          return
+        }
+
+        gesture.mode = "sheet"
+        beginSheetDrag(event, gesture.startY)
+      }
+
+      if (!isDraggingRef.current) return
+
+      updateSheetDrag(event)
+      event.preventDefault()
+    },
+    [beginSheetDrag, normalizedSnap, updateSheetDrag],
+  )
+
+  const handleContentPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const gesture = contentGestureRef.current
+
+      if (!gesture || gesture.pointerId !== event.pointerId) {
+        return
+      }
+
+      contentGestureRef.current = null
+
+      if (gesture.mode === "sheet" && isDraggingRef.current) {
+        finishSheetDrag(event)
+      }
+    },
+    [finishSheetDrag],
   )
 
   const dragHandleProps: DraggableBottomDrawerDragHandleProps = {
@@ -161,33 +438,35 @@ export function DraggableBottomDrawer({
     onPointerCancel: handlePointerEnd,
   }
 
-  const shouldHideContent = shouldHideDraggableBottomDrawerContent(
-    normalizedSnap,
-    hideContentWhenPeek,
-  )
-
   return (
     <aside
+      ref={asideRef}
       data-testid={testId}
+      data-snap={normalizedSnap}
       aria-label={ariaLabel}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 overflow-hidden rounded-t-2xl bg-white text-slate-950 shadow-2xl lg:hidden",
-        DRAGGABLE_BOTTOM_DRAWER_SNAP_HEIGHT_CLASS[normalizedSnap],
-        !isDragging && "transition-[height,transform] duration-200 ease-out",
+        "fixed inset-x-0 bottom-0 z-40 overflow-hidden rounded-t-2xl bg-white text-slate-950 shadow-2xl will-change-transform lg:hidden",
+        DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
         className,
       )}
-      style={{ transform: `translateY(${dragY}px)` }}
     >
       {header(dragHandleProps)}
 
-      {!shouldHideContent && (
-        <div
-          ref={contentRef}
-          className={cn("overflow-y-auto", contentClassName)}
-        >
-          {children}
-        </div>
-      )}
+      <div
+        ref={setContentNode}
+        aria-hidden={isContentHiddenAtPeek}
+        className={cn(
+          "overflow-y-auto overscroll-y-contain",
+          isContentHiddenAtPeek && "pointer-events-none invisible",
+          contentClassName,
+        )}
+        onPointerDown={handleContentPointerDown}
+        onPointerMove={handleContentPointerMove}
+        onPointerUp={handleContentPointerEnd}
+        onPointerCancel={handleContentPointerEnd}
+      >
+        {children}
+      </div>
     </aside>
   )
 }
