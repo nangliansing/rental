@@ -8,6 +8,7 @@ import type {
   SearchListing,
   SearchListingsBuilding,
 } from "@/features/map-search/types"
+import { parseAvailableAtFromApi } from "../utils/listingAvailability"
 
 export type ListingWithBuilding = SearchListing & {
   building: SearchListingsBuilding
@@ -284,6 +285,7 @@ const parseSearchListingFields = (
         })
       : [],
     isSavedByMe: readBoolean(listing.isSavedByMe),
+    availableAt: parseAvailableAtFromApi(listing.availableAt),
     description: readString(listing.description),
     listedBy,
     buildingId,

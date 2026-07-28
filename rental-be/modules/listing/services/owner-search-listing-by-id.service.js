@@ -7,6 +7,7 @@ import {
 } from "../../../shared/validators/index.js";
 
 import Listing from "../listing.model.js";
+import { serializeListingPayloadForApi } from "../utils/index.js";
 import { buildOwnerSearchListingByIdPipeline } from "../pipelines/index.js";
 import { buildOwnerListingAgentProfileQuery } from "./build-owner-listing-agent-profile-query.js";
 
@@ -55,8 +56,8 @@ export const ownerSearchListingByIdService = async ({
         throw new AppError("Listing not found", 404, "LISTING_NOT_FOUND");
     }
 
-    return {
+    return serializeListingPayloadForApi({
         agentProfile,
         listing,
-    };
+    });
 };

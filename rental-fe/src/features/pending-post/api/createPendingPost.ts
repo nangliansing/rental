@@ -2,6 +2,10 @@ import { ApiError, apiClient } from "@/lib/api-client";
 
 import type { BuildingFormValues } from "@/features/listing/components/BuildingForm";
 import type { ListingFormValues } from "@/features/listing/components/ListingForm";
+import {
+  parseListingAvailabilityFromApi,
+  serializeListingAvailabilityForApi,
+} from "@/features/listing/utils/listingAvailability";
 import type { UploadedMedia } from "@/features/uploads";
 
 export type PendingPostStatus =
@@ -61,14 +65,21 @@ type CreatePendingPostResponse = {
   data: PendingPost;
 };
 
+type CreatePendingPostListingPayload = Omit<
+  ListingFormValues,
+  "availabilityMode" | "availableFromDate"
+> & {
+  availableAt: string | null;
+};
+
 type CreatePendingPostPayload =
   | {
       existingBuildingId: string;
-      listing: ListingFormValues;
+      listing: CreatePendingPostListingPayload;
     }
   | {
       building: PendingPostBuildingSnapshot;
-      listing: ListingFormValues;
+      listing: CreatePendingPostListingPayload;
     };
 
 const PENDING_POST_STATUSES = new Set<PendingPostStatus>([
@@ -226,6 +237,7 @@ export const parseListing = (value: unknown): ListingFormValues => {
     facilities: readStringArray(listing.facilities),
     media: parseMediaArray(listing.media),
     description: readString(listing.description),
+    ...parseListingAvailabilityFromApi(listing.availableAt),
   };
 };
 
@@ -273,27 +285,17 @@ export const parseCreatePendingPostResponse = (value: unknown) => {
   return parsePendingPost(readRecord(value, "data"));
 };
 
-const buildListingPayload = (listing: ListingFormValues): ListingFormValues => {
+export const buildPendingPostListingApiPayload = (
+  listing: ListingFormValues,
+): CreatePendingPostListingPayload => {
+  const { availabilityMode, availableFromDate, ...listingFields } = listing;
+
   return {
-    visibility: listing.visibility,
-    isForeignerAccepted: listing.isForeignerAccepted,
-    isTM30Provided: listing.isTM30Provided,
-    rent: listing.rent,
-    deposit: listing.deposit,
-    moveInCost: listing.moveInCost,
-    electricRate: listing.electricRate,
-    waterRate: listing.waterRate,
-    bedroomCount: listing.bedroomCount,
-    bathroomCount: listing.bathroomCount,
-    kitchenType: listing.kitchenType,
-    size: listing.size,
-    contractMonths: listing.contractMonths,
-    occupancy: listing.occupancy,
-    isCookingAllowed: listing.isCookingAllowed,
-    isPetAllowed: listing.isPetAllowed,
-    facilities: listing.facilities,
-    media: listing.media,
-    description: listing.description,
+    ...listingFields,
+    availableAt: serializeListingAvailabilityForApi({
+      availabilityMode,
+      availableFromDate,
+    }),
   };
 };
 
@@ -316,7 +318,7 @@ const buildBuildingPayload = (
 const buildCreatePendingPostPayload = (
   input: CreatePendingPostInput,
 ): CreatePendingPostPayload => {
-  const listing = buildListingPayload(input.listing);
+  const listing = buildPendingPostListingApiPayload(input.listing);
 
   if ("existingBuildingId" in input) {
     return {

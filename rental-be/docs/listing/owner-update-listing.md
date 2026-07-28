@@ -52,7 +52,8 @@ Send only the fields that should change:
   "deposit": 28000,
   "visibility": "PUBLIC",
   "facilities": ["Air Conditioner", "Balcony"],
-  "description": "Updated listing description"
+  "description": "Updated listing description",
+  "availableAt": "2026-08-15"
 }
 ```
 
@@ -79,6 +80,29 @@ Send only the fields that should change:
 | `facilities` | array containing only supported listing facilities |
 | `media` | validated media array, maximum 20 items |
 | `description` | `null` or string, maximum 3000 characters; blank becomes `null` |
+| `availableAt` | `null` or a valid date; normalized to Thailand start of day |
+
+Response-field display guidance is shared in [`available-at-response.md`](./available-at-response.md).
+
+### `availableAt` Semantics
+
+| Sent value | Result |
+| --- | --- |
+| omitted | No change to the stored availability |
+| `null` | Set Flexible / unknown |
+| date string (for example `"2026-08-15"`) | Update to that calendar day |
+| empty string or invalid date | `422 VALIDATION_ERROR` |
+| same date already stored | `422 NO_VALID_CHANGE` |
+
+Rules:
+
+- Dates are normalized to the start of the calendar day in `Asia/Bangkok` (Thailand national time, UTC+7).
+- Omitting `availableAt` while updating other fields leaves availability unchanged.
+- To mark the room as available now, send today's Thailand date explicitly.
+- Display guidance for clients:
+  - `null` → Flexible
+  - date ≤ today (Thailand) → Available now
+  - date > today (Thailand) → Available from {date}
 
 Valid listing facilities:
 
@@ -283,6 +307,7 @@ Body:
     "facilities": ["Air Conditioner", "Balcony"],
     "media": [],
     "description": "Updated listing description",
+    "availableAt": "2026-08-14T17:00:00.000Z",
     "isDeleted": false,
     "deletedAt": null,
     "deletedBy": null,
@@ -345,6 +370,7 @@ bedroomCount must be an integer
 Invalid facilities: Swimming Pool
 media.0.publicId must be a string
 description must be at most 3000 characters
+availableAt must be a valid date
 ```
 
 ### Unknown Field
@@ -491,6 +517,10 @@ Automated MongoDB integration suite: `38/38` passed.
 all editable fields
 partial update preservation
 media update
+availableAt null flexible update
+availableAt date update
+availableAt omit leaves value unchanged
+availableAt unchanged date
 same scalar value
 same array value
 empty body

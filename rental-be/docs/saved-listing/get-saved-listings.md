@@ -4,6 +4,8 @@ Get the authenticated user's saved listings.
 
 This endpoint is user-scoped. The caller cannot request another user's saved listings.
 
+Live nested listings include `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
 ## Endpoint
 
 ```http
@@ -117,6 +119,7 @@ Body:
             }
           ],
           "description": "Pending post using an existing building for approve test.",
+          "availableAt": "2026-08-14T17:00:00.000Z",
           "listedBy": "6a5638bafc6d6328c9e1b281",
           "buildingId": "6a57c6da947d934e03495b7a",
           "building": {

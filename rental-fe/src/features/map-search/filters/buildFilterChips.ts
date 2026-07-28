@@ -1,3 +1,5 @@
+import { formatDateOnlyLabel } from "@/shared/dates/calendarDate"
+
 import type { FilterChip, MapSearchFilters } from "./types"
 
 const formatRent = (value: number) => {
@@ -123,6 +125,14 @@ export function buildFilterChips(filters: MapSearchFilters): FilterChip[] {
             key: "isPetAllowed",
             label: "Pet allowed",
             icon: "pet",
+        })
+    }
+
+    if (filters.availableBy !== undefined) {
+        const dateLabel = formatDateOnlyLabel(filters.availableBy)
+        chips.push({
+            key: "availableBy",
+            label: dateLabel ? `By ${dateLabel}` : "Available by date",
         })
     }
 

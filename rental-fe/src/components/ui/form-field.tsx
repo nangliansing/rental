@@ -7,6 +7,7 @@ import {
 } from "react"
 
 import { cn } from "@/lib/utils"
+import { hasReactNodeContent } from "@/shared/utils/reactNode"
 
 type FormControlProps = {
   id?: string
@@ -25,10 +26,6 @@ type FormFieldProps = {
   className?: string
 }
 
-function hasContent(value: ReactNode) {
-  return value !== null && value !== undefined && value !== false && value !== ""
-}
-
 function FormField({
   label,
   children,
@@ -41,8 +38,8 @@ function FormField({
   const generatedId = useId()
   const child = isValidElement<FormControlProps>(children) ? children : null
   const controlId = child?.props.id ?? id ?? generatedId
-  const hasDescription = hasContent(description)
-  const hasError = hasContent(error)
+  const hasDescription = hasReactNodeContent(description)
+  const hasError = hasReactNodeContent(error)
   const descriptionId = hasDescription ? `${controlId}-description` : undefined
   const errorId = hasError ? `${controlId}-error` : undefined
   const describedBy = [
@@ -64,7 +61,7 @@ function FormField({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <label htmlFor={controlId} className="block text-sm font-medium text-slate-950">
+      <label htmlFor={controlId} className="block text-sm font-semibold text-slate-950">
         {label}
         {required && (
           <span className="text-red-600" aria-hidden="true">

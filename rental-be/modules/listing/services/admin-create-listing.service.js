@@ -6,6 +6,7 @@ import { updateBuildingRentSummaryService } from "../../building/services/index.
 import { buildCreateListingRecord } from "../mappers/index.js";
 import Building from "../../building/building.model.js";
 import Listing from "../listing.model.js";
+import { serializeListingDocumentForApi } from "../utils/index.js";
 
 export const adminCreateListingService = async (
     body,
@@ -39,5 +40,5 @@ export const adminCreateListingService = async (
 
     await updateBuildingRentSummaryService(record.buildingId, session);
 
-    return listing;
+    return serializeListingDocumentForApi(listing);
 };

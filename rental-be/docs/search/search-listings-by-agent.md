@@ -4,6 +4,8 @@ Fetch public listings listed by one public agent profile.
 
 Authentication is optional and is only used to calculate listing `isSavedByMe`.
 
+Each returned listing includes `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
 ## Endpoint
 
 ```http
@@ -155,6 +157,7 @@ Body:
           }
         ],
         "description": "Pending post using an existing building for approve test.",
+        "availableAt": "2026-08-14T17:00:00.000Z",
         "isDeleted": false,
         "deletedAt": null,
         "deletedBy": null,

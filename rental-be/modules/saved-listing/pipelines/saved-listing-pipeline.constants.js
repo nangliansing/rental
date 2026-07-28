@@ -1,3 +1,5 @@
+import { LISTING_DETAILS_MONGO_PROJECT } from "../../listing/constants/listing-details.projection.js";
+
 export const SAVED_LISTING_SORT = Object.freeze({
   createdAt: -1,
   _id: -1,
@@ -5,26 +7,8 @@ export const SAVED_LISTING_SORT = Object.freeze({
 
 export const LIVE_SAVED_LISTING_PROJECT = Object.freeze({
   _id: 1,
-  visibility: 1,
+  ...LISTING_DETAILS_MONGO_PROJECT,
   isDeleted: 1,
-  isForeignerAccepted: 1,
-  isTM30Provided: 1,
-  rent: 1,
-  deposit: 1,
-  moveInCost: 1,
-  electricRate: 1,
-  waterRate: 1,
-  bedroomCount: 1,
-  bathroomCount: 1,
-  kitchenType: 1,
-  size: 1,
-  contractMonths: 1,
-  occupancy: 1,
-  isCookingAllowed: 1,
-  isPetAllowed: 1,
-  facilities: 1,
-  media: 1,
-  description: 1,
   listedBy: 1,
   buildingId: 1,
   building: 1,

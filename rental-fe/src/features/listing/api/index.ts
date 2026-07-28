@@ -37,6 +37,7 @@ export {
   useSearchOwnerListings,
 } from "./useSearchOwnerListings"
 export {
+  buildOwnerListingUpdateApiBody,
   parseUpdateOwnerListingResponse,
   updateOwnerListing,
   type UpdatedOwnerListing,

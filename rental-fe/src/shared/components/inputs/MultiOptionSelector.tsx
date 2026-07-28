@@ -71,7 +71,7 @@ export function MultiOptionSelector({
       className={cn("m-0 min-w-0 border-0 p-0", className)}
     >
       {normalizedLabel && (
-        <legend className="mb-2 p-0 text-sm font-medium text-slate-950">
+        <legend className="mb-2 p-0 text-sm font-semibold text-slate-950">
           {normalizedLabel}
           {required && (
             <span className="text-red-600" aria-hidden="true">

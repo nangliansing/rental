@@ -9,6 +9,7 @@ import {
 } from "../../../shared/validators/index.js";
 
 import Listing from "../listing.model.js";
+import { serializeListingPayloadForApi } from "../utils/index.js";
 import { buildOwnerSearchListingsPipeline } from "../pipelines/index.js";
 import { buildOwnerListingAgentProfileQuery } from "./build-owner-listing-agent-profile-query.js";
 import {
@@ -80,9 +81,9 @@ export const ownerSearchListingsService = async ({
     listingsQuery,
   ]);
 
-  return {
+  return serializeListingPayloadForApi({
     agentProfile,
     listings: result?.data ?? [],
     pagination: normalizePagination(result?.pagination, page, limit),
-  };
+  });
 };

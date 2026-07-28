@@ -4,6 +4,10 @@ Search active buildings inside the current map viewport.
 
 Authentication is optional and is only used to calculate listing `isSavedByMe`.
 
+Nested listings include `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
+Date search filter: `availableBy`. See [`../listing/available-by-filter.md`](../listing/available-by-filter.md).
+
 ## Endpoint
 
 ```http
@@ -92,6 +96,7 @@ MongoDB `location.coordinates` in the response uses GeoJSON order: `[lng, lat]`.
   "isTM30Provided": true,
   "isCookingAllowed": true,
   "isPetAllowed": true,
+  "availableBy": "2026-08-15",
   "supportLanguages": ["English"],
   "agentProfileIds": ["6a5669f81a9630e315e059a7"],
   "includeBuildingsWithoutMatchingListings": false
@@ -106,6 +111,7 @@ Filter behavior:
 - `occupancy` means listing occupancy must be greater than or equal to the requested value.
 - `bedroomCount: 0` means exactly studio/no bedroom.
 - `bedroomCount > 0` means greater than or equal to the requested value.
+- `availableBy` keeps Flexible listings and listings available on or before that Thailand date. See [`../listing/available-by-filter.md`](../listing/available-by-filter.md).
 - `supportLanguages` uses OR matching.
 - `includeBuildingsWithoutMatchingListings: true` can return active buildings with `listings: []`.
 
@@ -171,6 +177,7 @@ Body:
             }
           ],
           "description": "Pet friendly condo fixture.",
+          "availableAt": null,
           "isDeleted": false,
           "deletedAt": null,
           "deletedBy": null,

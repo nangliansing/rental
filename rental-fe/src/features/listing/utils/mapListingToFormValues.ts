@@ -1,9 +1,12 @@
 import type { OwnerListing } from "../api"
 import type { ListingFormValues } from "../components/ListingForm"
+import { parseListingAvailabilityFromApi } from "./listingAvailability"
 
 export function mapListingToFormValues(
   listing: OwnerListing,
 ): ListingFormValues {
+  const availability = parseListingAvailabilityFromApi(listing.availableAt)
+
   return {
     visibility: listing.visibility,
     isForeignerAccepted: listing.isForeignerAccepted,
@@ -37,5 +40,7 @@ export function mapListingToFormValues(
         }))
       : [],
     description: listing.description ?? "",
+    availabilityMode: availability.availabilityMode,
+    availableFromDate: availability.availableFromDate,
   }
 }

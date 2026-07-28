@@ -68,6 +68,11 @@ export function removeFilterChip(
         return nextFilters
     }
 
+    if (chip.key === "availableBy") {
+        delete nextFilters.availableBy
+        return nextFilters
+    }
+
     if (chip.key.startsWith("listingFacilities:")) {
         const facility = chip.key.replace("listingFacilities:", "")
         nextFilters.listingFacilities = removeArrayValue(

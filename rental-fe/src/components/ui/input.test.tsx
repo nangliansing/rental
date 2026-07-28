@@ -79,7 +79,7 @@ describe("Input", () => {
 
     expect(input).toBeDisabled()
     expect(input).toHaveAttribute("aria-invalid", "true")
-    expect(input).toHaveClass("aria-invalid:border-destructive")
+    expect(input).toHaveClass("aria-invalid:border-red-500")
   })
 
   it("merges caller classes over conflicting defaults", () => {

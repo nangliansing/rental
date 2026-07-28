@@ -5,6 +5,7 @@ import { validateNullableObject } from "../../../shared/validators/index.js";
 
 import AgentProfile from "../../agent/agent-profile.model.js";
 import Listing from "../../listing/listing.model.js";
+import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
 import User from "../../user/user.model.js";
 import { USER_STATUSES } from "../../user/user.constants.js";
 
@@ -82,7 +83,7 @@ export const searchListingsByAgentService = async ({
     const safeAgentProfile = agentProfile.toObject();
     delete safeAgentProfile.userId;
 
-    return {
+    return serializeListingPayloadForApi({
         agentProfile: safeAgentProfile,
         listings: result?.data ?? [],
         pagination: normalizePagination(
@@ -90,5 +91,5 @@ export const searchListingsByAgentService = async ({
             params.page,
             params.limit
         ),
-    };
+    });
 };
