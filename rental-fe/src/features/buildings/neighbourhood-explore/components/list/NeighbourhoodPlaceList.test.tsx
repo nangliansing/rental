@@ -126,7 +126,7 @@ describe("NeighbourhoodPlaceList", () => {
     })
 
     expect(listRef.current?.scrollToPlace("place-2")).toBe(true)
-    expect(scrollTo).toHaveBeenCalledWith({ top: 180, behavior: "smooth" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 200, behavior: "auto" })
   })
 
   it("scrolls using an external scroll root when provided", () => {
@@ -184,6 +184,6 @@ describe("NeighbourhoodPlaceList", () => {
     })
 
     expect(listRef.current?.scrollToPlace("place-2")).toBe(true)
-    expect(scrollTo).toHaveBeenCalledWith({ top: 180, behavior: "smooth" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 200, behavior: "auto" })
   })
 })

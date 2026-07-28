@@ -1,6 +1,7 @@
-import { useRef } from "react"
+import { useCallback, useRef } from "react"
 
 import { useNeighbourhoodExploreData } from "../../NeighbourhoodExploreContext"
+import { SELECT_PLACE_WITHOUT_LIST_SCROLL } from "../../context/NeighbourhoodExploreSelectionContext"
 import { useNeighbourhoodExplorePlaceSelection } from "../../hooks/useNeighbourhoodExplorePlaceSelection"
 import { NeighbourhoodExploreListPlaceSync } from "../sync/NeighbourhoodExploreListPlaceSync"
 import {
@@ -14,7 +15,6 @@ type NeighbourhoodPlaceListPanelProps = {
   header?: React.ReactNode
   isListScrollEnabled?: boolean
   scrollRootRef?: React.RefObject<HTMLElement | null>
-  scrollSyncKey?: string | number | boolean
 }
 
 export function NeighbourhoodPlaceListPanel({
@@ -23,18 +23,22 @@ export function NeighbourhoodPlaceListPanel({
   header,
   isListScrollEnabled = true,
   scrollRootRef,
-  scrollSyncKey,
 }: NeighbourhoodPlaceListPanelProps) {
   const { visiblePlaces } = useNeighbourhoodExploreData()
   const { selectedPlaceId, selectPlace } = useNeighbourhoodExplorePlaceSelection()
   const listRef = useRef<NeighbourhoodPlaceListHandle>(null)
+  const handlePlaceSelect = useCallback(
+    (placeId: string) => {
+      selectPlace(placeId, SELECT_PLACE_WITHOUT_LIST_SCROLL)
+    },
+    [selectPlace],
+  )
 
   return (
     <>
       <NeighbourhoodExploreListPlaceSync
         listRef={listRef}
         isListScrollEnabled={isListScrollEnabled}
-        syncKey={scrollSyncKey}
       />
       <div className={className}>
         {header}
@@ -42,7 +46,7 @@ export function NeighbourhoodPlaceListPanel({
           ref={listRef}
           places={visiblePlaces}
           activePlaceId={selectedPlaceId}
-          onPlaceSelect={selectPlace}
+          onPlaceSelect={handlePlaceSelect}
           listClassName={listClassName}
           scrollRootRef={scrollRootRef}
         />

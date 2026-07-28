@@ -44,6 +44,7 @@ export type DraggableBottomDrawerDragHandleProps = {
 type DraggableBottomDrawerProps = {
   snap: DraggableBottomDrawerSnap
   onSnapChange: (snap: DraggableBottomDrawerSnap) => void
+  onSnapSettled?: () => void
   header: (dragHandle: DraggableBottomDrawerDragHandleProps) => ReactNode
   children: ReactNode
   className?: string
@@ -111,9 +112,20 @@ function assignRef<T>(ref: RefObject<T | null> | undefined, value: T | null) {
   }
 }
 
+function hasActiveTransformTransition(element: HTMLElement) {
+  const { transitionDuration, transitionProperty } = getComputedStyle(element)
+
+  return (
+    transitionProperty.includes("transform") &&
+    transitionDuration !== "0s" &&
+    transitionDuration.split(",").every((duration) => duration.trim() !== "0s")
+  )
+}
+
 export function DraggableBottomDrawer({
   snap,
   onSnapChange,
+  onSnapSettled,
   header,
   children,
   className,
@@ -144,7 +156,15 @@ export function DraggableBottomDrawer({
   const activePointerIdRef = useRef<number | null>(null)
   const dragFrameRef = useRef<number | null>(null)
   const contentGestureRef = useRef<ContentGestureState | null>(null)
+  const onSnapSettledRef = useRef(onSnapSettled)
+  onSnapSettledRef.current = onSnapSettled
   const scrollEndSpacerPx = metrics.scrollEndSpacerPx[normalizedSnap]
+
+  const notifySnapSettled = useCallback(() => {
+    if (!isDraggingRef.current) {
+      onSnapSettledRef.current?.()
+    }
+  }, [])
 
   const setContentNode = useCallback(
     (node: HTMLDivElement | null) => {
@@ -218,10 +238,42 @@ export function DraggableBottomDrawer({
   }, [refreshDrawerMetrics])
 
   useLayoutEffect(() => {
-    if (!isDraggingRef.current) {
-      syncToSnap(normalizedSnap)
+    if (isDraggingRef.current) {
+      return
     }
-  }, [normalizedSnap, syncToSnap])
+
+    syncToSnap(normalizedSnap)
+
+    const element = asideRef.current
+    if (!element || !onSnapSettledRef.current) {
+      return
+    }
+
+    if (!hasActiveTransformTransition(element)) {
+      notifySnapSettled()
+    }
+  }, [normalizedSnap, notifySnapSettled, syncToSnap])
+
+  useEffect(() => {
+    const element = asideRef.current
+    if (!element) {
+      return
+    }
+
+    const handleTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== element || event.propertyName !== "transform") {
+        return
+      }
+
+      notifySnapSettled()
+    }
+
+    element.addEventListener("transitionend", handleTransitionEnd)
+
+    return () => {
+      element.removeEventListener("transitionend", handleTransitionEnd)
+    }
+  }, [notifySnapSettled])
 
   useEffect(() => {
     const visualViewport = window.visualViewport

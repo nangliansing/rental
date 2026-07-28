@@ -8,6 +8,7 @@ import {
 import {
   NeighbourhoodExploreSelectionContext,
   type NeighbourhoodExploreSelectionContextValue,
+  type SelectPlaceOptions,
 } from "./context/NeighbourhoodExploreSelectionContext"
 
 type NeighbourhoodExploreProviderProps = {
@@ -16,18 +17,35 @@ type NeighbourhoodExploreProviderProps = {
   children: ReactNode
 }
 
+type PlaceSelectionState = {
+  placeId: string | null
+  revision: number
+  scrollIntoView: boolean
+}
+
+const INITIAL_PLACE_SELECTION: PlaceSelectionState = {
+  placeId: null,
+  revision: 0,
+  scrollIntoView: true,
+}
+
 export function NeighbourhoodExploreProvider({
   buildingId,
   enabled = true,
   children,
 }: NeighbourhoodExploreProviderProps) {
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
-  const [selectedPlaceRevision, setSelectedPlaceRevision] = useState(0)
+  const [placeSelection, setPlaceSelection] = useState(INITIAL_PLACE_SELECTION)
 
-  const selectPlace = useCallback((placeId: string | null) => {
-    setSelectedPlaceId(placeId)
-    setSelectedPlaceRevision((revision) => revision + 1)
-  }, [])
+  const selectPlace = useCallback(
+    (placeId: string | null, options?: SelectPlaceOptions) => {
+      setPlaceSelection((current) => ({
+        placeId,
+        revision: current.revision + 1,
+        scrollIntoView: options?.scrollIntoView ?? true,
+      }))
+    },
+    [],
+  )
 
   const {
     neighbourhood,
@@ -46,22 +64,15 @@ export function NeighbourhoodExploreProvider({
     enabled,
   })
 
-  const effectiveSelectedPlaceId = useMemo(() => {
-    if (!selectedPlaceId) {
+  const selectedPlace = useMemo(() => {
+    if (!placeSelection.placeId) {
       return null
     }
 
-    return visiblePlaces.some((place) => place.id === selectedPlaceId)
-      ? selectedPlaceId
-      : null
-  }, [selectedPlaceId, visiblePlaces])
-
-  const selectedPlace = useMemo(
-    () =>
-      visiblePlaces.find((place) => place.id === effectiveSelectedPlaceId) ??
-      null,
-    [effectiveSelectedPlaceId, visiblePlaces],
-  )
+    return (
+      visiblePlaces.find((place) => place.id === placeSelection.placeId) ?? null
+    )
+  }, [placeSelection.placeId, visiblePlaces])
 
   const isInitialLoading = isPending && !neighbourhood
   const isInitialError = isError && !neighbourhood
@@ -106,12 +117,13 @@ export function NeighbourhoodExploreProvider({
 
   const selectionValue = useMemo(
     (): NeighbourhoodExploreSelectionContextValue => ({
-      selectedPlaceId: effectiveSelectedPlaceId,
+      selectedPlaceId: selectedPlace?.id ?? null,
       selectedPlace,
-      selectedPlaceRevision,
+      selectedPlaceRevision: placeSelection.revision,
+      shouldScrollSelectedPlaceIntoView: placeSelection.scrollIntoView,
       selectPlace,
     }),
-    [effectiveSelectedPlaceId, selectedPlace, selectedPlaceRevision, selectPlace],
+    [placeSelection, selectedPlace, selectPlace],
   )
 
   return (

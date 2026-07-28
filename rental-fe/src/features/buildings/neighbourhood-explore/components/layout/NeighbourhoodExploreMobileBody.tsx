@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
+import { cn } from "@/lib/utils"
 import {
   DraggableBottomDrawer,
   DraggableBottomDrawerDragRegion,
@@ -12,15 +13,25 @@ import { NeighbourhoodExploreMapStack } from "./NeighbourhoodExploreMapStack"
 
 export function NeighbourhoodExploreMobileBody() {
   const [snap, setSnap] = useState<DraggableBottomDrawerSnap>("half")
+  const [isDrawerSettled, setIsDrawerSettled] = useState(true)
   const { selectedPlaceId } = useNeighbourhoodExploreSelection()
   const listScrollRootRef = useRef<HTMLDivElement>(null)
-  const isListScrollEnabled = snap !== "peek"
+  const isDrawerExpanded = snap !== "peek"
+
+  const handleSnapChange = useCallback((nextSnap: DraggableBottomDrawerSnap) => {
+    setIsDrawerSettled(false)
+    setSnap(nextSnap)
+  }, [])
+
+  const handleSnapSettled = useCallback(() => {
+    setIsDrawerSettled(true)
+  }, [])
 
   useEffect(() => {
     if (selectedPlaceId && snap === "peek") {
-      setSnap("half")
+      handleSnapChange("half")
     }
-  }, [selectedPlaceId, snap])
+  }, [handleSnapChange, selectedPlaceId, snap])
 
   return (
     <div className="relative min-h-0 flex-1 bg-slate-50">
@@ -28,10 +39,16 @@ export function NeighbourhoodExploreMobileBody() {
 
       <DraggableBottomDrawer
         snap={snap}
-        onSnapChange={setSnap}
+        onSnapChange={handleSnapChange}
+        onSnapSettled={handleSnapSettled}
         testId="neighbourhood-explore-results-drawer"
         ariaLabel="Nearby places"
         contentRef={listScrollRootRef}
+        contentClassName={cn(
+          isDrawerExpanded &&
+            !isDrawerSettled &&
+            "pointer-events-none invisible",
+        )}
         header={(dragHandle) => (
           <DraggableBottomDrawerDragRegion
             dragHandle={dragHandle}
@@ -44,8 +61,7 @@ export function NeighbourhoodExploreMobileBody() {
         <NeighbourhoodPlaceListPanel
           className="min-h-0"
           scrollRootRef={listScrollRootRef}
-          scrollSyncKey={snap}
-          isListScrollEnabled={isListScrollEnabled}
+          isListScrollEnabled={isDrawerExpanded}
         />
       </DraggableBottomDrawer>
     </div>

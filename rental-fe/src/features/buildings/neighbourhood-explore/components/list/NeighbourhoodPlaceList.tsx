@@ -11,7 +11,10 @@ import {
 import { cn } from "@/lib/utils"
 
 import type { NeighbourhoodPlace } from "../../../api/getBuildingNeighbourhood"
-import { scrollElementIntoViewIfNeeded } from "../../utils/scrollElementIntoViewIfNeeded"
+import {
+  NEIGHBOURHOOD_ACTIVE_PLACE_SCROLL_OPTIONS,
+  scrollElementIntoViewIfNeeded,
+} from "../../utils/scrollElementIntoViewIfNeeded"
 import { NeighbourhoodPlaceListItem } from "./NeighbourhoodPlaceListItem"
 
 export type NeighbourhoodPlaceListHandle = {
@@ -84,7 +87,11 @@ export const NeighbourhoodPlaceList = memo(
               return false
             }
 
-            return scrollElementIntoViewIfNeeded(item, container)
+            return scrollElementIntoViewIfNeeded(
+              item,
+              container,
+              NEIGHBOURHOOD_ACTIVE_PLACE_SCROLL_OPTIONS,
+            )
           },
         }),
         [scrollRootRef],

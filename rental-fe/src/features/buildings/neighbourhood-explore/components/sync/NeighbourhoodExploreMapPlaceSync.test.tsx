@@ -63,6 +63,7 @@ describe("NeighbourhoodExploreMapPlaceSync", () => {
       selectedPlaceId: selectedPlace.id,
       selectedPlace,
       selectedPlaceRevision: 1,
+      shouldScrollSelectedPlaceIntoView: true,
       selectPlace: vi.fn(),
     }
 
@@ -89,6 +90,7 @@ describe("NeighbourhoodExploreMapPlaceSync", () => {
       selectedPlaceId: selectedPlace.id,
       selectedPlace,
       selectedPlaceRevision: 1,
+      shouldScrollSelectedPlaceIntoView: true,
       selectPlace: vi.fn(),
     })
 
@@ -103,6 +105,7 @@ describe("NeighbourhoodExploreMapPlaceSync", () => {
       selectedPlaceId: selectedPlace.id,
       selectedPlace,
       selectedPlaceRevision: 1,
+      shouldScrollSelectedPlaceIntoView: true,
       selectPlace: vi.fn(),
     })
 
@@ -125,6 +128,7 @@ describe("NeighbourhoodExploreMapPlaceSync", () => {
       selectedPlaceId: selectedPlace.id,
       selectedPlace,
       selectedPlaceRevision: 1,
+      shouldScrollSelectedPlaceIntoView: true,
       selectPlace: vi.fn(),
     }
 

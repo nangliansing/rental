@@ -38,8 +38,8 @@ export function useNeighbourhoodExploreData(): NeighbourhoodExploreDataContextVa
  * Shared active-place state for neighbourhood explore.
  *
  * Interaction contract:
- * - Map pins and list rows call `selectPlace(id)` — they never talk to each other directly.
- * - `NeighbourhoodExploreListPlaceSync` scrolls the active list item into view when needed.
+ * - Map pins call `selectPlace(id)`; list rows use `SELECT_PLACE_WITHOUT_LIST_SCROLL`.
+ * - `NeighbourhoodExploreListPlaceSync` scrolls the active list item into view for map selections.
  * - `NeighbourhoodExploreMapPlaceSync` pans the map to the active pin when needed.
  *
  * Both sync helpers no-op when the target is already visible.
