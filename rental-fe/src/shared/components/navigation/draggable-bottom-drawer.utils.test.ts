@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest"
 
 import {
   applyDraggableBottomDrawerRubberBand,
+  areDraggableBottomDrawerMetricsEqual,
   clampDraggableBottomDrawerTranslateY,
   DRAGGABLE_BOTTOM_DRAWER_DEFAULT_VIEWPORT_HEIGHT,
   DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,
   DRAGGABLE_BOTTOM_DRAWER_SNAPS,
   computeDraggableBottomDrawerReleaseVelocity,
   getDraggableBottomDrawerMetrics,
+  getDraggableBottomDrawerScrollEndSpacerPx,
   getNextDraggableBottomDrawerSnap,
   isDraggableBottomDrawerSnap,
   normalizeDraggableBottomDrawerSnap,
@@ -51,6 +53,37 @@ describe("draggable-bottom-drawer.utils", () => {
         half: 320,
         peek: 592,
       })
+      expect(metrics.scrollEndSpacerPx).toEqual({
+        full: 64,
+        half: 384,
+        peek: 656,
+      })
+    })
+  })
+
+  describe("getDraggableBottomDrawerScrollEndSpacerPx", () => {
+    it("reads precomputed spacer values from metrics", () => {
+      const metrics = getDraggableBottomDrawerMetrics(800)
+
+      expect(getDraggableBottomDrawerScrollEndSpacerPx("full", metrics)).toBe(64)
+      expect(getDraggableBottomDrawerScrollEndSpacerPx("half", metrics)).toBe(384)
+      expect(getDraggableBottomDrawerScrollEndSpacerPx("peek", metrics)).toBe(656)
+    })
+  })
+
+  describe("areDraggableBottomDrawerMetricsEqual", () => {
+    it("returns true for equivalent metrics", () => {
+      const left = getDraggableBottomDrawerMetrics(800)
+      const right = getDraggableBottomDrawerMetrics(800)
+
+      expect(areDraggableBottomDrawerMetricsEqual(left, right)).toBe(true)
+    })
+
+    it("returns false when snap offsets differ", () => {
+      const left = getDraggableBottomDrawerMetrics(800)
+      const right = getDraggableBottomDrawerMetrics(900)
+
+      expect(areDraggableBottomDrawerMetricsEqual(left, right)).toBe(false)
     })
   })
 
