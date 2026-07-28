@@ -110,4 +110,18 @@ describe("map search URL state", () => {
 
     expect(parseMapSearchUrl(params, {}).filters).toEqual({ minRent: 2_000 })
   })
+
+  it("keeps valid availableBy and drops invalid date filters", () => {
+    const validParams = new URLSearchParams({
+      filters: JSON.stringify({ availableBy: "2026-08-15" }),
+    })
+    const invalidParams = new URLSearchParams({
+      filters: JSON.stringify({ availableBy: "not-a-date" }),
+    })
+
+    expect(parseMapSearchUrl(validParams, {}).filters).toEqual({
+      availableBy: "2026-08-15",
+    })
+    expect(parseMapSearchUrl(invalidParams, {}).filters).toEqual({})
+  })
 })

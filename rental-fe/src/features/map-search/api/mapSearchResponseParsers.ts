@@ -13,6 +13,7 @@ import {
   readString,
   readStringArray,
 } from "@/features/listing/api/listingResponseParsers"
+import { parseAvailableAtFromApi } from "@/features/listing/utils/listingAvailability"
 
 import type {
   BuildingListing,
@@ -64,6 +65,7 @@ const parseBuildingListing = (value: unknown): BuildingListing => {
         })
       : [],
     isSavedByMe: readBoolean(listing.isSavedByMe),
+    availableAt: parseAvailableAtFromApi(listing.availableAt),
     updatedAt: readString(listing.updatedAt),
   }
 }
@@ -175,6 +177,7 @@ const parseListingInBuilding = (value: unknown): SearchListing => {
         })
       : [],
     isSavedByMe: readBoolean(listing.isSavedByMe),
+    availableAt: parseAvailableAtFromApi(listing.availableAt),
     description: readString(listing.description),
     listedBy,
     buildingId,

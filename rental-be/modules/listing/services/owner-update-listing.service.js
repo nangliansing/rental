@@ -9,6 +9,7 @@ import { AppError } from "../../../shared/errors/app-error.js";
 import { updateBuildingRentSummaryService } from "../../building/services/index.js";
 import { buildOwnerUpdateListingRecord } from "../mappers/index.js";
 import Listing from "../listing.model.js";
+import { serializeListingDocumentForApi } from "../utils/index.js";
 
 const updateOwnerListing = async ({ listingId, actorId, body, session }) => {
   const ownerListingFilter = {
@@ -57,7 +58,7 @@ const updateOwnerListing = async ({ listingId, actorId, body, session }) => {
     await updateBuildingRentSummaryService(listing.buildingId, session);
   }
 
-  return listing;
+  return serializeListingDocumentForApi(listing);
 };
 
 export const ownerUpdateListingService = async ({

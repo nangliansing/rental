@@ -6,6 +6,7 @@ import {
 import { normalizePagination } from "../../../shared/utils/index.js";
 
 import SavedListing from "../saved-listing.model.js";
+import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
 import { buildSearchSavedListingsParams } from "../saved-listing.validation.js";
 import { buildSearchSavedListingsPipeline } from "../pipelines/index.js";
 
@@ -33,12 +34,12 @@ export const searchSavedListingsService = async ({
 
   const [result] = await savedListingsQuery;
 
-  return {
+  return serializeListingPayloadForApi({
     savedListings: result?.data ?? [],
     pagination: normalizePagination(
       result?.pagination,
       params.page,
       params.limit,
     ),
-  };
+  });
 };

@@ -4,6 +4,8 @@ List the current authenticated active agent's non-deleted pending posts.
 
 Unverified agents can use this endpoint. `AgentProfile.isVerified` and `AgentProfile.isOnline` are display-only fields for this flow.
 
+Each pending post `listing` snapshot includes `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
 ## Endpoint
 
 ```http
@@ -100,7 +102,8 @@ Body:
             "isCover": true
           }
         ],
-        "description": null
+        "description": null,
+        "availableAt": null
       },
       "reviewNote": null,
       "reviewedBy": null,

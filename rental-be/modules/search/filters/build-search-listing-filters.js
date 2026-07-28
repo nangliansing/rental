@@ -11,6 +11,7 @@ import {
     validateIsPetAllowed,
     validateFacilities as validateListingFacilities,
     validateRent,
+    validateAvailableBy,
 } from "../../listing/listing.validation.js";
 import { AppError } from "../../../shared/errors/app-error.js";
 import { setArrayIfNotEmpty } from "./helpers/index.js";
@@ -78,6 +79,11 @@ export const buildSearchListingFilters = (body) => {
             "listingFacilities",
             validateListingFacilities(body.listingFacilities)
         );
+    }
+
+    // omitted/null => no date filter; valid date => room must be available by that day
+    if (body.availableBy !== undefined && body.availableBy !== null) {
+        filters.availableBy = validateAvailableBy(body.availableBy);
     }
 
     return filters;

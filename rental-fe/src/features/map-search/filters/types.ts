@@ -16,6 +16,7 @@ export type MapSearchFilters = {
   isTM30Provided?: boolean
   isCookingAllowed?: boolean
   isPetAllowed?: boolean
+  availableBy?: string
   supportLanguages?: string[]
   agentProfileIds?: string[]
   listerIds?: string[]

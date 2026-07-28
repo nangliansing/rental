@@ -8,8 +8,9 @@ import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { BooleanOptionSelector } from "@/shared/components/inputs/BooleanOptionSelector"
 import { MultiOptionSelector } from "@/shared/components/inputs/MultiOptionSelector"
+import { SingleOptionSelector } from "@/shared/components/inputs/SingleOptionSelector"
+import { getHorizontalScrollRowClass } from "@/shared/components/layout/horizontalScrollRow"
 import {
-  CONTRACT_MONTH_OPTIONS,
   KITCHEN_TYPE_OPTIONS,
   LISTING_FACILITY_OPTIONS,
   OCCUPANCY_OPTIONS,
@@ -19,6 +20,15 @@ import type { UploadedMedia } from "../../uploads/api/uploadToCloudinary"
 import { MediaUploader } from "../../uploads/components/MediaUploader"
 import type { MediaUploaderState } from "../../uploads/components/MediaUploader"
 import type { ListingVisibility } from "../types"
+import {
+  areAvailableAtValuesEqual,
+  isListingAvailabilityFormValid,
+  serializeListingAvailabilityForApi,
+  type ListingAvailabilityMode,
+} from "../utils/listingAvailability"
+import { ListingAvailabilityField } from "./ListingAvailabilityField"
+import { ListingContractField } from "./ListingContractField"
+import { ListingVisibilityField } from "./ListingVisibilityField"
 import {
   areStringArraysEqual,
   getFormErrorMessage,
@@ -51,12 +61,22 @@ export type ListingFormValues = {
   facilities: string[]
   media: UploadedMedia[]
   description: string
+  availabilityMode: ListingAvailabilityMode
+  availableFromDate: string
 }
 
 export type ListingFormMode = "create" | "edit"
 
+type ListingFormAvailabilityPatch = {
+  availableAt?: string | null
+}
+
 export type ListingFormSubmitValues =
-  ListingFormValues | Partial<ListingFormValues>
+  | ListingFormValues
+  | (Partial<
+      Omit<ListingFormValues, "availabilityMode" | "availableFromDate">
+    > &
+      ListingFormAvailabilityPatch)
 
 type ListingFormState = Omit<
   ListingFormValues,
@@ -81,6 +101,7 @@ type ListingFormState = Omit<
   size: string
   contractMonths: string
   occupancy: string
+  availableFromDate: string
 }
 
 const initialValues: ListingFormValues = {
@@ -103,6 +124,8 @@ const initialValues: ListingFormValues = {
   facilities: [],
   media: [],
   description: "",
+  availabilityMode: "now",
+  availableFromDate: "",
 }
 
 const BEDROOM_OPTIONS = [
@@ -118,11 +141,6 @@ const BATHROOM_OPTIONS = [
   { label: "2 bathrooms", value: 2 },
   { label: "3 bathrooms", value: 3 },
   { label: "4 bathrooms", value: 4 },
-]
-
-const VISIBILITY_OPTIONS: { label: string; value: ListingVisibility }[] = [
-  { label: "Public", value: "PUBLIC" },
-  { label: "Private", value: "PRIVATE" },
 ]
 
 type ListingFormProps = {
@@ -159,6 +177,9 @@ function buildFormValues(
     facilities: Array.isArray(values?.facilities) ? values.facilities : [],
     media: Array.isArray(values?.media) ? values.media : [],
     description: values?.description ?? "",
+    availabilityMode: values?.availabilityMode ?? initialValues.availabilityMode,
+    availableFromDate:
+      values?.availableFromDate ?? initialValues.availableFromDate,
   }
 }
 
@@ -175,6 +196,7 @@ function buildFormState(values: ListingFormValues): ListingFormState {
     size: stringifyFormNumber(values.size),
     contractMonths: stringifyFormNumber(values.contractMonths),
     occupancy: stringifyFormNumber(values.occupancy),
+    availableFromDate: values.availableFromDate,
   }
 }
 
@@ -199,6 +221,8 @@ function normalizeListingValues(values: ListingFormState): ListingFormValues {
     facilities: sortFormStrings(values.facilities),
     media: values.media,
     description: normalizeFormText(values.description),
+    availabilityMode: values.availabilityMode,
+    availableFromDate: normalizeFormText(values.availableFromDate),
   }
 }
 
@@ -238,8 +262,12 @@ function areMediaArraysEqual(
 function buildChangedListingValues(
   initialValues: ListingFormValues,
   currentValues: ListingFormValues,
-): Partial<ListingFormValues> {
-  const changes: Partial<ListingFormValues> = {}
+): Partial<Omit<ListingFormValues, "availabilityMode" | "availableFromDate">> &
+  ListingFormAvailabilityPatch {
+  const changes: Partial<
+    Omit<ListingFormValues, "availabilityMode" | "availableFromDate">
+  > &
+    ListingFormAvailabilityPatch = {}
 
   if (initialValues.visibility !== currentValues.visibility) {
     changes.visibility = currentValues.visibility
@@ -305,6 +333,19 @@ function buildChangedListingValues(
     changes.description = currentValues.description
   }
 
+  const initialAvailableAt = serializeListingAvailabilityForApi({
+    availabilityMode: initialValues.availabilityMode,
+    availableFromDate: initialValues.availableFromDate,
+  })
+  const currentAvailableAt = serializeListingAvailabilityForApi({
+    availabilityMode: currentValues.availabilityMode,
+    availableFromDate: currentValues.availableFromDate,
+  })
+
+  if (!areAvailableAtValuesEqual(initialAvailableAt, currentAvailableAt)) {
+    changes.availableAt = currentAvailableAt
+  }
+
   return changes
 }
 
@@ -321,7 +362,11 @@ function isListingValid(values: ListingFormValues) {
     values.kitchenType.length > 0 &&
     isNullableNumberInRange(values.size, 0, Number.MAX_SAFE_INTEGER) &&
     isIntegerInRange(values.contractMonths, 1, 60) &&
-    isIntegerInRange(values.occupancy, 1, 50)
+    isIntegerInRange(values.occupancy, 1, 50) &&
+    isListingAvailabilityFormValid(
+      values.availabilityMode,
+      values.availableFromDate,
+    )
   )
 }
 
@@ -396,7 +441,7 @@ export function ListingForm({
 
   return (
     <form
-      className="space-y-6"
+      className="space-y-0"
       onSubmit={async (event) => {
         event.preventDefault()
         if (!canSave) return
@@ -418,51 +463,88 @@ export function ListingForm({
         }
       }}
     >
-      <MediaUploader
-        purpose="listing-photo"
-        label="Listing photos"
-        description="Upload at least one clear photo of the room."
-        disabled={isSubmitting}
-        defaultMedia={savedValues.media}
-        onUploadStateChange={(state) => {
-          setPhotoUploadState(state)
-          setValues((currentValues) => ({
-            ...currentValues,
-            media: state.media,
-          }))
-        }}
-      />
+      <div className="space-y-3 pb-6">
+        <MediaUploader
+          purpose="listing-photo"
+          label="Listing photos"
+          description="Upload at least one clear photo of the room."
+          disabled={isSubmitting}
+          defaultMedia={savedValues.media}
+          onUploadStateChange={(state) => {
+            setPhotoUploadState(state)
+            setValues((currentValues) => ({
+              ...currentValues,
+              media: state.media,
+            }))
+          }}
+        />
 
-      {photoUploadState.hasFailedUpload && (
-        <p className="text-sm font-medium text-red-600" role="alert">
-          Remove or retry failed photos first.
-        </p>
-      )}
+        {photoUploadState.hasFailedUpload && (
+          <p className="text-sm font-medium text-red-600" role="alert">
+            Remove or retry failed photos first.
+          </p>
+        )}
 
-      {!hasPhoto && (
-        <p className="text-sm text-slate-500">
-          Add at least one room photo to continue.
-        </p>
-      )}
+        {!hasPhoto && (
+          <p className="text-sm text-slate-500">
+            Add at least one room photo to continue.
+          </p>
+        )}
+      </div>
 
-      <FormSection title="Listing status">
-        <FormField label="Visibility" required>
-          <Select
+      <FormSection title="Visibility, availability, and contract">
+        <div
+          className={getHorizontalScrollRowClass("items-center gap-2")}
+          role="group"
+          aria-label="Visibility, availability, and contract"
+        >
+          <ListingVisibilityField
             id={`${fieldIdPrefix}-visibility`}
-            name="visibility"
             value={values.visibility}
             disabled={isSubmitting}
-            onChange={(event) =>
-              updateField("visibility", event.target.value as ListingVisibility)
+            required
+            aria-label="Visibility"
+            onChange={(visibility) => updateField("visibility", visibility)}
+          />
+
+          <ListingAvailabilityField
+            id={`${fieldIdPrefix}-availability`}
+            value={{
+              availabilityMode: values.availabilityMode,
+              availableFromDate: values.availableFromDate,
+            }}
+            disabled={isSubmitting}
+            required
+            disablePast
+            triggerVariant="tab"
+            aria-label="Availability"
+            error={
+              isListingAvailabilityFormValid(
+                values.availabilityMode,
+                values.availableFromDate,
+              )
+                ? undefined
+                : "Choose an available-from date"
             }
-          >
-            {VISIBILITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+            onChange={(availability) =>
+              setValues((currentValues) => ({
+                ...currentValues,
+                ...availability,
+              }))
+            }
+          />
+
+          <ListingContractField
+            id={`${fieldIdPrefix}-contract-months`}
+            value={values.contractMonths}
+            disabled={isSubmitting}
+            required
+            aria-label="Minimum contract"
+            onChange={(contractMonths) =>
+              updateField("contractMonths", String(contractMonths))
+            }
+          />
+        </div>
       </FormSection>
 
       <FormSection title="Price">
@@ -561,152 +643,165 @@ export function ListingForm({
             disabled={isSubmitting}
             onChange={(value) => updateField("size", value)}
           />
-          <SelectField
-            id={`${fieldIdPrefix}-contract-months`}
-            name="contractMonths"
-            label="Minimum contract"
-            value={values.contractMonths}
-            options={CONTRACT_MONTH_OPTIONS}
-            disabled={isSubmitting}
-            onChange={(value) => updateField("contractMonths", value)}
-          />
-          <SelectField
-            id={`${fieldIdPrefix}-occupancy`}
-            name="occupancy"
-            label="Occupancy"
-            value={values.occupancy}
-            options={OCCUPANCY_OPTIONS}
-            disabled={isSubmitting}
-            onChange={(value) => updateField("occupancy", value)}
-          />
         </div>
       </FormSection>
 
       <FormSection title="Rules and documents">
-        <fieldset className="m-0 min-w-0 border-0 p-0" disabled={isSubmitting}>
-          <legend className="sr-only">Rules and documents</legend>
-          <p className="mb-2 text-sm text-slate-500">
-            Select everything that applies.
-          </p>
-
-          <div className="flex flex-wrap gap-2">
-            <BooleanOptionSelector
-              label="Foreigner accepted"
-              value={values.isForeignerAccepted}
-              disabled={isSubmitting}
-              onChange={(value) =>
-                updateBooleanField(
-                  "isForeignerAccepted",
-                  value === true,
-                )
-              }
-            />
-            <BooleanOptionSelector
-              label="TM30 provided"
-              value={values.isTM30Provided}
-              disabled={isSubmitting}
-              onChange={(value) =>
-                updateBooleanField("isTM30Provided", value === true)
-              }
-            />
-            <BooleanOptionSelector
-              label="Cooking allowed"
-              value={values.isCookingAllowed}
-              disabled={isSubmitting}
-              onChange={(value) =>
-                updateBooleanField("isCookingAllowed", value === true)
-              }
-            />
-            <BooleanOptionSelector
-              label="Pets allowed"
-              value={values.isPetAllowed}
-              disabled={isSubmitting}
-              onChange={(value) =>
-                updateBooleanField("isPetAllowed", value === true)
-              }
-            />
-          </div>
-        </fieldset>
-      </FormSection>
-
-      <MultiOptionSelector
-        label="Facilities"
-        options={LISTING_FACILITY_OPTIONS}
-        value={values.facilities}
-        disabled={isSubmitting}
-        onChange={(facilities) => {
-          if (isSubmitting) return
-
-          setValues((currentValues) => ({
-            ...currentValues,
-            facilities: Array.isArray(facilities) ? facilities : [],
-          }))
-        }}
-      />
-
-      <FormSection title="About the room">
-        <FormField label="Description">
-          <Textarea
-            id={`${fieldIdPrefix}-description`}
-            name="description"
-            value={values.description}
-            placeholder="Describe the room, furniture, location, or move-in details."
-            autoComplete="off"
+        <div className="space-y-4">
+          <SingleOptionSelector
+            label="Occupancy"
+            options={OCCUPANCY_OPTIONS}
+            value={Number(values.occupancy)}
+            required
             disabled={isSubmitting}
-            className="min-h-32 resize-none placeholder:text-slate-300"
-            onChange={(event) => updateField("description", event.target.value)}
+            onChange={(occupancy) => {
+              if (typeof occupancy !== "number") return
+              updateField("occupancy", String(occupancy))
+            }}
           />
-        </FormField>
+
+          <fieldset className="m-0 min-w-0 border-0 p-0" disabled={isSubmitting}>
+            <legend className="mb-2 p-0 text-sm font-semibold text-slate-950">
+              Rules
+            </legend>
+            <p className="mb-2 text-xs leading-5 text-slate-500">
+              Select everything that applies.
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <BooleanOptionSelector
+                label="Foreigner accepted"
+                value={values.isForeignerAccepted}
+                disabled={isSubmitting}
+                onChange={(value) =>
+                  updateBooleanField(
+                    "isForeignerAccepted",
+                    value === true,
+                  )
+                }
+              />
+              <BooleanOptionSelector
+                label="TM30 provided"
+                value={values.isTM30Provided}
+                disabled={isSubmitting}
+                onChange={(value) =>
+                  updateBooleanField("isTM30Provided", value === true)
+                }
+              />
+              <BooleanOptionSelector
+                label="Cooking allowed"
+                value={values.isCookingAllowed}
+                disabled={isSubmitting}
+                onChange={(value) =>
+                  updateBooleanField("isCookingAllowed", value === true)
+                }
+              />
+              <BooleanOptionSelector
+                label="Pets allowed"
+                value={values.isPetAllowed}
+                disabled={isSubmitting}
+                onChange={(value) =>
+                  updateBooleanField("isPetAllowed", value === true)
+                }
+              />
+            </div>
+          </fieldset>
+        </div>
       </FormSection>
 
-      {submitError && (
-        <p className="text-sm font-medium text-red-600" role="alert">
-          {submitError}
+      <FormSection title="Facilities">
+        <MultiOptionSelector
+          label="Facilities"
+          options={LISTING_FACILITY_OPTIONS}
+          value={values.facilities}
+          disabled={isSubmitting}
+          className="[&_legend]:sr-only [&_legend]:m-0 [&_legend]:p-0"
+          onChange={(facilities) => {
+            if (isSubmitting) return
+
+            setValues((currentValues) => ({
+              ...currentValues,
+              facilities: Array.isArray(facilities) ? facilities : [],
+            }))
+          }}
+        />
+      </FormSection>
+
+      <FormSection title="Description" titleId={`${fieldIdPrefix}-description-heading`}>
+        <Textarea
+          id={`${fieldIdPrefix}-description`}
+          aria-labelledby={`${fieldIdPrefix}-description-heading`}
+          value={values.description}
+          placeholder="Describe the room, furniture, location, or move-in details."
+          disabled={isSubmitting}
+          className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700"
+          onChange={(event) => updateField("description", event.target.value)}
+        />
+      </FormSection>
+
+      <div className="space-y-4 border-t border-slate-100 pt-6">
+        {submitError && (
+          <p className="text-sm font-medium text-red-600" role="alert">
+            {submitError}
+          </p>
+        )}
+
+        {!isValid && (
+          <p className="text-sm text-slate-500">
+            Add at least one photo and complete the required price and room
+            details to continue.
+          </p>
+        )}
+
+        <p className="text-xs leading-5 text-slate-500">
+          Please make sure you have permission to list this room and that the
+          details are accurate.
         </p>
-      )}
 
-      {!isValid && (
-        <p className="text-sm text-slate-500">
-          Add at least one photo and complete the required price and room
-          details to continue.
-        </p>
-      )}
-
-      <p className="text-xs leading-5 text-slate-500">
-        Please make sure you have permission to list this room and that the
-        details are accurate.
-      </p>
-
-      <Button
-        type="submit"
-        className="h-11 w-full rounded-full"
-        disabled={!canSave}
-      >
-        {photoUploadState.isUploading
-          ? "Uploading..."
-          : isSubmitting
-            ? "Saving..."
-            : (submitLabel ??
-              (mode === "edit" && isValid && !hasChanges
-                ? "No changes"
-                : mode === "edit"
-                  ? "Save changes"
-                  : "Continue"))}
-      </Button>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-full"
+          disabled={!canSave}
+        >
+          {photoUploadState.isUploading
+            ? "Uploading..."
+            : isSubmitting
+              ? "Saving..."
+              : (submitLabel ??
+                (mode === "edit" && isValid && !hasChanges
+                  ? "No changes"
+                  : mode === "edit"
+                    ? "Save changes"
+                    : "Continue"))}
+        </Button>
+      </div>
     </form>
   )
 }
 
 function FormSection({
   title,
+  titleId,
   children,
 }: {
   title: string
+  titleId?: string
   children: ReactNode
 }) {
   return (
-    <section className="space-y-4">
-      <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
+    <section className="space-y-4 py-6" aria-labelledby={titleId}>
+      <div className="relative">
+        <div
+          className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-slate-200"
+          aria-hidden="true"
+        />
+        <h2
+          id={titleId}
+          className="relative inline-block bg-white pr-3 text-sm font-semibold text-slate-950"
+        >
+          {title}
+        </h2>
+      </div>
       {children}
     </section>
   )
@@ -744,7 +839,6 @@ function NumberField({
         max={max}
         disabled={disabled}
         inputMode="decimal"
-        className="placeholder:text-slate-300"
         onChange={(event) => onChange(event.target.value)}
       />
     </FormField>

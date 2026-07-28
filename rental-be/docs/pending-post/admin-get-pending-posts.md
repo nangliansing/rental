@@ -4,6 +4,8 @@ List non-deleted pending-post submissions for platform moderation as an `OWNER` 
 
 This is an admin moderation list. It does not require an agent profile.
 
+Each pending post `listing` snapshot includes `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
 ## Endpoint
 
 ```http
@@ -108,7 +110,8 @@ Body:
             "isCover": true
           }
         ],
-        "description": "Protected field test for pending post creation."
+        "description": "Protected field test for pending post creation.",
+        "availableAt": null
       },
       "reviewNote": null,
       "reviewedBy": null,

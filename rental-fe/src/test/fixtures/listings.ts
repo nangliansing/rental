@@ -59,6 +59,7 @@ export function createSearchListing(
     facilities: ["Air Conditioner"],
     media: [listingPhoto],
     isSavedByMe: false,
+    availableAt: null,
     description: "A bright room.",
     listedBy: "user-1",
     buildingId: "building-1",

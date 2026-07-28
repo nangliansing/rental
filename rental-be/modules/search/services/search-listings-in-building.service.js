@@ -5,6 +5,7 @@ import { validateNullableObject } from "../../../shared/validators/index.js";
 
 import Building from "../../building/building.model.js";
 import Listing from "../../listing/listing.model.js";
+import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
 
 import { buildSearchListingsInBuildingParams } from "../params/index.js";
 import { buildSearchListingsInBuildingPipeline } from "../pipelines/index.js";
@@ -52,7 +53,7 @@ export const searchListingsInBuildingService = async ({
 
     const [result] = await aggregateQuery;
 
-    return {
+    return serializeListingPayloadForApi({
         building,
         listings: result?.data ?? [],
         pagination: normalizePagination(
@@ -60,5 +61,5 @@ export const searchListingsInBuildingService = async ({
             searchParams.page,
             searchParams.limit
         ),
-    };
+    });
 };

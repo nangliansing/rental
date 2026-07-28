@@ -127,6 +127,13 @@ export const listingDetailsSchemaDefinition = {
     trim: true,
     default: null,
   },
+
+  // null = flexible/unknown; date <= today = available now; date > today = available from that date.
+  // Create: omitted or null -> flexible. Update: omitted -> unchanged; null -> flexible.
+  availableAt: {
+    type: Date,
+    default: null,
+  },
 };
 
 export const listingDetailsSchema = new Schema(listingDetailsSchemaDefinition, {

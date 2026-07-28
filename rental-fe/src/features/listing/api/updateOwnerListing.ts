@@ -1,21 +1,26 @@
 import { ApiError, apiClient } from "@/lib/api-client"
 
 import type { ListingMedia } from "@/features/map-search/types"
-import type { ListingFormValues } from "../components/ListingForm"
+import type { ListingFormSubmitValues, ListingFormValues } from "../components/ListingForm"
+import {
+  parseAvailableAtFromApi,
+  normalizeListingAvailabilityPatchInput,
+} from "../utils/listingAvailability"
 import {
   parseListingMedia,
   readRecord,
 } from "./listingResponseParsers"
 
-export type UpdateOwnerListingInput = Partial<ListingFormValues>
+export type UpdateOwnerListingInput = ListingFormSubmitValues
 
 export type UpdatedOwnerListing = Omit<
   ListingFormValues,
-  "media" | "description"
+  "media" | "description" | "availabilityMode" | "availableFromDate"
 > & {
   _id: string
   media: ListingMedia[]
   description: string | null
+  availableAt: string | null
   isDeleted: boolean
   deletedAt: string | null
   deletedBy: string | null
@@ -34,7 +39,7 @@ export type UpdateOwnerListingResponse = {
 const INVALID_UPDATE_OWNER_LISTING_RESPONSE =
   "INVALID_UPDATE_OWNER_LISTING_RESPONSE"
 
-const UPDATE_FIELDS = new Set<keyof ListingFormValues>([
+const UPDATE_FIELDS = new Set([
   "visibility",
   "isForeignerAccepted",
   "isTM30Provided",
@@ -54,6 +59,7 @@ const UPDATE_FIELDS = new Set<keyof ListingFormValues>([
   "facilities",
   "media",
   "description",
+  "availableAt",
 ])
 
 const invalidResponse = () =>
@@ -135,6 +141,7 @@ const parseUpdatedOwnerListing = (value: unknown): UpdatedOwnerListing => {
     facilities: listing.facilities as string[],
     media: media as ListingMedia[],
     description: listing.description,
+    availableAt: parseAvailableAtFromApi(listing.availableAt),
     isDeleted: listing.isDeleted,
     deletedAt: listing.deletedAt,
     deletedBy: listing.deletedBy,
@@ -161,10 +168,12 @@ export const parseUpdateOwnerListingResponse = (
   }
 }
 
-const buildUpdateBody = (values: UpdateOwnerListingInput) => {
-  const input = readRecord(values)
+export const buildOwnerListingUpdateApiBody = (
+  values: UpdateOwnerListingInput,
+) => {
+  const input = normalizeListingAvailabilityPatchInput(readRecord(values))
   const unknownFields = Object.keys(input).filter(
-    (fieldName) => !UPDATE_FIELDS.has(fieldName as keyof ListingFormValues),
+    (fieldName) => !UPDATE_FIELDS.has(fieldName),
   )
 
   if (unknownFields.length) {
@@ -196,6 +205,8 @@ const buildUpdateBody = (values: UpdateOwnerListingInput) => {
 
   return body
 }
+
+const buildUpdateBody = buildOwnerListingUpdateApiBody
 
 export async function updateOwnerListing(
   listingId: string,

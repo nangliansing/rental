@@ -24,6 +24,7 @@ import {
   validateFacilities,
   validateMedia,
   validateDescription,
+  validateAvailableAt,
 } from "../listing.validation.js";
 
 const OWNER_UPDATE_FIELD_VALIDATORS = Object.freeze({
@@ -46,6 +47,7 @@ const OWNER_UPDATE_FIELD_VALIDATORS = Object.freeze({
   facilities: validateFacilities,
   media: validateMedia,
   description: validateDescription,
+  availableAt: validateAvailableAt,
 });
 
 const toPlainValue = (value) => {

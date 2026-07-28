@@ -4,6 +4,10 @@ Search public listings inside one active building.
 
 Authentication is optional and is only used to calculate listing `isSavedByMe`.
 
+Each returned listing includes `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
+Date search filter: `availableBy`. See [`../listing/available-by-filter.md`](../listing/available-by-filter.md).
+
 ## Endpoint
 
 ```http
@@ -91,6 +95,7 @@ Limits:
   "isTM30Provided": true,
   "isCookingAllowed": true,
   "isPetAllowed": false,
+  "availableBy": "2026-08-15",
   "supportLanguages": ["English"],
   "agentProfileIds": ["6a5669f81a9630e315e059a7"],
   "page": 1,
@@ -110,6 +115,7 @@ Filter behavior:
 - `occupancy` means listing occupancy must be greater than or equal to the requested value.
 - `bedroomCount: 0` means exactly studio/no bedroom.
 - `bedroomCount > 0` means greater than or equal to the requested value.
+- `availableBy` keeps Flexible listings and listings available on or before that Thailand date. See [`../listing/available-by-filter.md`](../listing/available-by-filter.md).
 - `supportLanguages` uses OR matching.
 - `agentProfileIds` filters listings by the lister's agent profile.
 
@@ -176,6 +182,7 @@ Body:
           }
         ],
         "description": "Pending post using an existing building for approve test.",
+        "availableAt": "2026-08-14T17:00:00.000Z",
         "isDeleted": false,
         "deletedAt": null,
         "deletedBy": null,

@@ -70,5 +70,14 @@ export const buildListingFilterMatch = (filters = {}) => {
     match.listedBy = { $in: filters.listedByUserIds };
   }
 
+  // Renter needs the room by availableBy:
+  // include Flexible (null/missing) and listings available on or before that day.
+  if (filters.availableBy !== undefined) {
+    match.$or = [
+      { availableAt: null },
+      { availableAt: { $lte: filters.availableBy } },
+    ];
+  }
+
   return match;
 };

@@ -32,6 +32,29 @@ The body must include:
   - `existingBuildingId`, or
   - `building`
 
+### Listing `availableAt`
+
+Optional listing field for room availability.
+
+| Sent value | Stored meaning |
+| --- | --- |
+| omitted | Flexible / unknown (`null`) |
+| `null` | Flexible / unknown |
+| date string (for example `"2026-08-15"`) | Available from that calendar day |
+| empty string or invalid date | `422 VALIDATION_ERROR` |
+
+Rules:
+
+- Dates are normalized to the start of the calendar day in `Asia/Bangkok` (Thailand national time, UTC+7).
+- Create does **not** default to today when the field is omitted.
+- To mark the room as available now, send today's Thailand date explicitly.
+- Display guidance for clients:
+  - `null` → Flexible
+  - date ≤ today (Thailand) → Available now
+  - date > today (Thailand) → Available from {date}
+
+Shared response-field docs: [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
 Example using a new building snapshot:
 
 ```json
@@ -79,7 +102,8 @@ Example using a new building snapshot:
         "isCover": true
       }
     ],
-    "description": "Pending post test listing near The Mall Lifestore Bangkapi."
+    "description": "Pending post test listing near The Mall Lifestore Bangkapi.",
+    "availableAt": "2026-08-15"
   }
 }
 ```
@@ -121,7 +145,8 @@ Example using an existing building:
         "isCover": true
       }
     ],
-    "description": "Pending post test listing using an existing building."
+    "description": "Pending post test listing using an existing building.",
+    "availableAt": null
   }
 }
 ```
@@ -186,7 +211,8 @@ Body:
           "isCover": true
         }
       ],
-      "description": "Pending post test listing near The Mall Lifestore Bangkapi."
+      "description": "Pending post test listing near The Mall Lifestore Bangkapi.",
+      "availableAt": "2026-08-14T17:00:00.000Z"
     },
     "reviewNote": null,
     "reviewedBy": null,
@@ -242,6 +268,10 @@ On create, the backend sets:
 - Existing building must not be inactive.
 - Listing data is required.
 - Listing must include at least one photo.
+- `listing.availableAt` may be omitted, `null`, or a valid date.
+- Omitted or `null` `availableAt` is stored as Flexible (`null`).
+- Valid `availableAt` values are normalized to Thailand start of day (`Asia/Bangkok`).
+- Invalid or empty `availableAt` values are rejected with `422 VALIDATION_ERROR`.
 - Building and listing validation reuse existing building/listing validators.
 - Database queries use the passed session when a valid session is provided.
 - No new index is required for this create flow.
@@ -505,6 +535,24 @@ Example response:
   "success": false,
   "code": "VALIDATION_ERROR",
   "message": "isForeignerAccepted must be a boolean"
+}
+```
+
+### Invalid `availableAt`
+
+Empty string, blank string, or an unparseable date.
+
+Response:
+
+```http
+422 Unprocessable Entity
+```
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "message": "availableAt must be a valid date"
 }
 ```
 

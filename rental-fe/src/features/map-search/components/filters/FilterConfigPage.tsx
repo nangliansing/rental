@@ -24,6 +24,7 @@ import {
 
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import type { MapSearchFilters } from "../../filters/types"
+import { AvailableByFilterField } from "./AvailableByFilterField"
 
 type FilterConfigPageProps = {
   className?: string
@@ -213,6 +214,14 @@ export function FilterConfigPage({
                 ...rentFilters,
               }))
             }
+          />
+        </FilterSection>
+
+        <FilterSection title="Availability">
+          <AvailableByFilterField
+            id="map-search-available-by"
+            value={draftFilters.availableBy ?? null}
+            onChange={(availableBy) => updateFilter("availableBy", availableBy)}
           />
         </FilterSection>
 

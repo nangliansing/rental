@@ -1,3 +1,5 @@
+import { isValidDateOnlyKey } from "@/shared/dates/calendarDate"
+
 import type { MapSearchFilters } from "../filters/types"
 import type { SearchBounds } from "../hooks/useMapBounds"
 import type { LineStringGeometry, MapPosition } from "../types"
@@ -184,6 +186,13 @@ function sanitizeFilters(value: unknown): MapSearchFilters {
     const candidate = input[key]
     if (typeof candidate === "string" && candidate.trim()) filters[key] = candidate
   }
+
+  const availableBy =
+    typeof input.availableBy === "string" ? input.availableBy.trim() : ""
+  if (isValidDateOnlyKey(availableBy)) {
+    filters.availableBy = availableBy
+  }
+
   for (const key of BOOLEAN_FILTERS) {
     const candidate = input[key]
     if (typeof candidate === "boolean") filters[key] = candidate

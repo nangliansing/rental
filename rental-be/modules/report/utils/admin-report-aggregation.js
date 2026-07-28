@@ -1,4 +1,5 @@
 import { COLLECTION_NAMES } from "../../../shared/constants/index.js";
+import { LISTING_DETAILS_MONGO_PROJECT } from "../../listing/constants/listing-details.projection.js";
 import { REPORT_TARGET_TYPES } from "../report.constants.js";
 
 const buildUserLookupStage = (localField, as) => ({
@@ -38,18 +39,7 @@ export const buildAdminReportLookupStages = () => [
       pipeline: [
         {
           $project: {
-            visibility: 1,
-            rent: 1,
-            deposit: 1,
-            moveInCost: 1,
-            bedroomCount: 1,
-            bathroomCount: 1,
-            kitchenType: 1,
-            size: 1,
-            contractMonths: 1,
-            occupancy: 1,
-            media: 1,
-            description: 1,
+            ...LISTING_DETAILS_MONGO_PROJECT,
             isDeleted: 1,
             listedBy: 1,
             buildingId: 1,

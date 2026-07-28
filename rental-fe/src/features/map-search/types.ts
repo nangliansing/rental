@@ -69,6 +69,7 @@ export type BuildingListing = {
   facilities: string[]
   media: ListingMedia[]
   isSavedByMe: boolean
+  availableAt: string | null
   updatedAt: string
 }
 
@@ -137,6 +138,7 @@ export type SearchListing = {
   facilities: string[]
   media: ListingMedia[]
   isSavedByMe: boolean
+  availableAt: string | null
   description: string
   listedBy: string
   buildingId: string

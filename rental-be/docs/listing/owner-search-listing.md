@@ -130,6 +130,7 @@ Body:
           "isActive": true
         },
         "isSavedByMe": true,
+        "availableAt": null,
         "createdAt": "2026-07-15T18:26:44.251Z",
         "updatedAt": "2026-07-17T20:00:17.527Z"
       }
@@ -147,6 +148,7 @@ Body:
 
 - `data.agentProfile` is the caller's agent profile, or `null` when the caller has no agent profile.
 - `data.listings` contains only records whose `listedBy` matches the authenticated user and whose `isDeleted` is `false`.
+- Each listing includes `availableAt` (`null` or an ISO datetime). See [`available-at-response.md`](./available-at-response.md).
 - `building` is populated when the referenced building exists. It is `null` when that lookup cannot resolve.
 - Inactive buildings are preserved because owners must still be able to manage their own listings. This differs from public listing search.
 - `isSavedByMe` indicates whether the authenticated caller has saved that listing.

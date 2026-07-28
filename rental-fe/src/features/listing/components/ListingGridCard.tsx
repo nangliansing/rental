@@ -29,6 +29,7 @@ import {
   formatRate,
   getSortedListingPhotos,
 } from "../utils/listingDisplay"
+import { getListingAvailabilityLabel } from "../utils/listingAvailability"
 
 export type ListingGridCardListing = SearchListing & {
   building?: {
@@ -44,6 +45,7 @@ type ListingGridCardProps = {
 export function ListingGridCard({ listing, onOpen }: ListingGridCardProps) {
   const [coverPhoto] = getSortedListingPhotos(listing.media)
   const buildingName = listing.building?.name?.trim()
+  const availabilityLabel = getListingAvailabilityLabel(listing.availableAt)
   const content = (
     <>
       <ListingCoverImage
@@ -113,6 +115,9 @@ export function ListingGridCard({ listing, onOpen }: ListingGridCardProps) {
                 <Droplet className="h-3 w-3 shrink-0" />
                 <span className="truncate">{formatRate(listing.waterRate)}</span>
               </span>
+            )}
+            {availabilityLabel && (
+              <span className="truncate">{availabilityLabel}</span>
             )}
           </ListingGridCardFinePrint>
       </ListingGridCardOverlay>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -102,20 +102,22 @@ describe("ListingForm", () => {
 
     render(<ListingForm onSubmit={onSubmit} />)
 
-    const visibility = screen.getByRole("combobox", { name: "Visibility" })
+    const visibility = screen.getByRole("button", { name: "Visibility" })
     const rent = screen.getByRole("spinbutton", { name: "Rent" })
     const facilities = screen.getByRole("group", { name: "Facilities" })
-    const rules = screen.getByRole("group", { name: "Rules and documents" })
+    const rules = screen.getByRole("group", { name: "Rules" })
     const submit = screen.getByRole("button", { name: "Continue" })
 
-    expect(visibility).toBeRequired()
+    expect(visibility).toHaveAttribute("aria-required", "true")
     expect(rent).toBeRequired()
     expect(facilities).toBeInTheDocument()
     expect(rules).toBeInTheDocument()
     expect(submit).toBeDisabled()
 
     await user.click(screen.getByRole("button", { name: "Add listing photo" }))
-    await user.selectOptions(visibility, "PRIVATE")
+    await user.click(visibility)
+    await user.click(screen.getByRole("radio", { name: /private/i }))
+    await user.click(screen.getByRole("button", { name: "Save" }))
     await user.clear(rent)
     await user.type(rent, "12000")
     await user.click(screen.getByRole("button", { name: "Foreigner accepted" }))
@@ -202,10 +204,9 @@ describe("ListingForm", () => {
       await user.type(input, value)
     }
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Visibility" }),
-      "PRIVATE",
-    )
+    await user.click(screen.getByRole("button", { name: "Visibility" }))
+    await user.click(screen.getByRole("radio", { name: /private/i }))
+    await user.click(screen.getByRole("button", { name: "Save" }))
     await replaceNumber("Rent", "11000")
     await replaceNumber("Deposit", "21000")
     await replaceNumber("Move-in cost", "32000")
@@ -224,14 +225,10 @@ describe("ListingForm", () => {
       screen.getByRole("combobox", { name: "Kitchen" }),
       "Kitchen",
     )
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Minimum contract" }),
-      "6",
-    )
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Occupancy" }),
-      "2",
-    )
+    await user.click(screen.getByRole("button", { name: "Minimum contract" }))
+    await user.click(screen.getByRole("radio", { name: /6 months/i }))
+    await user.click(screen.getByRole("button", { name: "Save" }))
+    await user.click(screen.getByRole("button", { name: "2 people" }))
 
     for (const name of [
       "Foreigner accepted",
@@ -271,6 +268,209 @@ describe("ListingForm", () => {
         media: [listingPhoto],
         description: "Updated description",
       }),
+    )
+  })
+
+  it("submits availableAt when availability changes in edit mode", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <ListingForm
+        mode="edit"
+        defaultValues={{
+          rent: 12000,
+          media: [listingPhoto],
+          availabilityMode: "flexible",
+          availableFromDate: "",
+        }}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Availability" }))
+    const dialog = screen.getByRole("dialog", {
+      name: "When is the room available?",
+    })
+    await user.click(
+      within(dialog).getByRole("button", { name: "Available now" }),
+    )
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          availableAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
+      ),
+    )
+  })
+
+  it("submits null availableAt when switching to Flexible in edit mode", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <ListingForm
+        mode="edit"
+        defaultValues={{
+          rent: 12000,
+          media: [listingPhoto],
+          availabilityMode: "from_date",
+          availableFromDate: "2026-08-15",
+        }}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Availability" }))
+    const dialog = screen.getByRole("dialog", {
+      name: "When is the room available?",
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Flexible" }))
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({ availableAt: null }),
+    )
+  })
+
+  it("shows an availability error for invalid from-date defaults", () => {
+    render(
+      <ListingForm
+        mode="edit"
+        defaultValues={{
+          rent: 12000,
+          media: [listingPhoto],
+          availabilityMode: "from_date",
+          availableFromDate: "not-a-date",
+        }}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Choose an available-from date",
+    )
+    expect(screen.getByRole("button", { name: "Availability" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled()
+  })
+
+  it("clears the availability error after a valid mode is chosen", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ListingForm
+        mode="edit"
+        defaultValues={{
+          rent: 12000,
+          media: [listingPhoto],
+          availabilityMode: "from_date",
+          availableFromDate: "not-a-date",
+        }}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Choose an available-from date",
+    )
+
+    await user.click(screen.getByRole("button", { name: "Availability" }))
+    const dialog = screen.getByRole("dialog", {
+      name: "When is the room available?",
+    })
+    await user.click(
+      within(dialog).getByRole("button", { name: "Available now" }),
+    )
+
+    expect(
+      screen.queryByText("Choose an available-from date"),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Availability" })).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
+  })
+
+  it("wires the visibility, availability, and contract tabs without loading spinners", () => {
+    render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+    const tabRow = screen.getByRole("group", {
+      name: "Visibility, availability, and contract",
+    })
+
+    expect(
+      within(tabRow).getByRole("button", { name: "Visibility" }),
+    ).toHaveAttribute("aria-required", "true")
+    expect(
+      within(tabRow).getByRole("button", { name: "Availability" }),
+    ).toHaveAttribute("aria-required", "true")
+    expect(
+      within(tabRow).getByRole("button", { name: "Minimum contract" }),
+    ).toHaveAttribute("aria-required", "true")
+
+    for (const name of ["Visibility", "Availability", "Minimum contract"]) {
+      expect(
+        within(tabRow).getByRole("button", { name }),
+      ).not.toHaveAttribute("aria-busy", "true")
+    }
+  })
+
+  it("labels Description from the section heading without a duplicate field label", () => {
+    render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+    const heading = screen.getByRole("heading", { name: "Description" })
+    const description = screen.getByRole("textbox", { name: "Description" })
+
+    expect(heading).toBeInTheDocument()
+    expect(description).toHaveAttribute(
+      "aria-labelledby",
+      heading.getAttribute("id") ?? undefined,
+    )
+    expect(description).toHaveClass(
+      "border-0",
+      "p-0",
+      "text-sm",
+      "leading-5",
+      "text-slate-700",
+      "whitespace-pre-wrap",
+    )
+    expect(screen.queryByText("About the room")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("label", { name: "Description" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps occupancy under Rules and documents", () => {
+    render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+    expect(
+      screen.getByRole("heading", { name: "Rules and documents" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("group", { name: "Occupancy" })).toBeInTheDocument()
+    expect(screen.getByRole("group", { name: "Rules" })).toBeInTheDocument()
+  })
+
+  it("uses white bordered inputs for price fields", () => {
+    render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+    expect(screen.getByRole("spinbutton", { name: "Rent" })).toHaveClass(
+      "bg-white",
+      "border-slate-200",
+    )
+    expect(screen.getByRole("combobox", { name: "Bedrooms" })).toHaveClass(
+      "bg-white",
+      "border-slate-200",
+    )
+  })
+
+  it("defaults new listings to Available now", () => {
+    render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+    expect(screen.getByRole("button", { name: "Availability" })).toHaveTextContent(
+      "Available now",
     )
   })
 

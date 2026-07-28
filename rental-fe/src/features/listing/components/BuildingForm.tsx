@@ -195,7 +195,6 @@ export function BuildingForm({
             placeholder="Building or apartment name"
             autoComplete="organization"
             disabled={isSubmitting}
-            className="placeholder:text-slate-300"
             onChange={(event) => updateField("name", event.target.value)}
           />
         </FormField>
@@ -226,7 +225,6 @@ export function BuildingForm({
             placeholder="Street, area, or nearby landmark"
             autoComplete="street-address"
             disabled={isSubmitting}
-            className="resize-none placeholder:text-slate-300"
             onChange={(event) => updateField("address", event.target.value)}
           />
         </FormField>

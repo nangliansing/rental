@@ -3,6 +3,7 @@ import { AppError } from "../../../shared/errors/app-error.js";
 import { validateNullableObject } from "../../../shared/validators/index.js";
 
 import Listing from "../../listing/listing.model.js";
+import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
 import { buildSearchListingByIdParams } from "../params/index.js";
 import { buildSearchListingByIdPipeline } from "../pipelines/index.js";
 import { normalizeOptionalViewerId } from "./normalize-optional-viewer-id.js";
@@ -32,5 +33,5 @@ export const searchListingByIdService = async ({
         throw new AppError("Listing not found", 404, "LISTING_NOT_FOUND");
     }
 
-    return { listing };
+    return serializeListingPayloadForApi({ listing });
 };

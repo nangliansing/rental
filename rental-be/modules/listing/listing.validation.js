@@ -10,6 +10,7 @@ import {
   validateMongooseId,
   validateMediaArray,
   validateIntegerRange,
+  validateNullableDateAtStartOfDay,
 } from "../../shared/validators/index.js";
 
 import { AppError } from "../../shared/errors/app-error.js";
@@ -172,6 +173,14 @@ export const validateMedia = (input) => {
 
 export const validateDescription = (input) => {
   return validateOptionalString(input, "description", 3000);
+};
+
+export const validateAvailableAt = (input) => {
+  return validateNullableDateAtStartOfDay(input, "availableAt");
+};
+
+export const validateAvailableBy = (input) => {
+  return validateNullableDateAtStartOfDay(input, "availableBy");
 };
 
 export const validateListedBy = (input) => {

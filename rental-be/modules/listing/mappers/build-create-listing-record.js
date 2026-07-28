@@ -21,6 +21,7 @@ import {
   validateFacilities,
   validateMedia,
   validateDescription,
+  validateAvailableAt,
   validateListedBy,
   validateBuildingId,
 } from "../listing.validation.js";
@@ -60,6 +61,7 @@ export const buildCreateListingRecord = (body, actorId) => {
     facilities: validateFacilities(body.facilities),
     media: validateMedia(body.media),
     description: validateDescription(body.description),
+    availableAt: validateAvailableAt(body.availableAt),
 
     listedBy: validateListedBy(actorId),
     buildingId: validateBuildingId(body.buildingId),

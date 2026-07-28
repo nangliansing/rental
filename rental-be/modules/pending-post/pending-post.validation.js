@@ -34,6 +34,7 @@ import {
   validateSize,
   validateVisibility,
   validateWaterRate,
+  validateAvailableAt,
 } from "../listing/listing.validation.js";
 
 export const validateSubmittedBy = (input) => {
@@ -94,6 +95,7 @@ export const validatePendingListing = (input) => {
     facilities: validateListingFacilities(input.facilities),
     media,
     description: validateDescription(input.description),
+    availableAt: validateAvailableAt(input.availableAt),
   };
 };
 

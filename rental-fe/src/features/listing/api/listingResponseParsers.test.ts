@@ -72,6 +72,7 @@ describe("listingResponseParsers", () => {
       buildingId: "building-1",
       visibility: "PRIVATE",
       rent: "9000",
+      availableAt: "2026-08-15T00:00:00+07:00",
       building: {
         _id: "building-1",
         name: "Sample Residence",
@@ -84,7 +85,25 @@ describe("listingResponseParsers", () => {
     expect(parsed._id).toBe("listing-1")
     expect(parsed.visibility).toBe("PRIVATE")
     expect(parsed.rent).toBe(0)
+    expect(parsed.availableAt).toBe("2026-08-14T17:00:00.000Z")
     expect(parsed.building.name).toBe("Sample Residence")
     expect(parsed.building.location.coordinates).toEqual([100.5, 13.7])
+  })
+
+  it("parseSearchListing defaults missing availableAt to null", () => {
+    const parsed = parseSearchListing({
+      _id: "listing-1",
+      listedBy: "agent-1",
+      buildingId: "building-1",
+      building: {
+        _id: "building-1",
+        name: "Sample Residence",
+        location: {
+          coordinates: [100.5, 13.7],
+        },
+      },
+    })
+
+    expect(parsed.availableAt).toBeNull()
   })
 })

@@ -15,3 +15,4 @@ export * from "./map-bounds.validators.js";
 export * from "./pagination.validators.js";
 export * from "./distance.validators.js";
 export * from "./line-geometry.validators.js";
+export * from "./date.validators.js";

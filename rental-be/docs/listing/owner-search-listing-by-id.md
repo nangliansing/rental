@@ -128,6 +128,7 @@ Body:
         "isActive": true
       },
       "isSavedByMe": true,
+      "availableAt": null,
       "createdAt": "2026-07-15T18:26:44.251Z",
       "updatedAt": "2026-07-17T20:00:17.527Z"
     }
@@ -191,6 +192,10 @@ Inactive and missing buildings do not hide an owner-managed listing. Public sear
 ```
 
 It is `true` only when the caller saved this listing; otherwise it is `false`.
+
+### Availability Date
+
+`listing.availableAt` is always present as `null` or an ISO datetime. See [`available-at-response.md`](./available-at-response.md).
 
 ## Backend Flow
 

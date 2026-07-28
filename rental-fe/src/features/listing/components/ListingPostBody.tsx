@@ -32,6 +32,7 @@ import {
   formatRate,
   getSortedListingPhotos,
 } from "../utils/listingDisplay"
+import { getListingAvailabilityLabel } from "../utils/listingAvailability"
 
 type ListingPostBodyProps = {
   listing: SearchListing
@@ -108,6 +109,7 @@ export function ListingPostBody({
   const occupancy = normalizeOccupancy(listing.occupancy)
   const kitchenType = normalizeText(listing.kitchenType)
   const agent = listing.agentProfile
+  const availabilityLabel = getListingAvailabilityLabel(listing.availableAt)
 
   return (
     <>
@@ -189,6 +191,10 @@ export function ListingPostBody({
             <CalendarDays className="h-3.5 w-3.5" />
             {formatContract(listing.contractMonths)}
           </DetailChip>
+
+          {availabilityLabel && (
+            <DetailChip tone="blue">{availabilityLabel}</DetailChip>
+          )}
 
           {kitchenType && <DetailChip>{kitchenType}</DetailChip>}
         </DetailChipRow>

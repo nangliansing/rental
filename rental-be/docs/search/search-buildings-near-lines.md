@@ -4,6 +4,10 @@ Search active buildings whose point location is within a requested distance of
 a GeoJSON line or set of lines. The endpoint supports both a single route and
 multiple connected or disconnected route segments.
 
+Nested listings include `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
+Date search filter: `availableBy`. See [`../listing/available-by-filter.md`](../listing/available-by-filter.md).
+
 ## Endpoint
 
 ```http
@@ -159,6 +163,7 @@ The endpoint reuses the same filters as
   "isTM30Provided": true,
   "isCookingAllowed": true,
   "isPetAllowed": true,
+  "availableBy": "2026-08-15",
   "supportLanguages": ["English", "Thai"],
   "agentProfileIds": ["6a5669f81a9630e315e059a7"],
   "includeBuildingsWithoutMatchingListings": false,
@@ -179,6 +184,9 @@ Filter behavior:
   requested value.
 - `bedroomCount: 0` matches exactly zero bedrooms.
 - `bedroomCount` greater than zero matches that number or more.
+- `availableBy` keeps Flexible listings and listings available on or before
+  that Thailand date. See
+  [`../listing/available-by-filter.md`](../listing/available-by-filter.md).
 - Boolean filters must be JSON booleans, not strings such as `"true"`.
 - `maxRent` must be greater than or equal to `minRent` when both are supplied.
 - `listerIds` is accepted as a legacy alias for `agentProfileIds`. Do not send
@@ -238,6 +246,7 @@ Status:
           "bedroomCount": 1,
           "bathroomCount": 1,
           "kitchenType": "Kitchen",
+          "availableAt": null,
           "isSavedByMe": false
         }
       ]

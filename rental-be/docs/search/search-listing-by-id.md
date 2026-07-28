@@ -98,6 +98,7 @@ Body:
         }
       ],
       "description": "Pending post using an existing building for approve test.",
+      "availableAt": "2026-08-14T17:00:00.000Z",
       "isDeleted": false,
       "deletedAt": null,
       "deletedBy": null,
@@ -172,6 +173,8 @@ These agent profile fields are display-only and do not hide the listing:
 - `agentProfile.isOnline`
 
 So unverified or offline agents can still have public listings.
+
+`listing.availableAt` is always present as `null` or an ISO datetime. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
 
 ## isSavedByMe
 

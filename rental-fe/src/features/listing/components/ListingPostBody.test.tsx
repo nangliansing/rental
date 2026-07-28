@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { createSearchListing } from "@/test/fixtures/listings"
 
@@ -7,6 +7,10 @@ import { ListingPostBody } from "./ListingPostBody"
 import { LISTING_POST_BREAKOUT_CLASS } from "../utils/listingPostLayout"
 
 describe("ListingPostBody", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("scrolls detail chips edge to edge within the listing card", () => {
     const listing = createSearchListing({
       occupancy: 2,
@@ -66,6 +70,7 @@ describe("ListingPostBody", () => {
     expect(screen.getByRole("img", { name: "Bright rental room" })).toBeInTheDocument()
     expect(screen.getByText("฿14k")).toBeInTheDocument()
     expect(screen.getByText("1 person")).toBeInTheDocument()
+    expect(screen.getByText("Flexible")).toBeInTheDocument()
     expect(screen.getByText("Wifi · Balcony")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Helpful/ })).toBeInTheDocument()
     expect(screen.getByText(/month with electricity and water/)).toBeInTheDocument()
@@ -129,6 +134,33 @@ describe("ListingPostBody", () => {
     })
 
     expect(screen.getByRole("button", { name: /Helpful/ })).toBeVisible()
+  })
+
+  it("renders availability labels from listing data", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    const { rerender } = render(
+      <ListingPostBody
+        listing={createSearchListing({
+          availableAt: "2026-07-29T00:00:00+07:00",
+        })}
+      />,
+    )
+
+    expect(screen.getByText("Available now")).toBeInTheDocument()
+
+    rerender(
+      <ListingPostBody
+        listing={createSearchListing({
+          availableAt: "2026-08-15T00:00:00+07:00",
+        })}
+      />,
+    )
+
+    expect(screen.getByText("Available from Aug 15, 2026")).toBeInTheDocument()
+
+    vi.useRealTimers()
   })
 
   it("normalizes malformed optional presentation data", () => {
