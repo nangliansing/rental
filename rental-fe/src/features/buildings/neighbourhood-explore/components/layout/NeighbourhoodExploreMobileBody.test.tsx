@@ -88,6 +88,32 @@ async function dragDrawerDown(user: ReturnType<typeof userEvent.setup>) {
   ])
 }
 
+async function dragDrawerUp(user: ReturnType<typeof userEvent.setup>) {
+  const dragRegion = screen.getByText("Nearby places").closest(".cursor-grab")
+
+  if (!dragRegion) {
+    throw new Error("Expected drawer drag region")
+  }
+
+  mockPointerCapture(dragRegion)
+
+  await user.pointer([
+    {
+      keys: "[MouseLeft>]",
+      target: dragRegion,
+      coords: { clientX: 0, clientY: 200 },
+    },
+    { coords: { clientX: 0, clientY: 10 } },
+    { keys: "[/MouseLeft]" },
+  ])
+}
+
+function getDrawerListContent() {
+  const listPanel = screen.getByTestId("list-panel")
+
+  return listPanel.closest(".overflow-y-auto")
+}
+
 function SelectPlaceTrigger() {
   const { selectPlace } = useNeighbourhoodExploreSelection()
 
@@ -187,5 +213,27 @@ describe("NeighbourhoodExploreMobileBody", () => {
         transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
       })
     })
+  })
+
+  it("keeps the list visible when expanding from half to full", async () => {
+    mockNeighbourhoodResponse()
+    const { user } = renderMobileBody()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("list-panel")).toBeInTheDocument()
+    })
+
+    expect(getDrawerListContent()).not.toHaveClass("invisible")
+
+    await dragDrawerUp(user)
+
+    await waitFor(() => {
+      expect(screen.getByTestId("neighbourhood-explore-results-drawer")).toHaveAttribute(
+        "data-snap",
+        "full",
+      )
+    })
+
+    expect(getDrawerListContent()).not.toHaveClass("invisible")
   })
 })
