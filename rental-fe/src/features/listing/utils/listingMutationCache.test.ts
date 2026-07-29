@@ -81,6 +81,26 @@ describe("listing mutation cache", () => {
     expect(queryClient.getQueryData(unrelatedKey)).toEqual({ unread: 2 })
   })
 
+  it("patches availableAt through nested listing records", () => {
+    const queryClient = new QueryClient()
+    const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
+    queryClient.setQueryData(publicKey, {
+      _id: "listing-1",
+      availableAt: null,
+      rent: 10_000,
+    })
+
+    patchListingInRelatedQueries(queryClient, "listing-1", {
+      availableAt: "2026-08-15",
+    })
+
+    expect(queryClient.getQueryData(publicKey)).toEqual({
+      _id: "listing-1",
+      availableAt: "2026-08-15",
+      rent: 10_000,
+    })
+  })
+
   it("removes collection listings but preserves saved snapshots", () => {
     const queryClient = new QueryClient()
     const ownerKey = ["owner-listings", "all"] as const

@@ -18,6 +18,7 @@ import { ExpandableFormattedText } from "@/shared/components/data-display/Expand
 import { ReviewTagBadges } from "@/shared/components/data-display/ReviewTagBadges"
 import { getEdgeToEdgeHorizontalScrollRowClass } from "@/shared/components/layout/horizontalScrollRow"
 
+import { ListingAvailabilityBadge } from "./ListingAvailabilityBadge"
 import { ListingPhotoCarousel } from "./ListingPhotoCarousel"
 import { MonthlyCostAdvice } from "./MonthlyCostAdvice"
 import {
@@ -32,10 +33,14 @@ import {
   formatRate,
   getSortedListingPhotos,
 } from "../utils/listingDisplay"
-import { getListingAvailabilityLabel } from "../utils/listingAvailability"
 
 type ListingPostBodyProps = {
   listing: SearchListing
+  availableAt?: string | null
+  isOwnListing?: boolean
+  isAvailabilitySubmitting?: boolean
+  availabilityError?: string | null
+  onAvailableAtChange?: (availableAt: string | null) => void
   onReviewsRequest?: () => void
 }
 
@@ -98,6 +103,11 @@ function DetailChipRow({ children }: { children: ReactNode }) {
 
 export function ListingPostBody({
   listing,
+  availableAt = listing.availableAt,
+  isOwnListing = false,
+  isAvailabilitySubmitting = false,
+  availabilityError = null,
+  onAvailableAtChange,
   onReviewsRequest,
 }: ListingPostBodyProps) {
   const photos = useMemo(
@@ -109,7 +119,6 @@ export function ListingPostBody({
   const occupancy = normalizeOccupancy(listing.occupancy)
   const kitchenType = normalizeText(listing.kitchenType)
   const agent = listing.agentProfile
-  const availabilityLabel = getListingAvailabilityLabel(listing.availableAt)
 
   return (
     <>
@@ -121,6 +130,15 @@ export function ListingPostBody({
 
       <div className="relative">
         <ListingPhotoCarousel photos={photos} />
+        <div className="absolute left-3 top-3 z-10">
+          <ListingAvailabilityBadge
+            availableAt={availableAt}
+            isEditable={isOwnListing}
+            isSubmitting={isAvailabilitySubmitting}
+            errorMessage={availabilityError}
+            onAvailableAtChange={onAvailableAtChange}
+          />
+        </div>
         <ReviewTagBadges
           tagCounts={agent?.reviewSummary?.tagCounts}
           maxTags={2}
@@ -191,10 +209,6 @@ export function ListingPostBody({
             <CalendarDays className="h-3.5 w-3.5" />
             {formatContract(listing.contractMonths)}
           </DetailChip>
-
-          {availabilityLabel && (
-            <DetailChip tone="blue">{availabilityLabel}</DetailChip>
-          )}
 
           {kitchenType && <DetailChip>{kitchenType}</DetailChip>}
         </DetailChipRow>

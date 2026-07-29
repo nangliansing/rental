@@ -1,5 +1,6 @@
 import {
   DATE_ONLY_PATTERN,
+  formatDateOnlyLabel,
   getCalendarDateKeyInTimeZone as getSharedCalendarDateKeyInTimeZone,
   getTodayDateKeyInTimeZone,
   THAILAND_TIME_ZONE,
@@ -209,41 +210,157 @@ export function areAvailableAtValuesEqual(
   firstValue: string | null,
   secondValue: string | null,
 ) {
-  if (firstValue === null && secondValue === null) {
-    return true
-  }
-
-  if (firstValue === null || secondValue === null) {
-    return false
-  }
-
   return (
-    getCalendarDateKeyInTimeZone(new Date(firstValue)) ===
-    getCalendarDateKeyInTimeZone(new Date(secondValue))
+    toListingAvailabilityDateKey(firstValue) ===
+    toListingAvailabilityDateKey(secondValue)
   )
+}
+
+/**
+ * Normalize API ISO timestamps or YYYY-MM-DD keys to a Bangkok date key.
+ * Invalid / empty values become null (Flexible).
+ */
+export function toListingAvailabilityDateKey(
+  availableAt: string | null | undefined,
+): string | null {
+  if (availableAt === null || availableAt === undefined) {
+    return null
+  }
+
+  if (typeof availableAt !== "string") {
+    return null
+  }
+
+  const trimmed = availableAt.trim()
+
+  if (!trimmed) {
+    return null
+  }
+
+  if (DATE_ONLY_PATTERN.test(trimmed)) {
+    return trimmed
+  }
+
+  const parsed = new Date(trimmed)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+
+  const dateKey = getCalendarDateKeyInTimeZone(parsed)
+
+  return dateKey || null
+}
+
+export type ListingAvailabilityResolvedState =
+  | {
+      kind: "flexible"
+      dateKey: null
+      isAvailableNow: false
+    }
+  | {
+      kind: "now"
+      dateKey: string
+      isAvailableNow: true
+    }
+  | {
+      kind: "from_date"
+      dateKey: string
+      isAvailableNow: false
+    }
+
+/** Single pass used by badge presentation, labels, and equality checks. */
+export function resolveListingAvailabilityState(
+  availableAt: string | null | undefined,
+  referenceDate = new Date(),
+): ListingAvailabilityResolvedState {
+  const dateKey = toListingAvailabilityDateKey(availableAt)
+
+  if (dateKey === null) {
+    return {
+      kind: "flexible",
+      dateKey: null,
+      isAvailableNow: false,
+    }
+  }
+
+  const todayKey = getTodayDateKeyInBangkok(referenceDate)
+
+  if (todayKey && dateKey <= todayKey) {
+    return {
+      kind: "now",
+      dateKey,
+      isAvailableNow: true,
+    }
+  }
+
+  return {
+    kind: "from_date",
+    dateKey,
+    isAvailableNow: false,
+  }
+}
+
+export type ListingAvailabilityBadgeTone = "active" | "secondary"
+
+export type ListingAvailabilityBadgePresentation = {
+  label: string
+  tone: ListingAvailabilityBadgeTone
+  isAvailableNow: boolean
+}
+
+export function isListingAvailableNow(
+  availableAt: string | null,
+  referenceDate = new Date(),
+) {
+  return resolveListingAvailabilityState(availableAt, referenceDate)
+    .isAvailableNow
+}
+
+export function getListingAvailabilityBadgePresentation(
+  availableAt: string | null,
+  referenceDate = new Date(),
+): ListingAvailabilityBadgePresentation {
+  const state = resolveListingAvailabilityState(availableAt, referenceDate)
+
+  if (state.kind === "flexible") {
+    return {
+      label: "Flexible",
+      tone: "secondary",
+      isAvailableNow: false,
+    }
+  }
+
+  if (state.kind === "now") {
+    return {
+      label: "Available now",
+      tone: "active",
+      isAvailableNow: true,
+    }
+  }
+
+  return {
+    label: formatDateOnlyLabel(state.dateKey) ?? state.dateKey,
+    tone: "secondary",
+    isAvailableNow: false,
+  }
 }
 
 export function getListingAvailabilityLabel(
   availableAt: string | null,
   referenceDate = new Date(),
 ) {
-  if (availableAt === null) {
+  const state = resolveListingAvailabilityState(availableAt, referenceDate)
+
+  if (state.kind === "flexible") {
     return "Flexible"
   }
 
-  const availableDateKey = getCalendarDateKeyInTimeZone(new Date(availableAt))
-  const todayKey = getTodayDateKeyInBangkok(referenceDate)
-
-  if (availableDateKey <= todayKey) {
+  if (state.kind === "now") {
     return "Available now"
   }
 
-  const formattedDate = new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: LISTING_AVAILABILITY_TIME_ZONE,
-  }).format(new Date(availableAt))
+  const formattedDate = formatDateOnlyLabel(state.dateKey) ?? state.dateKey
 
   return `Available from ${formattedDate}`
 }

@@ -3,15 +3,19 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   areAvailableAtValuesEqual,
   dateKeyToListingAvailabilityFields,
+  getListingAvailabilityBadgePresentation,
   getListingAvailabilityLabel,
   getTodayDateKeyInBangkok,
+  isListingAvailableNow,
   listingAvailabilityFieldsToDateKey,
   parseAvailableAtFromApi,
   parseAvailableAtToFormFields,
   parseListingAvailabilityFromApi,
   normalizeListingAvailabilityPatchInput,
+  resolveListingAvailabilityState,
   serializeAvailableAtForRequest,
   serializeListingAvailabilityForApi,
+  toListingAvailabilityDateKey,
 } from "./listingAvailability"
 
 describe("listingAvailability", () => {
@@ -205,6 +209,66 @@ describe("listingAvailability", () => {
     expect(getListingAvailabilityLabel("2026-08-15T00:00:00+07:00")).toBe(
       "Available from Aug 15, 2026",
     )
+  })
+
+  it("builds photo badge presentation for available-now vs later dates", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    expect(isListingAvailableNow(null)).toBe(false)
+    expect(isListingAvailableNow("2026-07-29T00:00:00+07:00")).toBe(true)
+    expect(isListingAvailableNow("2026-08-15T00:00:00+07:00")).toBe(false)
+
+    expect(getListingAvailabilityBadgePresentation(null)).toEqual({
+      label: "Flexible",
+      tone: "secondary",
+      isAvailableNow: false,
+    })
+    expect(
+      getListingAvailabilityBadgePresentation("2026-07-28T00:00:00+07:00"),
+    ).toEqual({
+      label: "Available now",
+      tone: "active",
+      isAvailableNow: true,
+    })
+    expect(
+      getListingAvailabilityBadgePresentation("2026-08-15T00:00:00+07:00"),
+    ).toEqual({
+      label: "Aug 15, 2026",
+      tone: "secondary",
+      isAvailableNow: false,
+    })
+  })
+
+  it("normalizes ISO and date keys once without repeating date math", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    expect(toListingAvailabilityDateKey(null)).toBeNull()
+    expect(toListingAvailabilityDateKey("not-a-date")).toBeNull()
+    expect(toListingAvailabilityDateKey("2026-08-15")).toBe("2026-08-15")
+    expect(toListingAvailabilityDateKey("2026-08-15T00:00:00+07:00")).toBe(
+      "2026-08-15",
+    )
+
+    expect(
+      resolveListingAvailabilityState("2026-07-28T00:00:00+07:00"),
+    ).toEqual({
+      kind: "now",
+      dateKey: "2026-07-28",
+      isAvailableNow: true,
+    })
+    expect(resolveListingAvailabilityState("garbage")).toEqual({
+      kind: "flexible",
+      dateKey: null,
+      isAvailableNow: false,
+    })
+    expect(
+      areAvailableAtValuesEqual(
+        "2026-08-15T00:00:00+07:00",
+        "2026-08-15",
+      ),
+    ).toBe(true)
   })
 
   it("uses Bangkok for today comparisons", () => {

@@ -5,6 +5,7 @@ import {
   DateDayPicker,
   type DateDayPickerPreset,
   type DateDayPickerRelativeMonthJump,
+  type DateDayPickerRenderTriggerProps,
 } from "@/shared/components/inputs/DateDayPicker"
 import {
   formatDateOnlyLabel,
@@ -34,6 +35,7 @@ export type ListingAvailabilityFieldProps = {
   disablePast?: boolean
   referenceDate?: Date
   triggerVariant?: "default" | "tab"
+  renderTrigger?: (props: DateDayPickerRenderTriggerProps) => ReactNode
   className?: string
   "aria-label"?: string
   "aria-describedby"?: string
@@ -99,6 +101,7 @@ export function ListingAvailabilityField({
   disablePast = true,
   referenceDate,
   triggerVariant = "default",
+  renderTrigger,
   className,
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
@@ -144,6 +147,7 @@ export function ListingAvailabilityField({
       referenceDate={resolvedReferenceDate}
       triggerVariant={triggerVariant}
       triggerIcon={useTabTrigger ? CalendarDays : undefined}
+      renderTrigger={renderTrigger}
       className={className}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}

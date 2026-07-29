@@ -26,6 +26,21 @@ export type {
 
 export type DateDayPickerTriggerVariant = "default" | "tab"
 
+export type DateDayPickerRenderTriggerProps = {
+  id: string
+  isOpen: boolean
+  disabled: boolean
+  isLoading: boolean
+  readOnly: boolean
+  required: boolean
+  triggerLabel: string
+  error?: ReactNode
+  "aria-label"?: string
+  "aria-describedby"?: string
+  "aria-invalid"?: boolean
+  openPicker: () => void
+}
+
 export type DateDayPickerProps = {
   id?: string
   value?: string | null
@@ -47,6 +62,7 @@ export type DateDayPickerProps = {
   referenceDate?: Date
   triggerVariant?: DateDayPickerTriggerVariant
   triggerIcon?: LucideIcon
+  renderTrigger?: (props: DateDayPickerRenderTriggerProps) => ReactNode
   className?: string
   triggerClassName?: string
   "aria-label"?: string
@@ -109,6 +125,7 @@ export function DateDayPicker({
   referenceDate,
   triggerVariant = "default",
   triggerIcon,
+  renderTrigger,
   className,
   triggerClassName,
   "aria-label": ariaLabel,
@@ -129,7 +146,8 @@ export function DateDayPicker({
     [presets],
   )
   const [isOpen, setIsOpen] = useState(false)
-  const useTabTrigger = triggerVariant === "tab"
+  const useCustomTrigger = typeof renderTrigger === "function"
+  const useTabTrigger = !useCustomTrigger && triggerVariant === "tab"
 
   const triggerLabel = resolveTriggerLabel({
     value: normalizedValue,
@@ -140,7 +158,7 @@ export function DateDayPicker({
   // FormTabTrigger owns error id wiring; default trigger needs it here.
   const describedBy = [
     ariaDescribedBy,
-    !useTabTrigger && showError ? errorId : undefined,
+    !useTabTrigger && !useCustomTrigger && showError ? errorId : undefined,
   ]
     .filter(Boolean)
     .join(" ")
@@ -175,8 +193,29 @@ export function DateDayPicker({
   }
 
   return (
-    <div className={cn("min-w-0", useTabTrigger && "inline-flex shrink-0", className)}>
-      {useTabTrigger ? (
+    <div
+      className={cn(
+        "min-w-0",
+        (useTabTrigger || useCustomTrigger) && "inline-flex shrink-0",
+        className,
+      )}
+    >
+      {useCustomTrigger ? (
+        renderTrigger({
+          id: triggerId,
+          isOpen,
+          disabled,
+          isLoading,
+          readOnly,
+          required,
+          triggerLabel,
+          error,
+          "aria-label": ariaLabel,
+          "aria-describedby": describedBy || undefined,
+          "aria-invalid": isAriaInvalid || undefined,
+          openPicker,
+        })
+      ) : useTabTrigger ? (
         <FormTabTrigger
           id={triggerId}
           label={triggerLabel}
@@ -234,7 +273,7 @@ export function DateDayPicker({
         </button>
       )}
 
-      {showError && !useTabTrigger && (
+      {showError && !useTabTrigger && !useCustomTrigger && (
         <p
           id={errorId}
           className="mt-2 text-sm font-medium text-red-600"

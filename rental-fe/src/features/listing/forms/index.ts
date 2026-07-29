@@ -1,4 +1,8 @@
 export {
+  EditAvailability,
+  type EditAvailabilityProps,
+} from "./EditAvailability"
+export {
   EditPrivacy,
   type EditPrivacyProps,
 } from "./EditPrivacy"

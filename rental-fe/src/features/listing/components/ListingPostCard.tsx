@@ -17,6 +17,10 @@ import { SaveListingButton } from "@/features/saved-listing/components/SaveListi
 import { useOptimisticSavedListingToggle } from "@/features/saved-listing/hooks/useOptimisticSavedListingToggle"
 
 import type { ListingVisibility } from "../types"
+import { useUpdateOwnerListing } from "../api"
+import {
+  toListingAvailabilityDateKey,
+} from "../utils/listingAvailability"
 import { buildListingUrl } from "../utils/listingDisplay"
 import { ListingPostBody } from "./ListingPostBody"
 import {
@@ -45,7 +49,14 @@ export function ListingPostCard({
   const [visibilityOverride, setVisibilityOverride] = useState<ListingVisibility | null>(
     null,
   )
+  const [availableAtOverride, setAvailableAtOverride] = useState<
+    string | null | undefined
+  >(undefined)
   const sharedExploreNeighbourhood = useNeighbourhoodExploreDialogContext()
+  const currentAvailableAt =
+    availableAtOverride !== undefined
+      ? availableAtOverride
+      : listing.availableAt
 
   if (isDeletedLocally) return null
 
@@ -58,6 +69,8 @@ export function ListingPostCard({
           canCreateListing={canCreateListing}
           directionsDestination={directionsDestination}
           currentVisibility={visibilityOverride ?? listing.visibility}
+          currentAvailableAt={currentAvailableAt}
+          onAvailableAtUpdated={setAvailableAtOverride}
           dialogActionsRef={dialogActionsRef}
           exploreNeighbourhood={sharedExploreNeighbourhood}
         />
@@ -68,6 +81,8 @@ export function ListingPostCard({
           canCreateListing={canCreateListing}
           directionsDestination={directionsDestination}
           currentVisibility={visibilityOverride ?? listing.visibility}
+          currentAvailableAt={currentAvailableAt}
+          onAvailableAtUpdated={setAvailableAtOverride}
           dialogActionsRef={dialogActionsRef}
         />
       )}
@@ -93,6 +108,8 @@ type ListingPostCardArticleProps = {
   canCreateListing: boolean
   directionsDestination?: DirectionsDestination | null
   currentVisibility: ListingVisibility
+  currentAvailableAt: string | null
+  onAvailableAtUpdated: (availableAt: string | null) => void
   dialogActionsRef: React.RefObject<ListingPostCardDialogActions | null>
   exploreNeighbourhood: NeighbourhoodExploreDialogControl
 }
@@ -125,6 +142,8 @@ function ListingPostCardArticle({
   canCreateListing,
   directionsDestination,
   currentVisibility,
+  currentAvailableAt,
+  onAvailableAtUpdated,
   dialogActionsRef,
   exploreNeighbourhood,
 }: ListingPostCardArticleProps) {
@@ -132,6 +151,8 @@ function ListingPostCardArticle({
   const navigate = useNavigate()
   const location = useLocation()
   const [saveAnimationKey, setSaveAnimationKey] = useState(0)
+  const [availabilityError, setAvailabilityError] = useState("")
+  const updateListingMutation = useUpdateOwnerListing()
   const savedListingToggle = useOptimisticSavedListingToggle({
     listingId: listing._id,
     initialIsSaved: Boolean(listing.isSavedByMe),
@@ -158,6 +179,33 @@ function ListingPostCardArticle({
 
   const openDialog = (action: keyof ListingPostCardDialogActions) => {
     dialogActionsRef.current?.[action]()
+  }
+
+  const handleAvailableAtChange = (nextAvailableAt: string | null) => {
+    if (
+      toListingAvailabilityDateKey(currentAvailableAt) === nextAvailableAt ||
+      updateListingMutation.isPending
+    ) {
+      return
+    }
+
+    setAvailabilityError("")
+    updateListingMutation.mutate(
+      { listingId: listing._id, values: { availableAt: nextAvailableAt } },
+      {
+        onSuccess: (updatedListing) => {
+          onAvailableAtUpdated(updatedListing.availableAt)
+          setAvailabilityError("")
+        },
+        onError: (error) => {
+          setAvailabilityError(
+            error instanceof Error
+              ? error.message
+              : "Could not update listing availability. Try again.",
+          )
+        },
+      },
+    )
   }
 
   const handleSaveToggle = () => {
@@ -207,6 +255,11 @@ function ListingPostCardArticle({
 
       <ListingPostBody
         listing={listing}
+        availableAt={currentAvailableAt}
+        isOwnListing={isOwnListing}
+        isAvailabilitySubmitting={updateListingMutation.isPending}
+        availabilityError={availabilityError || null}
+        onAvailableAtChange={handleAvailableAtChange}
         onReviewsRequest={
           agent ? () => openDialog("openReviewsDialog") : undefined
         }
