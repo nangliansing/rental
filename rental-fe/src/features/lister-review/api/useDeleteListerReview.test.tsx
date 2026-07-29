@@ -48,11 +48,19 @@ const variables = { review, currentSummary: summary }
 function setup() {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })
   const reviewsKey = queryKeys.listerReviews.list({ listerProfileId: "profile-1", sort: "latest", limit: 10 })
+  const teaserKey = queryKeys.listerReviewTeasers.list({ listerProfileId: "profile-1", sort: "latest", limit: 3 })
   const profileKey = queryKeys.profiles.detail("profile-1")
   const reportKey = queryKeys.admin.reviewReports.detail("report-1")
   queryClient.setQueryData(reviewsKey, {
     pageParams: [1],
     pages: [{ success: true, data: { myReview: review, reviews: [review] }, pagination: { page: 1, limit: 10, total: 1 } }],
+  })
+  // Flat teaser cache (useQuery), not InfiniteData: delete must leave it alone
+  // and refetch it instead of patching it with the infinite shape.
+  queryClient.setQueryData(teaserKey, {
+    success: true,
+    data: { myReview: review, reviews: [] },
+    pagination: { page: 1, limit: 3, total: 0 },
   })
   queryClient.setQueryData(profileKey, { _id: "profile-1", reviewSummary: summary })
   queryClient.setQueryData(reportKey, { _id: "report-1", review, listerProfile: { _id: "profile-1", reviewSummary: summary } })
@@ -60,7 +68,7 @@ function setup() {
   function Wrapper({ children }: PropsWithChildren) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   }
-  return { ...renderHook(() => useDeleteListerReview(), { wrapper: Wrapper }), queryClient, reviewsKey, profileKey, reportKey }
+  return { ...renderHook(() => useDeleteListerReview(), { wrapper: Wrapper }), queryClient, reviewsKey, teaserKey, profileKey, reportKey }
 }
 
 describe("useDeleteListerReview", () => {
@@ -71,10 +79,14 @@ describe("useDeleteListerReview", () => {
   it("optimistically removes the review, fixes pagination, and patches projections", async () => {
     let resolve!: (value: { review: typeof deletedReview; reviewSummary: typeof emptySummary }) => void
     mocks.deleteListerReview.mockImplementation(() => new Promise((done) => { resolve = done }))
-    const { result, queryClient, reviewsKey, profileKey, reportKey } = setup()
+    const { result, queryClient, reviewsKey, teaserKey, profileKey, reportKey } = setup()
 
     act(() => result.current.mutate(variables))
     await waitFor(() => expect(queryClient.getQueryData(reviewsKey)).toMatchObject({ pages: [{ data: { myReview: null, reviews: [] }, pagination: { total: 0 } }] }))
+    // Teasers are refetched on settle, never patched with the infinite shape.
+    expect(queryClient.getQueryData(teaserKey)).toMatchObject({
+      data: { myReview: { _id: "review-1" } },
+    })
     expect(queryClient.getQueryData(profileKey)).toMatchObject({ reviewSummary: emptySummary })
     expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: { isDeleted: true }, listerProfile: { reviewSummary: emptySummary } })
 
@@ -84,11 +96,14 @@ describe("useDeleteListerReview", () => {
 
   it("restores every exact snapshot on failure", async () => {
     mocks.deleteListerReview.mockRejectedValue(new Error("Network error"))
-    const { result, queryClient, reviewsKey, profileKey, reportKey } = setup()
+    const { result, queryClient, reviewsKey, teaserKey, profileKey, reportKey } = setup()
 
     act(() => result.current.mutate(variables))
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(queryClient.getQueryData(reviewsKey)).toMatchObject({ pages: [{ data: { myReview: { _id: "review-1" }, reviews: [{ _id: "review-1" }] }, pagination: { total: 1 } }] })
+    expect(queryClient.getQueryData(teaserKey)).toMatchObject({
+      data: { myReview: { _id: "review-1" }, reviews: [] },
+    })
     expect(queryClient.getQueryData(profileKey)).toMatchObject({ reviewSummary: summary })
     expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: { isDeleted: false } })
   })
@@ -101,8 +116,9 @@ describe("useDeleteListerReview", () => {
     act(() => result.current.mutate(variables))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: deletedReview })
-    expect(invalidate).toHaveBeenCalledTimes(3)
+    expect(invalidate).toHaveBeenCalledTimes(4)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviews.byLister("profile-1"), refetchType: "active" })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"), refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.admin.reviewReports.lists, refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.admin.reviewReports.details, refetchType: "active" })
   })

@@ -11,11 +11,8 @@ import {
 import { useMemo } from "react"
 import type { ReactNode } from "react"
 
-import { cn } from "@/lib/utils"
-
 import type { SearchListing } from "@/features/map-search/types"
 import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
-import { ReviewTagBadges } from "@/shared/components/data-display/ReviewTagBadges"
 import { getEdgeToEdgeHorizontalScrollRowClass } from "@/shared/components/layout/horizontalScrollRow"
 
 import { ListingAvailabilityBadge } from "./ListingAvailabilityBadge"
@@ -41,7 +38,6 @@ type ListingPostBodyProps = {
   isAvailabilitySubmitting?: boolean
   availabilityError?: string | null
   onAvailableAtChange?: (availableAt: string | null) => void
-  onReviewsRequest?: () => void
 }
 
 function InlineDot() {
@@ -108,7 +104,6 @@ export function ListingPostBody({
   isAvailabilitySubmitting = false,
   availabilityError = null,
   onAvailableAtChange,
-  onReviewsRequest,
 }: ListingPostBodyProps) {
   const photos = useMemo(
     () => getSortedListingPhotos(listing.media),
@@ -118,7 +113,6 @@ export function ListingPostBody({
   const facilities = normalizeFacilities(listing.facilities)
   const occupancy = normalizeOccupancy(listing.occupancy)
   const kitchenType = normalizeText(listing.kitchenType)
-  const agent = listing.agentProfile
 
   return (
     <>
@@ -139,15 +133,6 @@ export function ListingPostBody({
             onAvailableAtChange={onAvailableAtChange}
           />
         </div>
-        <ReviewTagBadges
-          tagCounts={agent?.reviewSummary?.tagCounts}
-          maxTags={2}
-          onReviewsClick={agent ? onReviewsRequest : undefined}
-          className={cn(
-            "absolute inset-x-0 bottom-3 z-10",
-            LISTING_POST_GUTTER_CLASS,
-          )}
-        />
       </div>
 
       <section className="space-y-2 px-3 pt-2.5">

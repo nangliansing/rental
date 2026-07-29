@@ -87,7 +87,7 @@ describe("useToggleListerReviewCollapse", () => {
     expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: { visibility: { isCollapsed: false } } })
   })
 
-  it("reconciles authoritative data without invalidating queries", async () => {
+  it("reconciles authoritative data and refetches review-backed collections", async () => {
     mocks.toggleListerReviewCollapse.mockResolvedValue(serverReview)
     const { result, queryClient, reviewsKey, reportKey } = setup()
     const invalidate = vi.spyOn(queryClient, "invalidateQueries")
@@ -96,6 +96,9 @@ describe("useToggleListerReviewCollapse", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(queryClient.getQueryData(reviewsKey)).toMatchObject({ pages: [{ data: { reviews: [serverReview] } }] })
     expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: serverReview })
-    expect(invalidate).not.toHaveBeenCalled()
+    // Collapsed reviews drop out of teasers, so those queries must refetch.
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviews.byLister("profile-1"), refetchType: "active" })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"), refetchType: "active" })
   })
 })

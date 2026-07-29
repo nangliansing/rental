@@ -1,6 +1,4 @@
-import type { ListerReviewTag } from "../api"
-
-export function formatReviewTag(tag: ListerReviewTag) {
+export function formatReviewTag(tag: string) {
   return tag
     .toLowerCase()
     .split("_")

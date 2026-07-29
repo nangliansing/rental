@@ -13,14 +13,14 @@ import {
   cancelReviewQueries,
   captureReviewQueries,
   invalidateReviewQueries,
+  listerReviewRefetchQueryKeys,
   patchReviewSummaryInQueries,
   replaceReviewInListerReviewData,
   restoreReviewQueries,
   reviewProjectionQueryKeys,
   setMyReviewInListerReviewData,
+  type ListerReviewsCacheData,
 } from "./reviewMutationCache"
-import type { SearchListerReviewsResponse } from "./searchListerReviews"
-import type { InfiniteData } from "@tanstack/react-query"
 
 export type CreateListerReviewVariables = CreateListerReviewInput & {
   currentSummary?: ListerReviewSummary | null
@@ -99,7 +99,7 @@ export function useCreateListerReview() {
         input.tags ?? [],
       )
 
-      queryClient.setQueriesData<InfiniteData<SearchListerReviewsResponse>>(
+      queryClient.setQueriesData<ListerReviewsCacheData>(
         { queryKey: queryKeys.listerReviews.byLister(listerProfileId) },
         (current) => setMyReviewInListerReviewData(current, optimisticReview),
       )
@@ -116,7 +116,7 @@ export function useCreateListerReview() {
       if (context) restoreReviewQueries(queryClient, context.snapshot)
     },
     onSuccess: (result, _input, context) => {
-      queryClient.setQueriesData<InfiniteData<SearchListerReviewsResponse>>(
+      queryClient.setQueriesData<ListerReviewsCacheData>(
         {
           queryKey: queryKeys.listerReviews.byLister(
             context?.listerProfileId ?? result.review.listerProfileId,
@@ -144,9 +144,10 @@ export function useCreateListerReview() {
         context?.listerProfileId ??
         result?.review.listerProfileId ??
         input.listerProfileId.trim()
-      await invalidateReviewQueries(queryClient, [
-        queryKeys.listerReviews.byLister(listerProfileId),
-      ])
+      await invalidateReviewQueries(
+        queryClient,
+        listerReviewRefetchQueryKeys(listerProfileId),
+      )
     },
   })
 }

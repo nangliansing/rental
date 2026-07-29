@@ -9,6 +9,9 @@ import type {
 } from "./createListerReview"
 import type { SearchListerReviewsResponse } from "./searchListerReviews"
 
+/** Cache shape of the infinite review lists under `queryKeys.listerReviews`. */
+export type ListerReviewsCacheData = InfiniteData<SearchListerReviewsResponse>
+
 export type ReviewCacheSnapshot = Array<{
   data: unknown
   queryKey: QueryKey
@@ -29,6 +32,21 @@ export function reviewProjectionQueryKeys(
     queryKeys.listings.ownerDetails,
     queryKeys.listings.publicDetails,
     queryKeys.savedListings.all,
+  ]
+}
+
+/**
+ * Caches to refetch after a review changes: the infinite review lists plus the
+ * listing-detail teaser queries. Teasers are cheap (one small page) so they are
+ * invalidated rather than patched, which keeps their flat shape out of the
+ * optimistic-update helpers below.
+ */
+export function listerReviewRefetchQueryKeys(
+  listerProfileId: string,
+): QueryKey[] {
+  return [
+    queryKeys.listerReviews.byLister(listerProfileId),
+    queryKeys.listerReviewTeasers.byLister(listerProfileId),
   ]
 }
 
@@ -73,15 +91,30 @@ export function restoreReviewQueries(
   })
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+/**
+ * Guards the helpers below against non-infinite caches. Only `useInfiniteQuery`
+ * data has `pages`; anything else is left untouched instead of crashing.
+ */
+function isInfiniteListerReviewsData(
+  value: unknown,
+): value is InfiniteData<SearchListerReviewsResponse> {
+  return isRecord(value) && Array.isArray(value.pages)
+}
+
 export function removeReviewFromListerReviewData(
-  current: InfiniteData<SearchListerReviewsResponse> | undefined,
+  current: ListerReviewsCacheData | undefined,
   reviewId: string,
-) {
-  if (!current) return current
+): ListerReviewsCacheData | undefined {
+  if (!isInfiniteListerReviewsData(current)) return current
 
   const removedCount = current.pages.reduce(
     (count, page) =>
-      count + page.data.reviews.filter((review) => review._id === reviewId).length,
+      count +
+      page.data.reviews.filter((review) => review._id === reviewId).length,
     0,
   )
   const removesMyReview = current.pages.some(
@@ -108,10 +141,11 @@ export function removeReviewFromListerReviewData(
 }
 
 export function setMyReviewInListerReviewData(
-  current: InfiniteData<SearchListerReviewsResponse> | undefined,
+  current: ListerReviewsCacheData | undefined,
   review: ListerReview,
-) {
-  if (!current) return current
+): ListerReviewsCacheData | undefined {
+  if (!isInfiniteListerReviewsData(current)) return current
+
   return {
     ...current,
     pages: current.pages.map((page) => ({
@@ -122,11 +156,12 @@ export function setMyReviewInListerReviewData(
 }
 
 export function replaceReviewInListerReviewData(
-  current: InfiniteData<SearchListerReviewsResponse> | undefined,
+  current: ListerReviewsCacheData | undefined,
   optimisticReviewId: string,
   review: ListerReview,
-) {
-  if (!current) return current
+): ListerReviewsCacheData | undefined {
+  if (!isInfiniteListerReviewsData(current)) return current
+
   return {
     ...current,
     pages: current.pages.map((page) => ({
@@ -319,10 +354,6 @@ export function patchReviewInQueries(
       )
     })
   })
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
 function patchReviewSummary<T>(

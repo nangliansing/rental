@@ -7,6 +7,8 @@ import type { ListerReview } from "./createListerReview"
 import {
   cancelReviewQueries,
   captureReviewQueries,
+  invalidateReviewQueries,
+  listerReviewRefetchQueryKeys,
   patchReviewInQueries,
   restoreReviewQueries,
 } from "./reviewMutationCache"
@@ -70,6 +72,14 @@ export function useToggleListerReviewCollapse() {
         ],
         variables.review._id,
         review,
+      )
+    },
+    onSettled: async (_review, error, variables) => {
+      if (error) return
+      // Collapsing hides a review from teasers, so they must refetch.
+      await invalidateReviewQueries(
+        queryClient,
+        listerReviewRefetchQueryKeys(variables.review.listerProfileId),
       )
     },
   })

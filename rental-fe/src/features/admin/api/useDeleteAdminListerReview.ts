@@ -4,14 +4,14 @@ import {
   cancelReviewQueries,
   captureReviewQueries,
   invalidateReviewQueries,
+  listerReviewRefetchQueryKeys,
   patchReviewSummaryInQueries,
   removeReviewFromListerReviewData,
   restoreReviewQueries,
   reviewProjectionQueryKeys,
+  type ListerReviewsCacheData,
 } from "@/features/lister-review/api/reviewMutationCache"
-import type { SearchListerReviewsResponse } from "@/features/lister-review/api/searchListerReviews"
 import { queryKeys } from "@/lib/query-keys"
-import type { InfiniteData } from "@tanstack/react-query"
 
 import {
   deleteAdminListerReview,
@@ -92,7 +92,7 @@ export function useDeleteAdminListerReview(currentUserId?: string) {
       await cancelReviewQueries(queryClient, optimisticKeys)
       const snapshot = captureReviewQueries(queryClient, optimisticKeys)
 
-      queryClient.setQueriesData<InfiniteData<SearchListerReviewsResponse>>(
+      queryClient.setQueriesData<ListerReviewsCacheData>(
         { queryKey: queryKeys.listerReviews.lists },
         (current) =>
           removeReviewFromListerReviewData(current, variables.reviewId),
@@ -166,6 +166,7 @@ export function useDeleteAdminListerReview(currentUserId?: string) {
         queryKeys.admin.reviewReports.lists,
         queryKeys.admin.reviewReports.detail(variables.reviewReportId),
         ...projectionKeys,
+        ...listerReviewRefetchQueryKeys(variables.listerProfileId),
       ])
     },
   })
