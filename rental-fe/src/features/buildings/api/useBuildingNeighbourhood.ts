@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 
 import { queryKeys } from "@/lib/query-keys"
 
@@ -22,6 +22,27 @@ export const buildingNeighbourhoodQueryKey = (
     fetchRadiusM: fetchRadiusM ?? NEIGHBOURHOOD_FETCH_RADIUS_METERS,
   })
 
+export const buildingNeighbourhoodQueryOptions = ({
+  buildingId,
+  radiusM = NEIGHBOURHOOD_DEFAULT_RADIUS_METERS,
+  fetchRadiusM = NEIGHBOURHOOD_FETCH_RADIUS_METERS,
+  enabled = true,
+}: UseBuildingNeighbourhoodInput) =>
+  queryOptions({
+    queryKey: buildingNeighbourhoodQueryKey(buildingId, {
+      radiusM,
+      fetchRadiusM,
+    }),
+    enabled: enabled && Boolean(buildingId?.trim()),
+    queryFn: ({ signal }) =>
+      getBuildingNeighbourhood({
+        buildingId: buildingId ?? "",
+        radiusM,
+        fetchRadiusM,
+        signal,
+      }),
+  })
+
 type UseBuildingNeighbourhoodInput = {
   buildingId?: string
   radiusM?: number
@@ -35,17 +56,12 @@ export function useBuildingNeighbourhood({
   fetchRadiusM = NEIGHBOURHOOD_FETCH_RADIUS_METERS,
   enabled = true,
 }: UseBuildingNeighbourhoodInput) {
-  return useQuery({
-    queryKey: buildingNeighbourhoodQueryKey(buildingId, {
+  return useQuery(
+    buildingNeighbourhoodQueryOptions({
+      buildingId,
       radiusM,
       fetchRadiusM,
+      enabled,
     }),
-    enabled: enabled && Boolean(buildingId),
-    queryFn: () =>
-      getBuildingNeighbourhood({
-        buildingId: buildingId!,
-        radiusM,
-        fetchRadiusM,
-      }),
-  })
+  )
 }

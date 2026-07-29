@@ -32,7 +32,10 @@ const parsePublicListingByIdResponse = (
   }
 }
 
-export async function getPublicListingById(listingId: string) {
+export async function getPublicListingById(
+  listingId: string,
+  signal?: AbortSignal,
+) {
   const normalizedListingId = listingId.trim()
 
   if (!normalizedListingId) {
@@ -45,6 +48,7 @@ export async function getPublicListingById(listingId: string) {
 
   const response = await apiClient.get<GetPublicListingByIdResponse>(
     `/search/listings/${encodeURIComponent(normalizedListingId)}`,
+    { signal },
   )
 
   return parsePublicListingByIdResponse(response.data).data.listing

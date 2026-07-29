@@ -1,16 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { QueryKey } from "@tanstack/react-query"
 
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
 import { queryKeys } from "@/lib/query-keys"
 
 import type { ListerReview } from "./createListerReview"
 import {
-  cancelReviewQueries,
-  captureReviewQueries,
-  invalidateReviewQueries,
   listerReviewRefetchQueryKeys,
   patchReviewInQueries,
-  restoreReviewQueries,
+  REVIEW_WRITE_SCOPE_ID,
 } from "./reviewMutationCache"
 import { toggleListerReviewCollapse } from "./toggleListerReviewCollapse"
 
@@ -18,21 +16,41 @@ export type ToggleListerReviewCollapseVariables = {
   review: ListerReview
 }
 
+function toggleReviewProjectionKeys(
+  variables: ToggleListerReviewCollapseVariables,
+): QueryKey[] {
+  return [
+    queryKeys.listerReviews.byLister(
+      variables.review.listerProfileId,
+    ),
+    queryKeys.admin.reviewReports.lists,
+    queryKeys.admin.reviewReports.details,
+  ]
+}
+
 export function useToggleListerReviewCollapse() {
   const queryClient = useQueryClient()
-
-  return useMutation({
-    scope: { id: "toggle-lister-review-collapse" },
-    mutationFn: ({ review }: ToggleListerReviewCollapseVariables) =>
-      toggleListerReviewCollapse({ reviewId: review._id }),
-    onMutate: async ({ review }) => {
-      const keys: QueryKey[] = [
-        queryKeys.listerReviews.byLister(review.listerProfileId),
-        queryKeys.admin.reviewReports.lists,
-        queryKeys.admin.reviewReports.details,
-      ]
-      await cancelReviewQueries(queryClient, keys)
-      const snapshot = captureReviewQueries(queryClient, keys)
+  const transaction = createOptimisticTransaction<
+    Awaited<ReturnType<typeof toggleListerReviewCollapse>>,
+    Error,
+    ToggleListerReviewCollapseVariables,
+    { keys: QueryKey[] }
+  >({
+    queryClient,
+    scopeKey: () => REVIEW_WRITE_SCOPE_ID,
+    getPlan: variables => {
+      const keys = toggleReviewProjectionKeys(variables)
+      return {
+        cancel: keys,
+        snapshot: keys,
+        invalidate: listerReviewRefetchQueryKeys(
+          variables.review.listerProfileId,
+        ),
+      }
+    },
+    apply: ({ queryClient: client, variables }) => {
+      const { review } = variables
+      const keys = toggleReviewProjectionKeys(variables)
       const isCollapsed = !review.visibility.isCollapsed
       const now = new Date().toISOString()
       const optimisticReview: ListerReview = {
@@ -50,37 +68,33 @@ export function useToggleListerReviewCollapse() {
       }
 
       patchReviewInQueries(
-        queryClient,
+        client,
         keys,
         review._id,
         optimisticReview,
       )
-      return { keys, snapshot }
+      return { keys }
     },
-    onError: (_error, _variables, context) => {
-      if (context) restoreReviewQueries(queryClient, context.snapshot)
-    },
-    onSuccess: (review, variables, context) => {
+    reconcile: ({
+      queryClient: client,
+      variables,
+      optimisticContext,
+      data,
+    }) => {
       patchReviewInQueries(
-        queryClient,
-        context?.keys ?? [
-          queryKeys.listerReviews.byLister(
-            variables.review.listerProfileId,
-          ),
-          queryKeys.admin.reviewReports.lists,
-          queryKeys.admin.reviewReports.details,
-        ],
+        client,
+        optimisticContext.keys,
         variables.review._id,
-        review,
+        data,
       )
     },
-    onSettled: async (_review, error, variables) => {
-      if (error) return
-      // Collapsing hides a review from teasers, so they must refetch.
-      await invalidateReviewQueries(
-        queryClient,
-        listerReviewRefetchQueryKeys(variables.review.listerProfileId),
-      )
-    },
+    shouldInvalidate: ({ error }) => error === null,
+  })
+
+  return useMutation({
+    scope: { id: REVIEW_WRITE_SCOPE_ID },
+    mutationFn: ({ review }: ToggleListerReviewCollapseVariables) =>
+      toggleListerReviewCollapse({ reviewId: review._id }),
+    ...transaction,
   })
 }

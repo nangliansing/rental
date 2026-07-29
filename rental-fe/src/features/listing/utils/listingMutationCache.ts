@@ -16,7 +16,7 @@ export const relatedListingQueryKeys = (listingId: string): QueryKey[] => [
   queryKeys.savedListings.all,
 ]
 
-const listingCollectionQueryKeys: QueryKey[] = [
+export const listingCollectionQueryKeys: QueryKey[] = [
   queryKeys.listings.ownerLists,
   queryKeys.mapSearch.listingsInBuilding,
   queryKeys.agentListings.lists,
@@ -89,7 +89,20 @@ function removeListing<T>(value: T, listingId: string): T {
   return next as T
 }
 
-function removeListingFromCountedCollection<T>(value: T, listingId: string): T {
+function directListings(value: unknown): unknown[] | null {
+  if (!isRecord(value)) return null
+  if (Array.isArray(value.data)) return value.data
+  if (isRecord(value.data) && Array.isArray(value.data.listings)) {
+    return value.data.listings
+  }
+  return null
+}
+
+function removeListingFromCountedCollection<T>(
+  value: T,
+  listingId: string,
+  collectionRemovedCount?: number,
+): T {
   if (Array.isArray(value)) {
     let changed = false
     const next = value
@@ -108,19 +121,31 @@ function removeListingFromCountedCollection<T>(value: T, listingId: string): T {
 
   if (!isRecord(value)) return value
 
+  if (Array.isArray(value.pages)) {
+    const removesListing = value.pages.some((page) =>
+      directListings(page)?.some(
+        (item) => isRecord(item) && item._id === listingId,
+      ),
+    )
+    if (removesListing) {
+      return {
+        ...value,
+        pages: value.pages.map((page) =>
+          removeListingFromCountedCollection(page, listingId, 1),
+        ),
+      } as T
+    }
+  }
+
   const pagination = isRecord(value.pagination) ? value.pagination : null
   const data = value.data
-  const directListings = Array.isArray(data)
-    ? data
-    : isRecord(data) && Array.isArray(data.listings)
-      ? data.listings
-      : null
+  const listings = directListings(value)
 
-  if (pagination && directListings) {
-    const removedCount = directListings.filter(
+  if (pagination && listings) {
+    const removedCount = listings.filter(
       (item) => isRecord(item) && item._id === listingId,
     ).length
-    const nextListings = directListings.filter(
+    const nextListings = listings.filter(
       (item) => !(isRecord(item) && item._id === listingId),
     )
     const nextData = Array.isArray(data)
@@ -134,7 +159,11 @@ function removeListingFromCountedCollection<T>(value: T, listingId: string): T {
         ...pagination,
         total:
           typeof pagination.total === "number"
-            ? Math.max(0, pagination.total - removedCount)
+            ? Math.max(
+                0,
+                pagination.total -
+                  (collectionRemovedCount ?? removedCount),
+              )
             : pagination.total,
       },
     } as T

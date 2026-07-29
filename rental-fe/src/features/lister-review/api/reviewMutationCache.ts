@@ -12,6 +12,8 @@ import type { SearchListerReviewsResponse } from "./searchListerReviews"
 /** Cache shape of the infinite review lists under `queryKeys.listerReviews`. */
 export type ListerReviewsCacheData = InfiniteData<SearchListerReviewsResponse>
 
+export const REVIEW_WRITE_SCOPE_ID = "lister-review-write"
+
 export type ReviewCacheSnapshot = Array<{
   data: unknown
   queryKey: QueryKey
@@ -102,7 +104,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isInfiniteListerReviewsData(
   value: unknown,
 ): value is InfiniteData<SearchListerReviewsResponse> {
-  return isRecord(value) && Array.isArray(value.pages)
+  return (
+    isRecord(value) &&
+    Array.isArray(value.pages) &&
+    value.pages.every(
+      (page) =>
+        isRecord(page) &&
+        isRecord(page.data) &&
+        Array.isArray(page.data.reviews) &&
+        isRecord(page.pagination) &&
+        typeof page.pagination.total === "number" &&
+        Number.isFinite(page.pagination.total),
+    )
+  )
 }
 
 export function removeReviewFromListerReviewData(
@@ -193,7 +207,7 @@ export function addReviewToSummary(
   rating: number,
   tags: ListerReviewTag[],
 ): ListerReviewSummary {
-  const summary: ListerReviewSummary = current ?? {
+  const summary = current ?? {
     averageRating: 0,
     reviewCount: 0,
     ratingCounts: {
@@ -205,30 +219,60 @@ export function addReviewToSummary(
     },
     tagCounts: [],
   }
-  const reviewCount = summary.reviewCount + 1
-  const ratingKey = RATING_COUNT_KEY[rating as keyof typeof RATING_COUNT_KEY]
-  const tagIncrements = new Set(tags)
-  const existingTags = new Set(summary.tagCounts.map(({ tag }) => tag))
+  const normalizeCount = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value)
+      ? Math.max(0, Math.trunc(value))
+      : 0
+  const previousReviewCount = normalizeCount(summary.reviewCount)
+  const previousAverage =
+    typeof summary.averageRating === "number" &&
+    Number.isFinite(summary.averageRating)
+      ? Math.min(5, Math.max(0, summary.averageRating))
+      : 0
+  const normalizedRating: keyof typeof RATING_COUNT_KEY | null =
+    Number.isInteger(rating) && rating >= 1 && rating <= 5
+      ? (rating as keyof typeof RATING_COUNT_KEY)
+      : null
+  const ratingCounts = {
+    oneStar: normalizeCount(summary.ratingCounts?.oneStar),
+    twoStars: normalizeCount(summary.ratingCounts?.twoStars),
+    threeStars: normalizeCount(summary.ratingCounts?.threeStars),
+    fourStars: normalizeCount(summary.ratingCounts?.fourStars),
+    fiveStars: normalizeCount(summary.ratingCounts?.fiveStars),
+  }
+  const tagCounts = new Map<ListerReviewTag, number>()
+  for (const entry of Array.isArray(summary.tagCounts)
+    ? summary.tagCounts
+    : []) {
+    tagCounts.set(
+      entry.tag,
+      (tagCounts.get(entry.tag) ?? 0) + normalizeCount(entry.count),
+    )
+  }
+
+  if (normalizedRating === null) {
+    return {
+      averageRating: previousAverage,
+      reviewCount: previousReviewCount,
+      ratingCounts,
+      tagCounts: [...tagCounts].map(([tag, count]) => ({ tag, count })),
+    }
+  }
+
+  const reviewCount = previousReviewCount + 1
+  const ratingKey = RATING_COUNT_KEY[normalizedRating]
+  ratingCounts[ratingKey] += 1
+  for (const tag of new Set(tags)) {
+    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+  }
 
   return {
     averageRating:
-      (summary.averageRating * summary.reviewCount + rating) / reviewCount,
+      (previousAverage * previousReviewCount + normalizedRating) /
+      reviewCount,
     reviewCount,
-    ratingCounts: {
-      ...summary.ratingCounts,
-      ...(ratingKey
-        ? { [ratingKey]: summary.ratingCounts[ratingKey] + 1 }
-        : {}),
-    },
-    tagCounts: [
-      ...summary.tagCounts.map((entry) => ({
-        ...entry,
-        count: entry.count + (tagIncrements.has(entry.tag) ? 1 : 0),
-      })),
-      ...tags
-        .filter((tag) => !existingTags.has(tag))
-        .map((tag) => ({ tag, count: 1 })),
-    ],
+    ratingCounts,
+    tagCounts: [...tagCounts].map(([tag, count]) => ({ tag, count })),
   }
 }
 

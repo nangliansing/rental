@@ -10,6 +10,7 @@ export type SearchListerReviewsInput = {
   page?: number
   limit?: number
   sort?: ListerReviewSort
+  signal?: AbortSignal
 }
 
 export type SearchListerReviewsResponse = {
@@ -26,6 +27,7 @@ export async function searchListerReviews({
   page = 1,
   limit = 20,
   sort = "latest",
+  signal,
 }: SearchListerReviewsInput) {
   const searchParams = new URLSearchParams({
     page: String(page),
@@ -35,6 +37,7 @@ export async function searchListerReviews({
 
   const response = await apiClient.get<unknown>(
     `/lister-reviews/listers/${listerProfileId}?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseSearchListerReviewsResponse(response.data, { page, limit })

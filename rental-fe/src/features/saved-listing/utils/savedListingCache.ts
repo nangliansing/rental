@@ -1,6 +1,8 @@
 import type { Query, QueryClient, QueryKey } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 
+export const SAVED_LISTING_WRITE_SCOPE_ID = "saved-listing-write"
+
 export const relatedSavedListingQueryKeys: QueryKey[] = [
   queryKeys.savedListings.all,
   queryKeys.listings.ownerLists,
@@ -70,7 +72,18 @@ function patchSavedState<T>(value: T, listingId: string, isSaved: boolean): Patc
   }
 }
 
-function removeListingFromSavedData<T>(value: T, listingId: string): PatchResult<T> {
+function directSavedListings(value: unknown): unknown[] | null {
+  if (!isRecord(value) || !isRecord(value.data)) return null
+  return Array.isArray(value.data.savedListings)
+    ? value.data.savedListings
+    : null
+}
+
+function removeListingFromSavedData<T>(
+  value: T,
+  listingId: string,
+  collectionRemovedCount?: number,
+): PatchResult<T> {
   if (Array.isArray(value)) {
     let changed = false
     const nextValue = value.map((item) => {
@@ -89,6 +102,27 @@ function removeListingFromSavedData<T>(value: T, listingId: string): PatchResult
     return { value, changed: false }
   }
 
+  if (Array.isArray(value.pages)) {
+    const removesListing = value.pages.some((page) =>
+      directSavedListings(page)?.some(
+        (savedListing) =>
+          isRecord(savedListing) &&
+          savedListing.listingId === listingId,
+      ),
+    )
+    if (removesListing) {
+      return {
+        value: {
+          ...value,
+          pages: value.pages.map((page) =>
+            removeListingFromSavedData(page, listingId, 1).value,
+          ),
+        } as T,
+        changed: true,
+      }
+    }
+  }
+
   const data = value.data
   let changed = false
   let nextValue: Record<string, unknown> = value
@@ -98,14 +132,21 @@ function removeListingFromSavedData<T>(value: T, listingId: string): PatchResult
       return !isRecord(savedListing) || savedListing.listingId !== listingId
     })
 
-    if (nextSavedListings.length !== data.savedListings.length) {
+    if (
+      nextSavedListings.length !== data.savedListings.length ||
+      collectionRemovedCount !== undefined
+    ) {
       const removedCount = data.savedListings.length - nextSavedListings.length
       const pagination = isRecord(value.pagination)
         ? {
             ...value.pagination,
             total:
               typeof value.pagination.total === "number"
-                ? Math.max(value.pagination.total - removedCount, 0)
+                ? Math.max(
+                    value.pagination.total -
+                      (collectionRemovedCount ?? removedCount),
+                    0,
+                  )
                 : value.pagination.total,
           }
         : value.pagination

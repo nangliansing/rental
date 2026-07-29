@@ -1,23 +1,19 @@
-import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import type { AgentProfile } from "@/features/profile/api"
-import {
-  cancelQueriesByKey,
-  captureQueriesByKey,
-  restoreQueryCacheSnapshot,
-} from "@/lib/query-cache-snapshot"
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
 import { queryKeys } from "@/lib/query-keys"
 
 import { createPendingPost } from "./createPendingPost"
 import {
   getOwnerPendingPostStatusFromQueryKey,
   insertPendingPostIntoInfiniteData,
+  PENDING_POST_WRITE_SCOPE_ID,
   type OwnerPendingPostsInfiniteData,
 } from "./pendingPostCache"
 
-const relatedCreatePendingPostQueryKeys: QueryKey[] = [
+const createPendingPostProjectionKeys = [
   queryKeys.pendingPosts.ownerLists,
-  queryKeys.admin.pendingPosts.lists,
   queryKeys.profiles.me,
   queryKeys.profiles.details,
 ]
@@ -30,72 +26,87 @@ function incrementPendingCount(value: unknown) {
     return value
   }
   const listingSummary = summary as Record<string, unknown>
+  const currentPendingCount =
+    typeof listingSummary.pendingCount === "number" &&
+    Number.isFinite(listingSummary.pendingCount)
+      ? Math.max(0, Math.trunc(listingSummary.pendingCount))
+      : 0
 
   return {
     ...profile,
     listingSummary: {
       ...listingSummary,
-      pendingCount:
-        (typeof listingSummary.pendingCount === "number"
-          ? listingSummary.pendingCount
-          : 0) + 1,
+      pendingCount: currentPendingCount + 1,
     },
   }
 }
 
 export function useCreatePendingPost() {
   const queryClient = useQueryClient()
-
-  return useMutation({
-    scope: { id: "create-pending-post" },
-    mutationFn: createPendingPost,
-    onMutate: async () => {
-      await cancelQueriesByKey(queryClient, relatedCreatePendingPostQueryKeys)
-      const snapshots = captureQueriesByKey(
-        queryClient,
-        relatedCreatePendingPostQueryKeys,
-      )
-      const profile = queryClient.getQueryData<AgentProfile>(
+  const transaction = createOptimisticTransaction<
+    Awaited<ReturnType<typeof createPendingPost>>,
+    Error,
+    Parameters<typeof createPendingPost>[0],
+    { profileAdjusted: boolean; profileId: string | null }
+  >({
+    queryClient,
+    scopeKey: () => PENDING_POST_WRITE_SCOPE_ID,
+    getPlan: () => ({
+      cancel: createPendingPostProjectionKeys,
+      snapshot: createPendingPostProjectionKeys,
+      invalidate: [queryKeys.admin.pendingPosts.lists],
+    }),
+    apply: ({ queryClient: client }) => {
+      const profile = client.getQueryData<AgentProfile>(
         queryKeys.profiles.me,
       )
+      const profileId = profile?._id ?? null
 
-      queryClient.setQueryData(queryKeys.profiles.me, incrementPendingCount)
-      if (profile?._id) {
-        queryClient.setQueryData(
-          queryKeys.profiles.detail(profile._id),
+      if (profileId) {
+        client.setQueryData(queryKeys.profiles.me, incrementPendingCount)
+        client.setQueryData(
+          queryKeys.profiles.detail(profileId),
           incrementPendingCount,
         )
       }
 
-      return { snapshots }
+      return { profileAdjusted: Boolean(profileId), profileId }
     },
-    onError: (_error, _input, context) => {
-      if (!context) return
-      restoreQueryCacheSnapshot(queryClient, context.snapshots)
-    },
-    onSuccess: (pendingPost) => {
-      queryClient
+    reconcile: ({ queryClient: client, optimisticContext, data }) => {
+      const profileId =
+        optimisticContext.profileId ??
+        client.getQueryData<AgentProfile>(queryKeys.profiles.me)?._id ??
+        null
+      if (!optimisticContext.profileAdjusted && profileId) {
+        client.setQueryData(queryKeys.profiles.me, incrementPendingCount)
+        client.setQueryData(
+          queryKeys.profiles.detail(profileId),
+          incrementPendingCount,
+        )
+      }
+
+      client
         .getQueriesData<OwnerPendingPostsInfiniteData>({
           queryKey: queryKeys.pendingPosts.ownerLists,
         })
         .forEach(([queryKey]) => {
-          queryClient.setQueryData<OwnerPendingPostsInfiniteData>(
+          client.setQueryData<OwnerPendingPostsInfiniteData>(
             queryKey,
-            (current) =>
+            current =>
               insertPendingPostIntoInfiniteData(
                 current,
                 getOwnerPendingPostStatusFromQueryKey(queryKey),
-                pendingPost,
+                data,
               ),
           )
         })
     },
-    onSettled: async (_data, error) => {
-      if (error) return
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.admin.pendingPosts.lists,
-        refetchType: "active",
-      })
-    },
+    shouldInvalidate: ({ error }) => error === null,
+  })
+
+  return useMutation({
+    scope: { id: PENDING_POST_WRITE_SCOPE_ID },
+    mutationFn: createPendingPost,
+    ...transaction,
   })
 }

@@ -79,9 +79,13 @@ export const parseListerProfileResponse = (
   }
 }
 
-export async function getListerProfileById(agentProfileId: string) {
+export async function getListerProfileById(
+  agentProfileId: string,
+  signal?: AbortSignal,
+) {
   const response = await apiClient.get<unknown>(
     `/search/agents/${agentProfileId}`,
+    { signal },
   )
 
   return parseListerProfileResponse(response.data)

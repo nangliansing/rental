@@ -1,8 +1,16 @@
 // src/features/map-search/api/useSearchBuildingsInMap.ts
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
+import {
+    infiniteQueryOptions,
+    keepPreviousData,
+    useInfiniteQuery,
+} from "@tanstack/react-query"
 
 import { ApiError } from "@/lib/api-client"
 import { queryKeys } from "@/lib/query-keys"
+import {
+    getNextPageParam,
+    readPageParam,
+} from "@/lib/query-pagination"
 
 import type { MapSearchFilters } from "../filters/types"
 import type { SearchBounds } from "../hooks/useMapBounds"
@@ -16,14 +24,14 @@ type UseSearchBuildingsInMapInput = {
     includeBuildingsWithoutMatchingListings?: boolean
 }
 
-export function useSearchBuildingsInMap({
+export const buildingsInMapQueryOptions = ({
     bounds,
     filters,
     limit = 20,
     enabled,
     includeBuildingsWithoutMatchingListings,
-}: UseSearchBuildingsInMapInput) {
-    return useInfiniteQuery({
+}: UseSearchBuildingsInMapInput) =>
+    infiniteQueryOptions({
         queryKey: queryKeys.mapSearch.buildingResults({
             bounds,
             filters,
@@ -44,18 +52,30 @@ export function useSearchBuildingsInMap({
             return searchBuildingsInMap({
                 bounds,
                 filters,
-                page: Number(pageParam),
+                page: readPageParam(pageParam),
                 limit,
                 includeBuildingsWithoutMatchingListings,
                 signal,
             })
         },
         placeholderData: keepPreviousData,
-        getNextPageParam: (lastPage) => {
-            const { page, limit, total } = lastPage.pagination
-            const loaded = page * limit
-
-            return loaded < total ? page + 1 : undefined
-        },
+        getNextPageParam,
     })
+
+export function useSearchBuildingsInMap({
+    bounds,
+    filters,
+    limit = 20,
+    enabled,
+    includeBuildingsWithoutMatchingListings,
+}: UseSearchBuildingsInMapInput) {
+    return useInfiniteQuery(
+        buildingsInMapQueryOptions({
+            bounds,
+            filters,
+            limit,
+            enabled,
+            includeBuildingsWithoutMatchingListings,
+        }),
+    )
 }

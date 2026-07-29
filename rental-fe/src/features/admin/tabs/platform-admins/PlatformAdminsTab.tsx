@@ -1,11 +1,8 @@
 import { useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
-import { queryKeys } from "@/lib/query-keys"
-
 import {
-  getAdminUserById,
-  searchAdminPlatformAdmins,
+  adminQueries,
   useRemoveAdminRole,
   type AdminUserDetails,
 } from "../../api"
@@ -15,7 +12,6 @@ import {
   AdminEmptyState,
   AdminListState,
 } from "../../components/AdminListState"
-import { getNextAdminPageParam } from "../../shared/adminPagination"
 import { PlatformAdminDetail } from "./PlatformAdminDetail"
 import { PlatformAdminListItem } from "./PlatformAdminListItem"
 import {
@@ -43,17 +39,9 @@ export function PlatformAdminsTab({
     string | null
   >(null)
 
-  const platformAdminsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.platformAdmins.list,
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminPlatformAdmins({
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled,
-  })
+  const platformAdminsQuery = useInfiniteQuery(
+    adminQueries.platformAdmins(enabled),
+  )
 
   const removeAdminRoleMutation = useRemoveAdminRole()
 
@@ -67,11 +55,9 @@ export function PlatformAdminsTab({
   const effectivePlatformAdminId =
     selectedPlatformAdminId ?? selectedPlatformAdminListItem?._id
 
-  const platformAdminDetailQuery = useQuery({
-    queryKey: queryKeys.admin.users.detail(effectivePlatformAdminId),
-    queryFn: () => getAdminUserById(effectivePlatformAdminId!),
-    enabled: enabled && Boolean(effectivePlatformAdminId),
-  })
+  const platformAdminDetailQuery = useQuery(
+    adminQueries.userDetail(effectivePlatformAdminId, enabled),
+  )
 
   const selectedPlatformAdmin: AdminUserDetails | null =
     platformAdminDetailQuery.data ??

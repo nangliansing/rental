@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 
 import { getPublicListingById } from "./getPublicListingById"
@@ -7,6 +7,21 @@ export const publicListingQueryKey = (
   listingId: string | undefined,
   viewerKey?: string | null,
 ) => queryKeys.listings.publicDetail(listingId, viewerKey)
+
+export const publicListingQueryOptions = ({
+  listingId,
+  viewerKey = null,
+  enabled = true,
+}: UsePublicListingByIdInput) => {
+  const normalizedListingId = listingId?.trim() || undefined
+
+  return queryOptions({
+    queryKey: publicListingQueryKey(normalizedListingId, viewerKey),
+    enabled: enabled && Boolean(normalizedListingId),
+    queryFn: ({ signal }) =>
+      getPublicListingById(normalizedListingId ?? "", signal),
+  })
+}
 
 type UsePublicListingByIdInput = {
   listingId?: string
@@ -19,11 +34,7 @@ export function usePublicListingById({
   viewerKey = null,
   enabled = true,
 }: UsePublicListingByIdInput) {
-  const normalizedListingId = listingId?.trim() || undefined
-
-  return useQuery({
-    queryKey: publicListingQueryKey(normalizedListingId, viewerKey),
-    enabled: enabled && Boolean(normalizedListingId),
-    queryFn: () => getPublicListingById(normalizedListingId!),
-  })
+  return useQuery(
+    publicListingQueryOptions({ listingId, viewerKey, enabled }),
+  )
 }

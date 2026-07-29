@@ -1,5 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+} from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
+import {
+  getNextPageParam,
+  readPageParam,
+} from "@/lib/query-pagination"
 
 import type { ListerReviewSort } from "./createListerReview"
 import { searchListerReviews } from "./searchListerReviews"
@@ -21,32 +28,43 @@ type UseSearchListerReviewsInput = {
   enabled?: boolean
 }
 
+export const listerReviewsQueryOptions = ({
+  listerProfileId,
+  sort = "latest",
+  limit = 20,
+  enabled = true,
+}: UseSearchListerReviewsInput = {}) =>
+  infiniteQueryOptions({
+    queryKey: listerReviewsQueryKey({
+      listerProfileId: listerProfileId ?? "",
+      sort,
+      limit,
+    }),
+    enabled: enabled && Boolean(listerProfileId?.trim()),
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      searchListerReviews({
+        listerProfileId: listerProfileId ?? "",
+        sort,
+        page: readPageParam(pageParam),
+        limit,
+        signal,
+      }),
+    getNextPageParam,
+  })
+
 export function useSearchListerReviews({
   listerProfileId,
   sort = "latest",
   limit = 20,
   enabled = true,
 }: UseSearchListerReviewsInput = {}) {
-  return useInfiniteQuery({
-    queryKey: listerReviewsQueryKey({
-      listerProfileId: listerProfileId ?? "",
+  return useInfiniteQuery(
+    listerReviewsQueryOptions({
+      listerProfileId,
       sort,
       limit,
+      enabled,
     }),
-    enabled: enabled && Boolean(listerProfileId),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchListerReviews({
-        listerProfileId: listerProfileId!,
-        sort,
-        page: Number(pageParam),
-        limit,
-      }),
-    getNextPageParam: (lastPage) => {
-      const { page, limit, total } = lastPage.pagination
-      const loaded = page * limit
-
-      return loaded < total ? page + 1 : undefined
-    },
-  })
+  )
 }

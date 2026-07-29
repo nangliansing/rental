@@ -6,12 +6,32 @@ import type { PendingPost, PendingPostStatus } from "./createPendingPost"
 export type OwnerPendingPostsInfiniteData =
   InfiniteData<SearchOwnerPendingPostsResponse>
 
+export const PENDING_POST_WRITE_SCOPE_ID = "pending-post-write"
+
+function hasUsablePages(
+  current: OwnerPendingPostsInfiniteData,
+) {
+  return (
+    Array.isArray(current.pages) &&
+    current.pages.every(
+      (page) =>
+        Boolean(page) &&
+        typeof page === "object" &&
+        Array.isArray(page.data),
+    )
+  )
+}
+
 export function insertPendingPostIntoInfiniteData(
   current: OwnerPendingPostsInfiniteData | undefined,
   statusFilter: string | undefined,
   pendingPost: PendingPost,
 ): OwnerPendingPostsInfiniteData | undefined {
-  if (!current || (statusFilter !== "all" && statusFilter !== pendingPost.status)) {
+  if (
+    !current ||
+    !hasUsablePages(current) ||
+    (statusFilter !== "all" && statusFilter !== pendingPost.status)
+  ) {
     return current
   }
   if (current.pages.some((page) =>
@@ -20,16 +40,37 @@ export function insertPendingPostIntoInfiniteData(
     return current
   }
 
+  const posts = [
+    pendingPost,
+    ...current.pages.flatMap((page) => page.data),
+  ]
+  let offset = 0
+
   return {
     ...current,
-    pages: current.pages.map((page, index) => ({
-      ...page,
-      data: index === 0 ? [pendingPost, ...page.data] : page.data,
-      pagination: {
-        ...page.pagination,
-        total: page.pagination.total + 1,
-      },
-    })),
+    pages: current.pages.map((page, index) => {
+      const limit =
+        Number.isFinite(page.pagination?.limit) &&
+        page.pagination.limit > 0
+          ? Math.trunc(page.pagination.limit)
+          : page.data.length + (index === 0 ? 1 : 0)
+      const data = posts.slice(offset, offset + limit)
+      offset += limit
+      const previousTotal =
+        Number.isFinite(page.pagination?.total) &&
+        page.pagination.total >= 0
+          ? Math.trunc(page.pagination.total)
+          : posts.length - 1
+
+      return {
+        ...page,
+        data,
+        pagination: {
+          ...page.pagination,
+          total: previousTotal + 1,
+        },
+      }
+    }),
   }
 }
 
@@ -43,7 +84,7 @@ export function removePendingPostFromInfiniteData(
   current: OwnerPendingPostsInfiniteData | undefined,
   pendingPostId: string,
 ): OwnerPendingPostsInfiniteData | undefined {
-  if (!current) return current
+  if (!current || !hasUsablePages(current)) return current
 
   const removedCount = current.pages.reduce(
     (count, page) =>
@@ -73,7 +114,7 @@ export function transitionOwnerPendingPostInInfiniteData(
   status: PendingPostStatus,
   changes: Partial<PendingPost> = {},
 ): OwnerPendingPostsInfiniteData | undefined {
-  if (!current) return current
+  if (!current || !hasUsablePages(current)) return current
 
   const containsPost = current.pages.some((page) =>
     page.data.some((post) => post._id === pendingPostId),

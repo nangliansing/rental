@@ -1,12 +1,8 @@
 import { useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
-import { ApiError } from "@/lib/api-client"
-import { queryKeys } from "@/lib/query-keys"
-
 import {
-  getAdminReviewReportById,
-  searchAdminReviewReports,
+  adminQueries,
   useDeleteAdminListerReview,
   useUpdateAdminReviewReportStatus,
   type AdminReviewReport,
@@ -18,7 +14,6 @@ import {
   AdminEmptyState,
   AdminListState,
 } from "../../components/AdminListState"
-import { getNextAdminPageParam } from "../../shared/adminPagination"
 import { ReviewReportDetail } from "./ReviewReportDetail"
 import { ReviewReportListItem } from "./ReviewReportListItem"
 import {
@@ -62,18 +57,9 @@ export function ReportedReviewsTab({
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const reviewReportsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.reviewReports.list(status),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminReviewReports({
-        status,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled,
-  })
+  const reviewReportsQuery = useInfiniteQuery(
+    adminQueries.reviewReports(status, enabled),
+  )
 
   const updateReviewReportStatusMutation = useUpdateAdminReviewReportStatus()
   const deleteReviewReportReviewMutation =
@@ -91,15 +77,9 @@ export function ReportedReviewsTab({
   const effectiveReviewReportId =
     selectedReviewReportId ?? selectedReviewReportListItem?._id
 
-  const reviewReportDetailQuery = useQuery({
-    queryKey: queryKeys.admin.reviewReports.detail(effectiveReviewReportId),
-    queryFn: () => getAdminReviewReportById(effectiveReviewReportId!),
-    enabled: enabled && Boolean(effectiveReviewReportId),
-    retry: (failureCount, error) =>
-      error instanceof ApiError && error.status < 500
-        ? false
-        : failureCount < 2,
-  })
+  const reviewReportDetailQuery = useQuery(
+    adminQueries.reviewReportDetail(effectiveReviewReportId, enabled),
+  )
 
   const selectedReviewReport =
     reviewReportDetailQuery.data ?? selectedReviewReportListItem ?? null

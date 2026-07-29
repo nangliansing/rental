@@ -51,7 +51,10 @@ const parseGetOwnerListingByIdResponse = (
   }
 }
 
-export async function getOwnerListingById(listingId: string) {
+export async function getOwnerListingById(
+  listingId: string,
+  signal?: AbortSignal,
+) {
   const normalizedListingId = listingId.trim()
 
   if (!normalizedListingId) {
@@ -64,6 +67,7 @@ export async function getOwnerListingById(listingId: string) {
 
   const response = await apiClient.get<unknown>(
     `/listings/${encodeURIComponent(normalizedListingId)}`,
+    { signal },
   )
 
   return parseGetOwnerListingByIdResponse(response.data).data

@@ -203,4 +203,38 @@ describe("listing mutation cache", () => {
       })
     })
   })
+
+  it("keeps every infinite page total consistent after removing one listing", () => {
+    const queryClient = new QueryClient()
+    const ownerKey = queryKeys.listings.ownerList({
+      visibility: "all",
+      sort: "latest",
+      limit: 1,
+    })
+    queryClient.setQueryData(ownerKey, {
+      pageParams: [1, 2],
+      pages: [
+        {
+          data: [{ _id: "listing-1" }],
+          pagination: { page: 1, limit: 1, total: 2 },
+        },
+        {
+          data: [{ _id: "listing-2" }],
+          pagination: { page: 2, limit: 1, total: 2 },
+        },
+      ],
+    })
+
+    optimisticallyDeleteListing(queryClient, "listing-1")
+
+    expect(queryClient.getQueryData(ownerKey)).toMatchObject({
+      pages: [
+        { data: [], pagination: { total: 1 } },
+        {
+          data: [{ _id: "listing-2" }],
+          pagination: { total: 1 },
+        },
+      ],
+    })
+  })
 })

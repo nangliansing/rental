@@ -11,3 +11,7 @@ export {
   type MarkMyNotificationsReadResponse,
 } from "./markMyNotificationsRead"
 export { useMarkMyNotificationsRead } from "./useMarkMyNotificationsRead"
+export {
+  NOTIFICATIONS_QUERY_KEY,
+  notificationsQueryOptions,
+} from "./notificationQueryOptions"

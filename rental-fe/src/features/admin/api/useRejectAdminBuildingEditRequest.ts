@@ -1,73 +1,29 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import {
-  captureBuildingEditRequestCache,
-  createOptimisticBuildingEditTransition,
-  findBuildingEditRequest,
-  invalidateBuildingEditRequestCache,
-  restoreBuildingEditRequestCache,
-  updateBuildingEditRequestCache,
-} from "./adminBuildingEditRequestCache"
+import { ADMIN_BUILDING_EDIT_REQUEST_WRITE_SCOPE_ID } from "./adminBuildingEditRequestCache"
+import { createAdminBuildingEditRequestTransaction } from "./adminBuildingEditRequestTransaction"
 import {
   rejectAdminBuildingEditRequest,
   type RejectAdminBuildingEditRequestInput,
 } from "./rejectAdminBuildingEditRequest"
+import type { AdminBuildingEditRequest } from "./buildingEditRequestTypes"
 
 export function useRejectAdminBuildingEditRequest() {
   const queryClient = useQueryClient()
+  const transaction = createAdminBuildingEditRequestTransaction<
+    AdminBuildingEditRequest,
+    RejectAdminBuildingEditRequestInput
+  >({
+    queryClient,
+    status: "REJECTED",
+    getReviewReason: (input) => input.reviewReason,
+    getRequest: (request) => request,
+  })
 
   return useMutation({
-    scope: { id: "reject-admin-building-edit-request" },
+    scope: { id: ADMIN_BUILDING_EDIT_REQUEST_WRITE_SCOPE_ID },
     mutationFn: (input: RejectAdminBuildingEditRequestInput) =>
       rejectAdminBuildingEditRequest(input),
-    onMutate: async (input) => {
-      const requestId = input.buildingEditRequestId.trim()
-      const snapshot = await captureBuildingEditRequestCache(
-        queryClient,
-        requestId,
-      )
-      const currentRequest = findBuildingEditRequest(
-        snapshot.detailData,
-        snapshot.listData,
-        requestId,
-      )
-
-      if (currentRequest) {
-        const optimisticRequest = createOptimisticBuildingEditTransition(
-          currentRequest,
-          "REJECTED",
-          input.reviewReason,
-        )
-        updateBuildingEditRequestCache(
-          queryClient,
-          snapshot,
-          optimisticRequest,
-        )
-      }
-
-      return { snapshot }
-    },
-    onError: (_error, _input, context) => {
-      if (context) {
-        restoreBuildingEditRequestCache(queryClient, context.snapshot)
-      }
-    },
-    onSuccess: async (rejectedRequest, _input, context) => {
-      updateBuildingEditRequestCache(
-        queryClient,
-        context?.snapshot ??
-          (await captureBuildingEditRequestCache(
-            queryClient,
-            rejectedRequest._id,
-          )),
-        rejectedRequest,
-      )
-    },
-    onSettled: async (request, error, input) => {
-      if (error) return
-
-      const requestId = request?._id ?? input.buildingEditRequestId.trim()
-      await invalidateBuildingEditRequestCache(queryClient, requestId)
-    },
+    ...transaction,
   })
 }

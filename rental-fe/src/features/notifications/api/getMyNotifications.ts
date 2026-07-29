@@ -26,6 +26,7 @@ export type GetMyNotificationsInput = {
   isRead?: NotificationReadFilter
   page?: number
   limit?: number
+  signal?: AbortSignal
 }
 
 export type GetMyNotificationsResponse = {
@@ -110,6 +111,7 @@ export async function getMyNotifications({
   isRead,
   page = 1,
   limit = 20,
+  signal,
 }: GetMyNotificationsInput = {}) {
   const normalizedPage = normalizePositiveInteger(page, 1)
   const normalizedLimit = normalizePositiveInteger(limit, 20)
@@ -124,6 +126,7 @@ export async function getMyNotifications({
 
   const response = await apiClient.get<GetMyNotificationsResponse>(
     `/notifications/me?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseGetMyNotificationsResponse(response.data, {

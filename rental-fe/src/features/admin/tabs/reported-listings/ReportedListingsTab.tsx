@@ -1,11 +1,8 @@
 import { useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
-import { queryKeys } from "@/lib/query-keys"
-
 import {
-  getAdminReportById,
-  searchAdminReports,
+  adminQueries,
   useDeleteAdminListing,
   useUpdateAdminReportStatus,
   type AdminReport,
@@ -18,7 +15,6 @@ import {
   AdminEmptyState,
   AdminListState,
 } from "../../components/AdminListState"
-import { getNextAdminPageParam } from "../../shared/adminPagination"
 import { ReportDetail } from "./ReportDetail"
 import { ReportListItem } from "./ReportListItem"
 import {
@@ -59,18 +55,9 @@ export function ReportedListingsTab({
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const reportsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.reports.list(status),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminReports({
-        status,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled,
-  })
+  const reportsQuery = useInfiniteQuery(
+    adminQueries.reports(status, enabled),
+  )
 
   const updateReportStatusMutation = useUpdateAdminReportStatus()
   const deleteReportListingMutation = useDeleteAdminListing(currentUserId)
@@ -85,11 +72,9 @@ export function ReportedListingsTab({
     null
   const effectiveReportId = selectedReportId ?? selectedReportListItem?._id
 
-  const reportDetailQuery = useQuery({
-    queryKey: queryKeys.admin.reports.detail(effectiveReportId),
-    queryFn: () => getAdminReportById(effectiveReportId!),
-    enabled: enabled && Boolean(effectiveReportId),
-  })
+  const reportDetailQuery = useQuery(
+    adminQueries.reportDetail(effectiveReportId, enabled),
+  )
 
   const selectedReport =
     reportDetailQuery.data ?? selectedReportListItem ?? null

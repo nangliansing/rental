@@ -1,4 +1,8 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  queryOptions,
+  useQuery,
+} from "@tanstack/react-query"
 
 import { ApiError } from "@/lib/api-client"
 import { queryKeys } from "@/lib/query-keys"
@@ -16,15 +20,15 @@ type UseSearchBuildingsNearbyInput = {
   includeBuildingsWithoutMatchingListings?: boolean
 }
 
-export function useSearchBuildingsNearby({
+export const buildingsNearbyQueryOptions = ({
   position,
   radiusMeters,
   filters,
   limit = 20,
   enabled,
   includeBuildingsWithoutMatchingListings,
-}: UseSearchBuildingsNearbyInput) {
-  return useQuery({
+}: UseSearchBuildingsNearbyInput) =>
+  queryOptions({
     queryKey: queryKeys.mapSearch.nearbyBuildingResults({
       position,
       radiusMeters,
@@ -53,4 +57,23 @@ export function useSearchBuildingsNearby({
     },
     placeholderData: keepPreviousData,
   })
+
+export function useSearchBuildingsNearby({
+  position,
+  radiusMeters,
+  filters,
+  limit = 20,
+  enabled,
+  includeBuildingsWithoutMatchingListings,
+}: UseSearchBuildingsNearbyInput) {
+  return useQuery(
+    buildingsNearbyQueryOptions({
+      position,
+      radiusMeters,
+      filters,
+      limit,
+      enabled,
+      includeBuildingsWithoutMatchingListings,
+    }),
+  )
 }

@@ -1,5 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+} from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
+import {
+  getNextPageParam,
+  readPageParam,
+} from "@/lib/query-pagination"
 import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 
 import { searchSavedListings } from "./searchSavedListings"
@@ -12,25 +19,26 @@ type UseSearchSavedListingsInput = {
   enabled?: boolean
 }
 
-export function useSearchSavedListings({
+export const savedListingsQueryOptions = ({
   limit = DEFAULT_LISTING_PAGE_SIZE,
   enabled = true,
-}: UseSearchSavedListingsInput = {}) {
-  return useInfiniteQuery({
+}: UseSearchSavedListingsInput = {}) =>
+  infiniteQueryOptions({
     queryKey: savedListingsQueryKey({ limit }),
     enabled,
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
       searchSavedListings({
-        page: Number(pageParam),
+        page: readPageParam(pageParam),
         limit,
         signal,
       }),
-    getNextPageParam: (lastPage) => {
-      const { page, limit, total } = lastPage.pagination
-      const loaded = page * limit
-
-      return loaded < total ? page + 1 : undefined
-    },
+    getNextPageParam,
   })
+
+export function useSearchSavedListings({
+  limit = DEFAULT_LISTING_PAGE_SIZE,
+  enabled = true,
+}: UseSearchSavedListingsInput = {}) {
+  return useInfiniteQuery(savedListingsQueryOptions({ limit, enabled }))
 }

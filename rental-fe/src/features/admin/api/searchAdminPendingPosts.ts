@@ -70,6 +70,7 @@ export type SearchAdminPendingPostsInput = {
   status?: AdminPendingPostStatusFilter;
   page?: number;
   limit?: number;
+  signal?: AbortSignal;
 };
 
 export type SearchAdminPendingPostsResponse = {
@@ -207,6 +208,7 @@ export async function searchAdminPendingPosts({
   status,
   page = 1,
   limit = 20,
+  signal,
 }: SearchAdminPendingPostsInput = {}) {
   const normalizedPage = normalizePositiveInteger(page, 1);
   const normalizedLimit = normalizePositiveInteger(limit, 20);
@@ -221,6 +223,7 @@ export async function searchAdminPendingPosts({
 
   const response = await apiClient.get<SearchAdminPendingPostsResponse>(
     `/admin/pending-posts?${searchParams.toString()}`,
+    { signal },
   );
 
   return parseSearchAdminPendingPostsResponse(response.data, {

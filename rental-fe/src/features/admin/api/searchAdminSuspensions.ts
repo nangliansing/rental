@@ -34,6 +34,7 @@ export type SearchAdminSuspensionsInput = {
   status?: AdminSuspensionStatusFilter
   page?: number
   limit?: number
+  signal?: AbortSignal
 }
 
 export type SearchAdminSuspensionsResponse = {
@@ -173,6 +174,7 @@ export async function searchAdminSuspensions({
   status,
   page = 1,
   limit = 20,
+  signal,
 }: SearchAdminSuspensionsInput = {}) {
   const searchParams = new URLSearchParams({
     page: String(page),
@@ -185,6 +187,7 @@ export async function searchAdminSuspensions({
 
   const response = await apiClient.get<SearchAdminSuspensionsResponse>(
     `/admin/suspensions?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseSearchAdminSuspensionsResponse(response.data)

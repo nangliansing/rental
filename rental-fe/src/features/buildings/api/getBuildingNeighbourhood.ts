@@ -72,6 +72,7 @@ export type GetBuildingNeighbourhoodInput = {
   buildingId: string
   radiusM?: number
   fetchRadiusM?: number
+  signal?: AbortSignal
 }
 
 const INVALID_GET_BUILDING_NEIGHBOURHOOD_RESPONSE =
@@ -288,6 +289,7 @@ export async function getBuildingNeighbourhood({
   buildingId,
   radiusM = NEIGHBOURHOOD_DEFAULT_RADIUS_METERS,
   fetchRadiusM = NEIGHBOURHOOD_FETCH_RADIUS_METERS,
+  signal,
 }: GetBuildingNeighbourhoodInput) {
   const searchParams = new URLSearchParams({
     radiusM: String(radiusM),
@@ -296,6 +298,7 @@ export async function getBuildingNeighbourhood({
 
   const response = await apiClient.get<GetBuildingNeighbourhoodResponse>(
     `/buildings/${buildingId}/neighbourhood?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseGetBuildingNeighbourhoodResponse(response.data)

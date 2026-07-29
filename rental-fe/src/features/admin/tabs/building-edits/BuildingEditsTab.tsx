@@ -1,11 +1,8 @@
 import { useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
-import { queryKeys } from "@/lib/query-keys"
-
 import {
-  getAdminBuildingEditRequestById,
-  searchAdminBuildingEditRequests,
+  adminQueries,
   useApproveAdminBuildingEditRequest,
   useRejectAdminBuildingEditRequest,
   type AdminBuildingEditRequest,
@@ -17,7 +14,6 @@ import {
   AdminEmptyState,
   AdminListState,
 } from "../../components/AdminListState"
-import { getNextAdminPageParam } from "../../shared/adminPagination"
 import { BuildingEditRequestDetail } from "./BuildingEditRequestDetail"
 import { BuildingEditRequestListItem } from "./BuildingEditRequestListItem"
 import {
@@ -49,18 +45,9 @@ export function BuildingEditsTab({ enabled }: BuildingEditsTabProps) {
   const [reviewReason, setReviewReason] = useState("")
   const [reviewError, setReviewError] = useState<string | null>(null)
 
-  const buildingEditRequestsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.buildingEditRequests.list(status),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminBuildingEditRequests({
-        status,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled,
-  })
+  const buildingEditRequestsQuery = useInfiniteQuery(
+    adminQueries.buildingEditRequests(status, enabled),
+  )
 
   const approveMutation = useApproveAdminBuildingEditRequest()
   const rejectMutation = useRejectAdminBuildingEditRequest()
@@ -77,11 +64,9 @@ export function BuildingEditsTab({ enabled }: BuildingEditsTabProps) {
   const effectiveRequestId =
     selectedRequestId ?? selectedRequestListItem?._id
 
-  const buildingEditRequestDetailQuery = useQuery({
-    queryKey: queryKeys.admin.buildingEditRequests.detail(effectiveRequestId),
-    queryFn: () => getAdminBuildingEditRequestById(effectiveRequestId!),
-    enabled: enabled && Boolean(effectiveRequestId),
-  })
+  const buildingEditRequestDetailQuery = useQuery(
+    adminQueries.buildingEditRequestDetail(effectiveRequestId, enabled),
+  )
 
   const selectedRequest =
     buildingEditRequestDetailQuery.data ?? selectedRequestListItem ?? null

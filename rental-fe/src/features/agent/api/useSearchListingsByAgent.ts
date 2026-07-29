@@ -1,5 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+} from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
+import {
+  getNextPageParam,
+  readPageParam,
+} from "@/lib/query-pagination"
 import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 
 import {
@@ -24,33 +31,43 @@ type UseSearchListingsByAgentInput = {
   enabled?: boolean
 }
 
+export const agentListingsQueryOptions = ({
+  agentProfileId,
+  sort = "latest",
+  limit = 20,
+  enabled = true,
+}: UseSearchListingsByAgentInput = {}) =>
+  infiniteQueryOptions({
+    queryKey: agentListingsQueryKey({
+      agentProfileId: agentProfileId ?? "",
+      sort,
+      limit,
+    }),
+    enabled: enabled && Boolean(agentProfileId?.trim()),
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      searchListingsByAgent({
+        agentProfileId: agentProfileId ?? "",
+        sort,
+        page: readPageParam(pageParam),
+        limit,
+        signal,
+      }),
+    getNextPageParam,
+  })
+
 export function useSearchListingsByAgent({
   agentProfileId,
   sort = "latest",
   limit = DEFAULT_LISTING_PAGE_SIZE,
   enabled = true,
 }: UseSearchListingsByAgentInput = {}) {
-  return useInfiniteQuery({
-    queryKey: agentListingsQueryKey({
-      agentProfileId: agentProfileId ?? "",
+  return useInfiniteQuery(
+    agentListingsQueryOptions({
+      agentProfileId,
       sort,
       limit,
+      enabled,
     }),
-    enabled: enabled && Boolean(agentProfileId),
-    initialPageParam: 1,
-    queryFn: ({ pageParam, signal }) =>
-      searchListingsByAgent({
-        agentProfileId: agentProfileId!,
-        sort,
-        page: Number(pageParam),
-        limit,
-        signal,
-      }),
-    getNextPageParam: (lastPage) => {
-      const { page, limit, total } = lastPage.pagination
-      const loaded = page * limit
-
-      return loaded < total ? page + 1 : undefined
-    },
-  })
+  )
 }

@@ -1,15 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
+
 import {
-  cancelRelatedListingQueries,
-  captureRelatedListingQueries,
-  invalidateListingCollections,
+  listingCollectionQueryKeys,
   patchListingInRelatedQueries,
-  restoreListingCacheSnapshot,
+  relatedListingQueryKeys,
 } from "../utils/listingMutationCache"
 import {
   updateOwnerListing,
   type UpdateOwnerListingInput,
+  type UpdatedOwnerListing,
 } from "./updateOwnerListing"
 
 type UpdateOwnerListingVariables = {
@@ -19,27 +20,35 @@ type UpdateOwnerListingVariables = {
 
 export function useUpdateOwnerListing() {
   const queryClient = useQueryClient()
+  const transaction = createOptimisticTransaction<
+    UpdatedOwnerListing,
+    Error,
+    UpdateOwnerListingVariables
+  >({
+    queryClient,
+    scopeKey: ({ listingId }) => `listing:update:${listingId}`,
+    getPlan: ({ listingId }) => ({
+      cancel: relatedListingQueryKeys(listingId),
+      snapshot: relatedListingQueryKeys(listingId),
+      invalidate: listingCollectionQueryKeys,
+    }),
+    apply: ({ queryClient: client, variables }) => {
+      patchListingInRelatedQueries(
+        client,
+        variables.listingId,
+        variables.values,
+      )
+    },
+    reconcile: ({ queryClient: client, variables, data }) => {
+      patchListingInRelatedQueries(client, variables.listingId, data)
+    },
+    shouldInvalidate: ({ data, error }) =>
+      error === null && data !== undefined,
+  })
 
   return useMutation({
     mutationFn: ({ listingId, values }: UpdateOwnerListingVariables) =>
       updateOwnerListing(listingId, values),
-    onMutate: async ({ listingId, values }) => {
-      await cancelRelatedListingQueries(queryClient, listingId)
-      const snapshot = captureRelatedListingQueries(queryClient, listingId)
-      patchListingInRelatedQueries(queryClient, listingId, values)
-      return { snapshot }
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.snapshot) {
-        restoreListingCacheSnapshot(queryClient, context.snapshot)
-      }
-    },
-    onSuccess: (updatedListing, { listingId }) => {
-      patchListingInRelatedQueries(queryClient, listingId, updatedListing)
-    },
-    onSettled: async (updatedListing) => {
-      if (!updatedListing) return
-      await invalidateListingCollections(queryClient)
-    },
+    ...transaction,
   })
 }

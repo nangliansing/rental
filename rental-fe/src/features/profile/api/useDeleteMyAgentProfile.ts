@@ -1,51 +1,71 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
 import { queryKeys } from "@/lib/query-keys"
 
 import type { AgentProfile } from "./createAgentProfile"
-import { deleteMyAgentProfile } from "./deleteMyAgentProfile"
 import {
-  cancelProfileProjectionQueries,
-  captureProfileProjectionQueries,
+  deleteMyAgentProfile,
+  isMyAgentProfileNotFoundError,
+} from "./deleteMyAgentProfile"
+import {
+  deletedProfileCollectionsToRefresh,
   deletedProfileQueryKeys,
-  reconcileDeletedProfileQueries,
-  restoreProfileProjectionQueries,
+  PROFILE_WRITE_SCOPE_ID,
+  removeDeletedProfileQueries,
   updateAgentProfileProjections,
 } from "./profileMutationCache"
 
+async function deleteMyAgentProfileIdempotently() {
+  try {
+    return await deleteMyAgentProfile()
+  } catch (error) {
+    if (!isMyAgentProfileNotFoundError(error)) throw error
+    return null
+  }
+}
+
 export function useDeleteMyAgentProfile() {
   const queryClient = useQueryClient()
-
-  return useMutation({
-    scope: { id: "delete-my-agent-profile" },
-    mutationFn: deleteMyAgentProfile,
-    onMutate: async () => {
-      await cancelProfileProjectionQueries(queryClient, deletedProfileQueryKeys)
-      const snapshots = captureProfileProjectionQueries(
-        queryClient,
-        deletedProfileQueryKeys,
-      )
-      const profile = queryClient.getQueryData<AgentProfile>(
+  const transaction = createOptimisticTransaction<
+    Awaited<ReturnType<typeof deleteMyAgentProfileIdempotently>>,
+    Error,
+    void,
+    { profileId: string | null }
+  >({
+    queryClient,
+    scopeKey: () => PROFILE_WRITE_SCOPE_ID,
+    getPlan: () => ({
+      cancel: deletedProfileQueryKeys,
+      snapshot: deletedProfileQueryKeys,
+      invalidate: deletedProfileCollectionsToRefresh,
+    }),
+    apply: ({ queryClient: client }) => {
+      const profile = client.getQueryData<AgentProfile>(
         queryKeys.profiles.me,
       )
+      const profileId = profile?._id ?? null
 
-      if (profile?._id) {
+      if (profileId) {
         updateAgentProfileProjections(
-          queryClient,
-          profile._id,
+          client,
+          profileId,
           { isDeleted: true, isOnline: false, isVerified: false },
           deletedProfileQueryKeys,
         )
       }
 
-      return { snapshots }
+      return { profileId }
     },
-    onError: (_error, _variables, context) => {
-      if (!context) return
-      restoreProfileProjectionQueries(queryClient, context.snapshots)
+    reconcile: ({ queryClient: client }) => {
+      removeDeletedProfileQueries(client)
     },
-    onSuccess: async () => {
-      await reconcileDeletedProfileQueries(queryClient)
-    },
+    shouldInvalidate: ({ error }) => error === null,
+  })
+
+  return useMutation({
+    scope: { id: PROFILE_WRITE_SCOPE_ID },
+    mutationFn: deleteMyAgentProfileIdempotently,
+    ...transaction,
   })
 }

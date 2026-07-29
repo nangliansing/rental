@@ -1,47 +1,55 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
+
 import {
-  cancelRelatedListingQueries,
-  captureRelatedListingQueries,
-  invalidateListingCollections,
+  listingCollectionQueryKeys,
   optimisticallyDeleteListing,
+  relatedListingQueryKeys,
   removeDeletedListingDetails,
-  restoreListingCacheSnapshot,
 } from "../utils/listingMutationCache"
 import {
   deleteOwnerListing,
   isOwnerListingNotFoundError,
 } from "./deleteOwnerListing"
 
+async function deleteOwnerListingIdempotently(listingId: string) {
+  try {
+    return await deleteOwnerListing(listingId)
+  } catch (error) {
+    if (!isOwnerListingNotFoundError(error)) throw error
+    return null
+  }
+}
+
 export function useDeleteOwnerListing() {
   const queryClient = useQueryClient()
+  const transaction = createOptimisticTransaction<
+    Awaited<ReturnType<typeof deleteOwnerListingIdempotently>>,
+    Error,
+    string
+  >({
+    queryClient,
+    // Every owner listing delete patches shared collections and pagination.
+    // One scope prevents two deletes from snapshotting the same list at once.
+    scopeKey: () => "listing:delete:owner",
+    getPlan: listingId => ({
+      cancel: relatedListingQueryKeys(listingId),
+      snapshot: relatedListingQueryKeys(listingId),
+      invalidate: listingCollectionQueryKeys,
+    }),
+    apply: ({ queryClient: client, variables: listingId }) => {
+      optimisticallyDeleteListing(client, listingId)
+    },
+    reconcile: ({ queryClient: client, variables: listingId }) => {
+      removeDeletedListingDetails(client, listingId)
+    },
+    shouldInvalidate: ({ error }) => error === null,
+  })
 
   return useMutation({
-    mutationFn: async (listingId: string) => {
-      try {
-        return await deleteOwnerListing(listingId)
-      } catch (error) {
-        if (!isOwnerListingNotFoundError(error)) throw error
-        return null
-      }
-    },
-    onMutate: async (listingId) => {
-      await cancelRelatedListingQueries(queryClient, listingId)
-      const snapshot = captureRelatedListingQueries(queryClient, listingId)
-      optimisticallyDeleteListing(queryClient, listingId)
-      return { snapshot }
-    },
-    onError: (_error, _listingId, context) => {
-      if (context?.snapshot) {
-        restoreListingCacheSnapshot(queryClient, context.snapshot)
-      }
-    },
-    onSuccess: (_deletedListing, listingId) => {
-      removeDeletedListingDetails(queryClient, listingId)
-    },
-    onSettled: async (_data, error) => {
-      if (error) return
-      await invalidateListingCollections(queryClient)
-    },
+    scope: { id: "delete-owner-listing" },
+    mutationFn: deleteOwnerListingIdempotently,
+    ...transaction,
   })
 }

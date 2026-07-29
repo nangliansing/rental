@@ -10,7 +10,6 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { queryKeys } from "@/lib/query-keys"
 import { io, type Socket } from "socket.io-client"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
@@ -18,10 +17,10 @@ import { getAccessToken } from "@/lib/api-client"
 import { getSocketUrl } from "@/lib/public-env"
 
 import {
-  getMyNotifications,
+  NOTIFICATIONS_QUERY_KEY,
+  notificationsQueryOptions,
   parseNotificationItem,
   useMarkMyNotificationsRead,
-  type GetMyNotificationsResponse,
 } from "./api"
 import {
   mergeNotificationIntoCache,
@@ -42,18 +41,8 @@ type ServerToClientEvents = {
 
 type ClientToServerEvents = Record<string, never>
 
-const notificationQueryKey = queryKeys.notifications.me
-const notificationPageSize = 20
-
 function deferStateUpdate(update: () => void) {
   queueMicrotask(update)
-}
-
-function getNextNotificationsPageParam(lastPage: GetMyNotificationsResponse) {
-  const { page, limit, total } = lastPage.pagination
-  const loaded = page * limit
-
-  return loaded < total ? page + 1 : undefined
 }
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
@@ -67,17 +56,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const shouldUseNotifications =
     !isLoading && isAuthenticated && user?.status === "ACTIVE"
 
-  const notificationsQuery = useInfiniteQuery({
-    queryKey: notificationQueryKey,
-    initialPageParam: 1,
-    enabled: shouldUseNotifications,
-    queryFn: ({ pageParam }) =>
-      getMyNotifications({
-        page: Number(pageParam),
-        limit: notificationPageSize,
-      }),
-    getNextPageParam: getNextNotificationsPageParam,
-  })
+  const notificationsQuery = useInfiniteQuery(
+    notificationsQueryOptions(shouldUseNotifications),
+  )
   const {
     data: notificationsData,
     error: notificationsError,
@@ -93,14 +74,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const parsedNotification = parseNotificationItem(notification)
 
     queryClient.setQueryData<NotificationsInfiniteData>(
-      notificationQueryKey,
+      NOTIFICATIONS_QUERY_KEY,
       (currentData) =>
         mergeNotificationIntoCache(currentData, parsedNotification),
     )
   }, [queryClient])
 
   const clearNotifications = useCallback(() => {
-    queryClient.removeQueries({ queryKey: notificationQueryKey })
+    queryClient.removeQueries({ queryKey: NOTIFICATIONS_QUERY_KEY })
   }, [queryClient])
 
   const unreadCount = useMemo(
@@ -125,7 +106,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       socketRef.current?.disconnect()
       socketRef.current = null
       deferStateUpdate(() => {
-        queryClient.removeQueries({ queryKey: notificationQueryKey })
+        queryClient.removeQueries({ queryKey: NOTIFICATIONS_QUERY_KEY })
         setConnectionStatus("idle")
       })
       return
@@ -148,7 +129,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     socket.on("connect", () => {
       setConnectionStatus("connected")
-      void queryClient.invalidateQueries({ queryKey: notificationQueryKey })
+      void queryClient.invalidateQueries({
+        queryKey: NOTIFICATIONS_QUERY_KEY,
+      })
     })
 
     socket.on("disconnect", () => {

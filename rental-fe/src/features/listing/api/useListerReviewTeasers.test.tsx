@@ -65,6 +65,7 @@ describe("useListerReviewTeasers", () => {
       page: 1,
       limit: LISTER_REVIEW_TEASER_LIMIT,
       sort: LISTER_REVIEW_TEASER_SORT,
+      signal: expect.any(AbortSignal),
     })
     // Teasers live in their own namespace so review mutations cannot patch this
     // flat cache with the infinite list shape.

@@ -3,19 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { ApiError, subscribeToAuthInvalidation } from "@/lib/api-client"
 
-import { getCurrentUser } from "./api/getCurrentUser"
 import { AuthContext } from "./auth-context"
-import { CURRENT_USER_QUERY_KEY } from "./auth-query"
+import { currentUserQueryOptions } from "./auth-query"
 import { clearAuthSession } from "./utils/authSession"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const currentUserQuery = useQuery({
-    queryKey: CURRENT_USER_QUERY_KEY,
-    queryFn: getCurrentUser,
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-  })
+  const currentUserQuery = useQuery(currentUserQueryOptions())
 
   useEffect(() => {
     return subscribeToAuthInvalidation(() => {

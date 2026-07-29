@@ -125,4 +125,51 @@ describe("syncListingSavedState", () => {
     })
     expect(invalidateSpy).not.toHaveBeenCalled()
   })
+
+  it("keeps every infinite page total consistent after removal", async () => {
+    const queryClient = createQueryClient()
+    const savedKey = queryKeys.savedListings.list({ limit: 1 })
+    queryClient.setQueryData(savedKey, {
+      pages: [
+        {
+          data: {
+            savedListings: [
+              { _id: "saved-1", listingId: "listing-1" },
+            ],
+          },
+          pagination: { page: 1, limit: 1, total: 2 },
+        },
+        {
+          data: {
+            savedListings: [
+              { _id: "saved-2", listingId: "listing-2" },
+            ],
+          },
+          pagination: { page: 2, limit: 1, total: 2 },
+        },
+      ],
+      pageParams: [1, 2],
+    })
+
+    await syncListingSavedState({
+      queryClient,
+      listingId: "listing-1",
+      isSaved: false,
+    })
+
+    expect(queryClient.getQueryData(savedKey)).toMatchObject({
+      pages: [
+        {
+          data: { savedListings: [] },
+          pagination: { total: 1 },
+        },
+        {
+          data: {
+            savedListings: [{ listingId: "listing-2" }],
+          },
+          pagination: { total: 1 },
+        },
+      ],
+    })
+  })
 })

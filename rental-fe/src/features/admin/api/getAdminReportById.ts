@@ -7,9 +7,13 @@ export type GetAdminReportByIdResponse = {
   data: AdminReport
 }
 
-export async function getAdminReportById(reportId: string) {
+export async function getAdminReportById(
+  reportId: string,
+  signal?: AbortSignal,
+) {
   const response = await apiClient.get<GetAdminReportByIdResponse>(
     `/admin/reports/${encodeURIComponent(reportId)}`,
+    { signal },
   )
 
   return parseAdminReport(response.data.data)

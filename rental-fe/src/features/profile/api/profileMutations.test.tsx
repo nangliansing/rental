@@ -3,11 +3,13 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ApiError } from "@/lib/api-client"
 import { queryKeys } from "@/lib/query-keys"
 
 import {
   deletedProfileQueryKeys,
   profileProjectionQueryKeys,
+  removeDeletedProfileQueries,
 } from "./profileMutationCache"
 import { useCreateAgentProfile } from "./useCreateAgentProfile"
 import { useDeleteMyAgentProfile } from "./useDeleteMyAgentProfile"
@@ -20,9 +22,13 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock("./createAgentProfile", () => ({ createAgentProfile: apiMocks.create }))
-vi.mock("./deleteMyAgentProfile", () => ({
-  deleteMyAgentProfile: apiMocks.delete,
-}))
+vi.mock("./deleteMyAgentProfile", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./deleteMyAgentProfile")>()
+  return {
+    ...actual,
+    deleteMyAgentProfile: apiMocks.delete,
+  }
+})
 vi.mock("./updateMyAgentProfile", () => ({ updateMyAgentProfile: apiMocks.update }))
 
 const profile = { _id: "profile-1", userId: "user-1", displayName: "Nang Rentals" }
@@ -294,5 +300,215 @@ describe("profile mutations", () => {
     )
     expect(queryClient.getQueryData(pendingKey)).toEqual(pendingData)
     expect(invalidate).not.toHaveBeenCalled()
+  })
+
+  it("treats an already-missing profile as idempotent success", async () => {
+    const currentProfile = { ...profile, isDeleted: false, isOnline: true }
+    queryClient.setQueryData(queryKeys.profiles.me, currentProfile)
+    queryClient.setQueryData(
+      queryKeys.profiles.detail(profile._id),
+      currentProfile,
+    )
+    apiMocks.delete.mockRejectedValue(
+      new ApiError("Missing", 404, "AGENT_PROFILE_NOT_FOUND"),
+    )
+    const { result } = renderHook(() => useDeleteMyAgentProfile(), { wrapper })
+
+    act(() => result.current.mutate())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toBeNull()
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toBeUndefined()
+    expect(
+      queryClient.getQueryData(queryKeys.profiles.detail(profile._id)),
+    ).toBeUndefined()
+  })
+
+  it("does not call the endpoint or mutate projections when cancellation fails", async () => {
+    const currentProfile = { ...profile, isDeleted: false, isOnline: true }
+    queryClient.setQueryData(queryKeys.profiles.me, currentProfile)
+    vi.spyOn(queryClient, "cancelQueries").mockRejectedValueOnce(
+      new Error("Cancellation failed"),
+    )
+    const { result } = renderHook(() => useDeleteMyAgentProfile(), { wrapper })
+
+    act(() => result.current.mutate())
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(apiMocks.delete).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toEqual(
+      currentProfile,
+    )
+  })
+
+  it("removes profile-dependent caches recreated while deletion is pending", async () => {
+    let resolveDelete!: (value: typeof profile) => void
+    apiMocks.delete.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDelete = resolve
+        }),
+    )
+    const currentProfile = { ...profile, isDeleted: false, isOnline: true }
+    const publicKey = queryKeys.listings.publicDetail(
+      "listing-1",
+      "viewer-1",
+    )
+    queryClient.setQueryData(queryKeys.profiles.me, currentProfile)
+    queryClient.setQueryData(publicKey, {
+      listing: { _id: "listing-1", agentProfile: currentProfile },
+    })
+    const { result } = renderHook(() => useDeleteMyAgentProfile(), { wrapper })
+
+    act(() => result.current.mutate())
+    await waitFor(() => expect(apiMocks.delete).toHaveBeenCalledTimes(1))
+
+    queryClient.setQueryData(queryKeys.profiles.me, currentProfile)
+    queryClient.setQueryData(publicKey, {
+      listing: { _id: "listing-1", agentProfile: currentProfile },
+    })
+    await act(async () => resolveDelete(profile))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toBeUndefined()
+    expect(queryClient.getQueryData(publicKey)).toBeUndefined()
+  })
+
+  it("succeeds after complete cache eviction without creating phantom entries", async () => {
+    queryClient.clear()
+    const { result } = renderHook(() => useDeleteMyAgentProfile(), { wrapper })
+
+    act(() => result.current.mutate())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(
+      queryClient.getQueryCache().find({
+        queryKey: queryKeys.profiles.me,
+        exact: true,
+      }),
+    ).toBeUndefined()
+  })
+
+  it("rejects a queued update after deletion instead of resurrecting the profile", async () => {
+    let resolveDelete!: (value: typeof profile) => void
+    apiMocks.delete.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDelete = resolve
+        }),
+    )
+    const { result } = renderHook(
+      () => ({
+        deleteProfile: useDeleteMyAgentProfile(),
+        updateProfile: useUpdateMyAgentProfile(),
+      }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.deleteProfile.mutate()
+      result.current.updateProfile.mutate({ displayName: "Too late" })
+    })
+    await waitFor(() => expect(apiMocks.delete).toHaveBeenCalledTimes(1))
+    expect(apiMocks.update).not.toHaveBeenCalled()
+
+    await act(async () => resolveDelete(profile))
+    await waitFor(() =>
+      expect(result.current.updateProfile.isError).toBe(true),
+    )
+    expect(apiMocks.update).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toBeUndefined()
+  })
+
+  it("allows an explicitly queued profile recreation after deletion", async () => {
+    let resolveDelete!: (value: typeof profile) => void
+    apiMocks.delete.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDelete = resolve
+        }),
+    )
+    const { result } = renderHook(
+      () => ({
+        createProfile: useCreateAgentProfile(),
+        deleteProfile: useDeleteMyAgentProfile(),
+      }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.deleteProfile.mutate()
+      result.current.createProfile.mutate(createValues)
+    })
+    await waitFor(() => expect(apiMocks.delete).toHaveBeenCalledTimes(1))
+    expect(apiMocks.create).not.toHaveBeenCalled()
+
+    await act(async () => resolveDelete(profile))
+    await waitFor(() => expect(apiMocks.create).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(result.current.createProfile.isSuccess).toBe(true))
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toEqual(profile)
+  })
+
+  it("keeps admin projections marked deleted after owner caches are removed", async () => {
+    const currentProfile = {
+      ...profile,
+      isDeleted: false,
+      isOnline: true,
+      isVerified: true,
+    }
+    const adminKey = queryKeys.admin.users.detail("user-1")
+    queryClient.setQueryData(queryKeys.profiles.me, currentProfile)
+    queryClient.setQueryData(adminKey, {
+      _id: "user-1",
+      agentProfile: currentProfile,
+    })
+    const { result } = renderHook(() => useDeleteMyAgentProfile(), { wrapper })
+
+    act(() => result.current.mutate())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.getQueryData(adminKey)).toMatchObject({
+      agentProfile: {
+        isDeleted: true,
+        isOnline: false,
+        isVerified: false,
+      },
+    })
+  })
+
+  it("removes every remaining family when one cache removal throws", () => {
+    const ownerDetailKey = queryKeys.listings.ownerDetail("listing-1")
+    const pendingKey = queryKeys.pendingPosts.ownerList({
+      status: "PENDING",
+      limit: 20,
+    })
+    queryClient.setQueryData(ownerDetailKey, { listing: { _id: "listing-1" } })
+    queryClient.setQueryData(pendingKey, { pages: [] })
+    const originalRemove = queryClient.removeQueries.bind(queryClient)
+    vi.spyOn(queryClient, "removeQueries")
+      .mockImplementationOnce(() => {
+        throw new Error("First removal failed")
+      })
+      .mockImplementation((filters) => originalRemove(filters))
+
+    expect(() => removeDeletedProfileQueries(queryClient)).toThrow(
+      "Unable to remove every deleted-profile cache family",
+    )
+
+    expect(queryClient.getQueryData(ownerDetailKey)).toBeUndefined()
+    expect(queryClient.getQueryData(pendingKey)).toBeUndefined()
+  })
+
+  it("keeps destructive cleanup successful when collection refresh fails", async () => {
+    queryClient.setQueryData(queryKeys.profiles.me, profile)
+    vi.spyOn(queryClient, "invalidateQueries").mockRejectedValue(
+      new Error("Refresh failed"),
+    )
+    const { result } = renderHook(() => useDeleteMyAgentProfile(), { wrapper })
+
+    act(() => result.current.mutate())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toBeUndefined()
   })
 })

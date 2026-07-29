@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import {
-  cancelProfileProjectionQueries,
-  captureProfileProjectionQueries,
-  restoreProfileProjectionQueries,
+  profileProjectionQueryKeys,
   updateAgentProfileProjections,
 } from "@/features/profile/api/profileMutationCache"
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
+import type { AgentProfile } from "@/features/profile/api/createAgentProfile"
 
 import {
   updateAdminAgentProfileVerification,
@@ -14,32 +14,40 @@ import {
 
 export function useUpdateAdminAgentProfileVerification() {
   const queryClient = useQueryClient()
+  const transaction = createOptimisticTransaction<
+    AgentProfile,
+    Error,
+    UpdateAdminAgentProfileVerificationInput,
+    { agentProfileId: string }
+  >({
+    queryClient,
+    scopeKey: input =>
+      `profile:verification:${input.agentProfileId.trim()}`,
+    getPlan: () => ({
+      cancel: profileProjectionQueryKeys,
+      snapshot: profileProjectionQueryKeys,
+    }),
+    apply: ({ queryClient: client, variables }) => {
+      const agentProfileId = variables.agentProfileId.trim()
+      updateAgentProfileProjections(client, agentProfileId, {
+        isVerified: variables.isVerified,
+      })
+      return { agentProfileId }
+    },
+    reconcile: ({ queryClient: client, optimisticContext, data }) => {
+      updateAgentProfileProjections(
+        client,
+        optimisticContext.agentProfileId || data._id,
+        data,
+      )
+    },
+    shouldInvalidate: () => false,
+  })
 
   return useMutation({
     scope: { id: "update-admin-agent-profile-verification" },
     mutationFn: (input: UpdateAdminAgentProfileVerificationInput) =>
       updateAdminAgentProfileVerification(input),
-    onMutate: async (input) => {
-      await cancelProfileProjectionQueries(queryClient)
-      const snapshots = captureProfileProjectionQueries(queryClient)
-      const agentProfileId = input.agentProfileId.trim()
-
-      updateAgentProfileProjections(queryClient, agentProfileId, {
-        isVerified: input.isVerified,
-      })
-
-      return { agentProfileId, snapshots }
-    },
-    onError: (_error, _input, context) => {
-      if (!context) return
-      restoreProfileProjectionQueries(queryClient, context.snapshots)
-    },
-    onSuccess: (profile, _input, context) => {
-      updateAgentProfileProjections(
-        queryClient,
-        context?.agentProfileId ?? profile._id,
-        profile,
-      )
-    },
+    ...transaction,
   })
 }

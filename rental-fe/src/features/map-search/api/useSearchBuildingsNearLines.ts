@@ -1,7 +1,15 @@
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  useInfiniteQuery,
+} from "@tanstack/react-query"
 
 import { ApiError } from "@/lib/api-client"
 import { queryKeys } from "@/lib/query-keys"
+import {
+  getNextPageParam,
+  readPageParam,
+} from "@/lib/query-pagination"
 
 import type { MapSearchFilters } from "../filters/types"
 import type { SearchLinesGeometry } from "../types"
@@ -20,15 +28,15 @@ type UseSearchBuildingsNearLinesInput = {
   includeBuildingsWithoutMatchingListings?: boolean
 }
 
-export function useSearchBuildingsNearLines({
+export const buildingsNearLinesQueryOptions = ({
   geometry,
   distanceMeters = DEFAULT_NEAR_LINES_DISTANCE_METERS,
   filters,
   limit = DEFAULT_NEAR_LINES_LIMIT,
   enabled,
   includeBuildingsWithoutMatchingListings,
-}: UseSearchBuildingsNearLinesInput) {
-  return useInfiniteQuery({
+}: UseSearchBuildingsNearLinesInput) =>
+  infiniteQueryOptions({
     queryKey: queryKeys.mapSearch.nearLinesBuildingResults({
       geometry,
       distanceMeters,
@@ -51,18 +59,32 @@ export function useSearchBuildingsNearLines({
         geometry,
         distanceMeters,
         filters,
-        page: Number(pageParam),
+        page: readPageParam(pageParam),
         limit,
         includeBuildingsWithoutMatchingListings,
         signal,
       })
     },
     placeholderData: keepPreviousData,
-    getNextPageParam: (lastPage) => {
-      const { page, limit: pageLimit, total } = lastPage.pagination
-      const loaded = page * pageLimit
-
-      return loaded < total ? page + 1 : undefined
-    },
+    getNextPageParam,
   })
+
+export function useSearchBuildingsNearLines({
+  geometry,
+  distanceMeters = DEFAULT_NEAR_LINES_DISTANCE_METERS,
+  filters,
+  limit = DEFAULT_NEAR_LINES_LIMIT,
+  enabled,
+  includeBuildingsWithoutMatchingListings,
+}: UseSearchBuildingsNearLinesInput) {
+  return useInfiniteQuery(
+    buildingsNearLinesQueryOptions({
+      geometry,
+      distanceMeters,
+      filters,
+      limit,
+      enabled,
+      includeBuildingsWithoutMatchingListings,
+    }),
+  )
 }

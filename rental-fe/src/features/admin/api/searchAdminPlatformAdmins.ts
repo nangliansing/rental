@@ -17,6 +17,7 @@ export type AdminPlatformAdminsPagination = {
 export type SearchAdminPlatformAdminsInput = {
   page?: number
   limit?: number
+  signal?: AbortSignal
 }
 
 export type SearchAdminPlatformAdminsResponse = {
@@ -90,6 +91,7 @@ function parseSearchAdminPlatformAdminsResponse(
 export async function searchAdminPlatformAdmins({
   page = 1,
   limit = 20,
+  signal,
 }: SearchAdminPlatformAdminsInput = {}) {
   const searchParams = new URLSearchParams({
     page: String(page),
@@ -98,6 +100,7 @@ export async function searchAdminPlatformAdmins({
 
   const response = await apiClient.get<unknown>(
     `/admin/users/platform-admins?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseSearchAdminPlatformAdminsResponse(response.data)

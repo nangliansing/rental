@@ -13,6 +13,8 @@ import type { AgentProfileFormSubmitValues } from "../components/AgentProfileFor
 
 export type ProfileCacheSnapshot = QueryCacheSnapshot
 
+export const PROFILE_WRITE_SCOPE_ID = "profile-write"
+
 export const profileProjectionQueryKeys: QueryKey[] = [
   queryKeys.profiles.me,
   queryKeys.profiles.details,
@@ -32,7 +34,7 @@ export const profileProjectionQueryKeys: QueryKey[] = [
   queryKeys.admin.reports.details,
   queryKeys.admin.reviewReports.lists,
   queryKeys.admin.reviewReports.details,
-  queryKeys.admin.platformAdmins.list,
+  queryKeys.admin.platformAdmins.lists,
   queryKeys.admin.users.details,
 ]
 
@@ -142,22 +144,39 @@ const deletedProfileQueriesToRemove: QueryKey[] = [
   queryKeys.listerReviews.lists,
 ]
 
-const deletedProfileCollectionsToRefresh: QueryKey[] = [
+export const deletedProfileCollectionsToRefresh: QueryKey[] = [
   queryKeys.mapSearch.buildings,
   queryKeys.mapSearch.listingsInBuilding,
   queryKeys.savedListings.all,
 ]
 
 export async function reconcileDeletedProfileQueries(queryClient: QueryClient) {
-  deletedProfileQueriesToRemove.forEach((queryKey) => {
-    queryClient.removeQueries({ queryKey })
-  })
+  removeDeletedProfileQueries(queryClient)
 
   await Promise.all(
     deletedProfileCollectionsToRefresh.map((queryKey) =>
       queryClient.invalidateQueries({ queryKey, refetchType: "active" }),
     ),
   )
+}
+
+export function removeDeletedProfileQueries(queryClient: QueryClient) {
+  const failures: unknown[] = []
+
+  deletedProfileQueriesToRemove.forEach((queryKey) => {
+    try {
+      queryClient.removeQueries({ queryKey })
+    } catch (error) {
+      failures.push(error)
+    }
+  })
+
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      "Unable to remove every deleted-profile cache family.",
+    )
+  }
 }
 
 export function cacheMyAgentProfile(

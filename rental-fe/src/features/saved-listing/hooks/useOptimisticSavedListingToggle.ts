@@ -10,6 +10,7 @@ import {
 } from "../api"
 import {
   patchListingSavedStateInCache,
+  SAVED_LISTING_WRITE_SCOPE_ID,
   syncListingSavedState,
 } from "../utils/savedListingCache"
 
@@ -54,6 +55,9 @@ export function useOptimisticSavedListingToggle({
   )
 
   const mutation = useMutation({
+    // Share one write lane with panel removals because every saved-list
+    // mutation can change the same paginated collection totals.
+    scope: { id: SAVED_LISTING_WRITE_SCOPE_ID },
     mutationFn: async ({ controller, isSaved }: SaveMutationInput) => {
       try {
         if (isSaved) {

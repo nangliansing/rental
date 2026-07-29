@@ -38,9 +38,11 @@ function parseGetAdminBuildingEditRequestByIdResponse(
 
 export async function getAdminBuildingEditRequestById(
   buildingEditRequestId: string,
+  signal?: AbortSignal,
 ) {
   const response = await apiClient.get<unknown>(
     `/admin/building-edit-requests/${buildingEditRequestId}`,
+    { signal },
   )
 
   return parseGetAdminBuildingEditRequestByIdResponse(response.data).data

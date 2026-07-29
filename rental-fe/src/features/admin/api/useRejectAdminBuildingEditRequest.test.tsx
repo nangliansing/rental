@@ -148,6 +148,43 @@ describe("useRejectAdminBuildingEditRequest", () => {
     })
   })
 
+  it("restores list and detail queries evicted while the request is pending", async () => {
+    let reject!: (error: Error) => void
+    mocks.rejectAdminBuildingEditRequest.mockReturnValue(
+      new Promise((_resolve, fail) => {
+        reject = fail
+      }),
+    )
+    const { result, queryClient, allKey, detailKey } = setup()
+
+    act(() =>
+      result.current.mutate({
+        buildingEditRequestId: "request-1",
+        reviewReason: "Reason",
+      }),
+    )
+    await waitFor(() =>
+      expect(queryClient.getQueryData(detailKey)).toMatchObject({
+        status: "REJECTED",
+      }),
+    )
+
+    queryClient.removeQueries({ queryKey: allKey, exact: true })
+    queryClient.removeQueries({ queryKey: detailKey, exact: true })
+    expect(queryClient.getQueryData(allKey)).toBeUndefined()
+    expect(queryClient.getQueryData(detailKey)).toBeUndefined()
+
+    await act(async () => reject(new Error("Network error")))
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(requests(queryClient, allKey)?.[0]).toMatchObject({
+      status: "PENDING",
+    })
+    expect(queryClient.getQueryData(detailKey)).toMatchObject({
+      status: "PENDING",
+    })
+  })
+
   it("reconciles the response and invalidates only lists and exact detail", async () => {
     mocks.rejectAdminBuildingEditRequest.mockResolvedValue(
       request("request-1", "REJECTED", "Canonical reason"),

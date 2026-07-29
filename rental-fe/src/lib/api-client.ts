@@ -239,10 +239,21 @@ async function request<T>(
 
 async function get<T>(
   url: string,
-  retryAfterRefresh = true,
+  retryAfterRefreshOrOptions:
+    | boolean
+    | { signal?: AbortSignal } = true,
   signal?: AbortSignal,
 ) {
-  return request<T>('GET', url, undefined, retryAfterRefresh, signal)
+  const retryAfterRefresh =
+    typeof retryAfterRefreshOrOptions === 'boolean'
+      ? retryAfterRefreshOrOptions
+      : true
+  const requestSignal =
+    typeof retryAfterRefreshOrOptions === 'boolean'
+      ? signal
+      : retryAfterRefreshOrOptions.signal
+
+  return request<T>('GET', url, undefined, retryAfterRefresh, requestSignal)
 }
 
 async function post<T>(
