@@ -24,6 +24,7 @@ export const profileProjectionQueryKeys: QueryKey[] = [
   queryKeys.mapSearch.listingsInBuilding,
   queryKeys.savedListings.all,
   queryKeys.listerReviews.lists,
+  queryKeys.listerReviewTeasers.lists,
   queryKeys.admin.pendingPosts.lists,
   queryKeys.admin.buildingEditRequests.lists,
   queryKeys.admin.buildingEditRequests.details,

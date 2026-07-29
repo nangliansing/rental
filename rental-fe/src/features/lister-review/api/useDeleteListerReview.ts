@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import type { InfiniteData, QueryKey } from "@tanstack/react-query"
+import type { QueryKey } from "@tanstack/react-query"
 
 import { queryKeys } from "@/lib/query-keys"
 
@@ -9,14 +9,15 @@ import {
   cancelReviewQueries,
   captureReviewQueries,
   invalidateReviewQueries,
+  listerReviewRefetchQueryKeys,
   patchReviewInQueries,
   patchReviewSummaryInQueries,
   removeReviewFromListerReviewData,
   removeReviewFromSummary,
   restoreReviewQueries,
   reviewProjectionQueryKeys,
+  type ListerReviewsCacheData,
 } from "./reviewMutationCache"
-import type { SearchListerReviewsResponse } from "./searchListerReviews"
 
 export type DeleteListerReviewVariables = {
   currentSummary?: ListerReviewSummary | null
@@ -50,7 +51,7 @@ export function useDeleteListerReview() {
         updatedAt: now,
       }
 
-      queryClient.setQueriesData<InfiniteData<SearchListerReviewsResponse>>(
+      queryClient.setQueriesData<ListerReviewsCacheData>(
         {
           queryKey: queryKeys.listerReviews.byLister(review.listerProfileId),
         },
@@ -101,7 +102,7 @@ export function useDeleteListerReview() {
     onSettled: async (_result, error, variables) => {
       if (error) return
       await invalidateReviewQueries(queryClient, [
-        queryKeys.listerReviews.byLister(variables.review.listerProfileId),
+        ...listerReviewRefetchQueryKeys(variables.review.listerProfileId),
         queryKeys.admin.reviewReports.lists,
         queryKeys.admin.reviewReports.details,
       ])

@@ -260,9 +260,6 @@ function ListingPostCardArticle({
         isAvailabilitySubmitting={updateListingMutation.isPending}
         availabilityError={availabilityError || null}
         onAvailableAtChange={handleAvailableAtChange}
-        onReviewsRequest={
-          agent ? () => openDialog("openReviewsDialog") : undefined
-        }
       />
 
       <ContactActions

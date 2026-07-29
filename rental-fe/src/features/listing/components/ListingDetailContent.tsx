@@ -10,6 +10,7 @@ import type { ListingDetailListing } from "../types"
 import { buildListingDirectionsDestination } from "../utils/buildListingDirectionsDestination"
 import { ListingGridCard } from "./ListingGridCard"
 import { ListingPostCard } from "./ListingPostCard"
+import { ListingDetailReviewsSection } from "./reviews/ListingDetailReviewsSection"
 
 const EMPTY_LISTING_FILTERS = {}
 
@@ -47,6 +48,7 @@ export function ListingDetailContent({
   return (
     <>
       <ListingDetailPostSection {...sectionProps} />
+      <ListingDetailReviewsSection listing={listing} />
       <ListingDetailBuildingSection listing={listing} />
       <ListingDetailMoreListingsSection
         listing={listing}
@@ -174,26 +176,15 @@ function MoreListingsInBuilding({
         isFetchNextPageError={listingsQuery.isFetchNextPageError}
         onFetchNextPage={() => void listingsQuery.fetchNextPage()}
         endMessage="No more rooms"
-        testId="more-rooms-grid"
       >
-        {listings.map((listing) => (
-          <BuildingListingGridItem
+        {listings.map((listing: SearchListing) => (
+          <ListingGridCard
             key={listing._id}
             listing={listing}
-            onListingSelect={onListingSelect}
+            onOpen={(listingId) => onListingSelect?.(listingId)}
           />
         ))}
       </ListingCardGrid>
     </section>
   )
-}
-
-function BuildingListingGridItem({
-  listing,
-  onListingSelect,
-}: {
-  listing: SearchListing
-  onListingSelect?: (listingId: string) => void
-}) {
-  return <ListingGridCard listing={listing} onOpen={onListingSelect} />
 }

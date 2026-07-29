@@ -27,52 +27,19 @@ describe("ListingPostBody", () => {
     expect(chipRow).toHaveClass("overflow-x-auto", "flex-nowrap")
   })
 
-  it("renders listing media, pricing, details, facilities, and review action", () => {
-    const onReviewsRequest = vi.fn()
+  it("renders listing media, pricing, details, and facilities", () => {
     const listing = createSearchListing({
       occupancy: 1,
       facilities: ["Wifi", "Balcony"],
-      agentProfile: {
-        _id: "agent-1",
-        userId: "user-1",
-        displayName: "Test Lister",
-        profilePhoto: null,
-        phone: null,
-        lineUrl: null,
-        whatsappPhone: null,
-        telegramUrl: null,
-        viberPhone: null,
-        supportLanguages: ["English"],
-        reviewSummary: {
-          averageRating: 5,
-          reviewCount: 1,
-          ratingCounts: {
-            oneStar: 0,
-            twoStars: 0,
-            threeStars: 0,
-            fourStars: 0,
-            fiveStars: 1,
-          },
-          tagCounts: [{ tag: "HELPFUL", count: 1 }],
-        },
-        isVerified: false,
-        isOnline: true,
-      },
     })
 
-    render(
-      <ListingPostBody
-        listing={listing}
-        onReviewsRequest={onReviewsRequest}
-      />,
-    )
+    render(<ListingPostBody listing={listing} />)
 
     expect(screen.getByRole("img", { name: "Bright rental room" })).toBeInTheDocument()
     expect(screen.getByText("฿14k")).toBeInTheDocument()
     expect(screen.getByText("1 person")).toBeInTheDocument()
     expect(screen.getByLabelText("Flexible")).toBeInTheDocument()
     expect(screen.getByText("Wifi · Balcony")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Helpful/ })).toBeInTheDocument()
     expect(screen.getByText(/month with electricity and water/)).toBeInTheDocument()
   })
 
@@ -87,43 +54,10 @@ describe("ListingPostBody", () => {
     expect(screen.getByText(/Line one/).textContent).toContain("Line two")
   })
 
-  it("keeps review badges visible after the carousel photo loads", async () => {
-    const onReviewsRequest = vi.fn()
-    const listing = createSearchListing({
-      agentProfile: {
-        _id: "agent-1",
-        userId: "user-1",
-        displayName: "Test Lister",
-        profilePhoto: null,
-        phone: null,
-        lineUrl: null,
-        whatsappPhone: null,
-        telegramUrl: null,
-        viberPhone: null,
-        supportLanguages: ["English"],
-        reviewSummary: {
-          averageRating: 5,
-          reviewCount: 1,
-          ratingCounts: {
-            oneStar: 0,
-            twoStars: 0,
-            threeStars: 0,
-            fourStars: 0,
-            fiveStars: 1,
-          },
-          tagCounts: [{ tag: "HELPFUL", count: 1 }],
-        },
-        isVerified: false,
-        isOnline: true,
-      },
-    })
+  it("keeps the availability badge visible after the carousel photo loads", async () => {
+    const listing = createSearchListing()
 
-    render(
-      <ListingPostBody
-        listing={listing}
-        onReviewsRequest={onReviewsRequest}
-      />,
-    )
+    render(<ListingPostBody listing={listing} />)
 
     fireEvent.load(screen.getByRole("img", { name: "Bright rental room" }))
 
@@ -133,7 +67,7 @@ describe("ListingPostBody", () => {
       )
     })
 
-    expect(screen.getByRole("button", { name: /Helpful/ })).toBeVisible()
+    expect(screen.getByLabelText("Flexible")).toBeVisible()
   })
 
   it("renders availability badge on the photo from listing data", () => {
@@ -244,7 +178,5 @@ describe("ListingPostBody", () => {
     expect(screen.queryByText(/people|person/)).not.toBeInTheDocument()
     expect(screen.getByText("Wifi")).toBeInTheDocument()
     expect(screen.getByText("No photo")).toBeInTheDocument()
-    expect(screen.queryByLabelText("Lister review highlights and actions"))
-      .not.toBeInTheDocument()
   })
 })

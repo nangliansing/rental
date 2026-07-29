@@ -10,6 +10,7 @@ import {
   cancelReviewQueries,
   captureReviewQueries,
   invalidateReviewQueries,
+  listerReviewRefetchQueryKeys,
   patchReviewInQueries,
   patchReviewSummaryInQueries,
   replaceReviewInSummary,
@@ -128,9 +129,10 @@ export function useUpdateListerReview() {
         context?.listerProfileId ??
         result?.review.listerProfileId ??
         variables.review.listerProfileId
-      await invalidateReviewQueries(queryClient, [
-        queryKeys.listerReviews.byLister(listerProfileId),
-      ])
+      await invalidateReviewQueries(
+        queryClient,
+        listerReviewRefetchQueryKeys(listerProfileId),
+      )
     },
   })
 }

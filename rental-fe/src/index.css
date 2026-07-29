@@ -236,26 +236,6 @@
     backface-visibility: hidden;
   }
 
-  @keyframes review-tag-float {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-2px);
-    }
-  }
-
-  .review-tag-float {
-    animation: review-tag-float 4s ease-in-out infinite;
-    will-change: transform;
-  }
-
-  .review-tag-float:hover,
-  .review-tag-float:focus-visible {
-    animation-play-state: paused;
-  }
-
   @keyframes error-page-aurora-drift {
     0%,
     100% {
@@ -298,6 +278,49 @@
     animation-duration: 28s;
   }
 
+  @keyframes rotating-content-enter {
+    /* Hold invisible until the outgoing fade has cleared. */
+    0%,
+    38% {
+      opacity: 0;
+      transform: translate3d(0, 10%, 0);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes rotating-content-exit {
+    0% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+    /* Clear the old text early so the incoming line never stacks on it. */
+    42% {
+      opacity: 0;
+      transform: translate3d(0, -3%, 0);
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(0, -4%, 0);
+    }
+  }
+
+  .rotating-content-enter {
+    animation-name: rotating-content-enter;
+    animation-duration: var(--rotating-content-ms, 900ms);
+    animation-timing-function: cubic-bezier(0.33, 0.1, 0.25, 1);
+    animation-fill-mode: both;
+  }
+
+  .rotating-content-exit {
+    animation-name: rotating-content-exit;
+    animation-duration: var(--rotating-content-ms, 900ms);
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -315,9 +338,9 @@
       will-change: auto;
     }
 
-    .review-tag-float {
+    .rotating-content-enter,
+    .rotating-content-exit {
       animation: none;
-      will-change: auto;
     }
 
     .error-page-aurora {

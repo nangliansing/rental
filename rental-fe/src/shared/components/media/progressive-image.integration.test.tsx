@@ -124,45 +124,18 @@ describe("progressive image integration", () => {
   })
 
   describe("listing post body integration", () => {
-    it("keeps review badges and the carousel counter visible through the full load cycle", async () => {
+    it("keeps the carousel counter visible through the full load cycle", async () => {
       render(
         <ListingPostBody
           listing={createSearchListing({
             media: cloudinaryPhotos,
-            agentProfile: {
-              _id: "agent-1",
-              userId: "user-1",
-              displayName: "Test Lister",
-              profilePhoto: null,
-              phone: null,
-              lineUrl: null,
-              whatsappPhone: null,
-              telegramUrl: null,
-              viberPhone: null,
-              supportLanguages: ["English"],
-              reviewSummary: {
-                averageRating: 5,
-                reviewCount: 1,
-                ratingCounts: {
-                  oneStar: 0,
-                  twoStars: 0,
-                  threeStars: 0,
-                  fourStars: 0,
-                  fiveStars: 1,
-                },
-                tagCounts: [{ tag: "HELPFUL", count: 1 }],
-              },
-              isVerified: false,
-              isOnline: true,
-            },
           })}
-          onReviewsRequest={vi.fn()}
         />,
       )
 
       expect(screen.getAllByTestId("progressive-cover-placeholder").length).toBeGreaterThan(0)
-      expect(screen.getByRole("button", { name: /Helpful/ })).toBeVisible()
       expect(screen.getByText("1/2")).toBeVisible()
+      expect(screen.getByLabelText("Flexible")).toBeVisible()
 
       fireEvent.load(screen.getByRole("img", { name: "Bright rental room" }))
 
@@ -172,8 +145,8 @@ describe("progressive image integration", () => {
         )
       })
 
-      expect(screen.getByRole("button", { name: /Helpful/ })).toBeVisible()
       expect(screen.getByText("1/2")).toBeVisible()
+      expect(screen.getByLabelText("Flexible")).toBeVisible()
     })
   })
 

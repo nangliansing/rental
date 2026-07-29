@@ -47,6 +47,18 @@ export const queryKeys = {
     list: ({ listerProfileId, sort, limit }: ListerReviewKeyInput) =>
       ["lister-reviews", listerProfileId, sort, limit] as const,
   },
+  /**
+   * Separate namespace from `listerReviews`: teasers cache a flat single page,
+   * while `listerReviews` caches infinite pages. Keeping them apart stops
+   * review mutations from patching one cache with the other's shape.
+   */
+  listerReviewTeasers: {
+    lists: ["lister-review-teasers"] as const,
+    byLister: (listerProfileId: string) =>
+      ["lister-review-teasers", listerProfileId] as const,
+    list: ({ listerProfileId, sort, limit }: ListerReviewKeyInput) =>
+      ["lister-review-teasers", listerProfileId, sort, limit] as const,
+  },
   agentListings: {
     lists: ["agent-listings"] as const,
     list: ({ agentProfileId, sort, limit }: AgentListingKeyInput) =>

@@ -147,9 +147,13 @@ describe("useCreateListerReview", () => {
       pages: [{ data: { myReview: { _id: "review-1", interaction: { isVerified: true } } } }],
     })
     expect(queryClient.getQueryData(profileKey)).toMatchObject({ reviewSummary: newSummary })
-    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(invalidate).toHaveBeenCalledTimes(2)
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: queryKeys.listerReviews.byLister("profile-1"),
+      refetchType: "active",
+    })
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"),
       refetchType: "active",
     })
   })
