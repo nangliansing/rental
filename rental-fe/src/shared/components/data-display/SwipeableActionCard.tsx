@@ -1,10 +1,13 @@
 /* eslint-disable react-refresh/only-export-components -- This compound component intentionally exports its page marker and context hook together. */
+
 import {
   Children,
   createContext,
   isValidElement,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -20,7 +23,7 @@ import { hasReactNodeContent } from "@/shared/utils/reactNode"
 
 const PAGE_DISPLAY_NAME = "SwipeableActionCard.Page"
 const HEADER_GUTTER_CLASS = "px-4"
-/** Ignore small pointer jitter so taps still activate after a light touch. */
+
 const TAP_SLOP_PX = 10
 const TAP_SLOP_SQ = TAP_SLOP_PX * TAP_SLOP_PX
 
@@ -34,26 +37,23 @@ const SwipeableActionCardContext =
 
 const SwipeableActionCardPageIndexContext = createContext(0)
 
-/**
- * True when this page is the active swipe page and the card is in the viewport.
- * Safe to call outside a card (returns true so callers are not force-paused).
- */
 export function useSwipeableActionCardPageActive(): boolean {
   const card = useContext(SwipeableActionCardContext)
   const pageIndex = useContext(SwipeableActionCardPageIndexContext)
+
   if (card == null) return true
+
   return card.isInView && pageIndex === card.activePageIndex
 }
 
 export type SwipeableActionCardPageProps = {
   title: ReactNode
-  /** Optional muted text shown beside the title (e.g. "4.5 (30 reviews)"). */
   meta?: ReactNode
   children?: ReactNode
   className?: string
+
   /**
-   * When true, the page is still swipeable but cannot activate the card
-   * (`onClick` / keyboard). Chrome is muted while this page is active.
+   * Keeps the page swipeable while disabling whole-card activation.
    */
   disabled?: boolean
 }
@@ -70,24 +70,39 @@ type CollectedPage = {
 export type SwipeableActionCardProps = {
   children?: ReactNode
   className?: string
+
   /**
-   * Called when the card surface is activated (tap / Enter / Space) with the
-   * active page index. Nested links/buttons are ignored.
+   * Called when the active page is activated.
+   * Nested interactive elements are ignored.
    */
   onClick?: (index: number) => void
+
   "aria-label"?: string
 }
 
-export function clampSwipeableActionCardIndex(index: number, length: number) {
+type PointerStart = {
+  pointerId: number
+  x: number
+  y: number
+}
+
+export function clampSwipeableActionCardIndex(
+  index: number,
+  length: number,
+): number {
   if (length <= 0) return 0
   if (!Number.isFinite(index)) return 0
+
   return Math.min(Math.max(Math.trunc(index), 0), length - 1)
 }
 
 function isPageElement(
   child: ReactElement,
 ): child is ReactElement<SwipeableActionCardPageProps> {
-  const type = child.type as { displayName?: string }
+  const type = child.type as {
+    displayName?: string
+  }
+
   return (
     child.type === SwipeableActionCardPage ||
     type.displayName === PAGE_DISPLAY_NAME
@@ -97,14 +112,33 @@ function isPageElement(
 function isNestedInteractiveTarget(
   target: EventTarget | null,
   currentTarget: EventTarget,
-) {
+): boolean {
   if (!(target instanceof Element)) return false
 
-  const interactive = target.closest(
-    "a[href], button, input, select, textarea, label, summary, [role='button'], [role='link']",
+  const interactiveElement = target.closest(
+    [
+      "a[href]",
+      "button",
+      "input",
+      "select",
+      "textarea",
+      "label",
+      "summary",
+      "[contenteditable='true']",
+      "[role='button']",
+      "[role='link']",
+      "[role='checkbox']",
+      "[role='menuitem']",
+      "[role='option']",
+      "[role='radio']",
+      "[role='switch']",
+      "[role='tab']",
+    ].join(", "),
   )
 
-  return Boolean(interactive && interactive !== currentTarget)
+  return Boolean(
+    interactiveElement && interactiveElement !== currentTarget,
+  )
 }
 
 function collectPages(children: ReactNode): CollectedPage[] {
@@ -135,6 +169,7 @@ export function resolveSwipeableActionCardIndex(
   if (!Number.isFinite(scrollLeft)) return null
 
   const rawIndex = Math.round(scrollLeft / itemWidth)
+
   if (!Number.isFinite(rawIndex)) return null
 
   return clampSwipeableActionCardIndex(rawIndex, pageCount)
@@ -143,121 +178,211 @@ export function resolveSwipeableActionCardIndex(
 function syncScrollerToIndex(
   scroller: HTMLDivElement | null,
   index: number,
-) {
+): void {
   if (!scroller) return
 
-  const itemWidth = scroller.clientWidth
-  if (itemWidth <= 0) return
+  const pageWidth = scroller.clientWidth
 
-  const nextLeft = index * itemWidth
-  if (Math.abs(scroller.scrollLeft - nextLeft) > 1) {
-    scroller.scrollLeft = nextLeft
-  }
+  if (pageWidth <= 0) return
+
+  const nextScrollLeft = index * pageWidth
+
+  if (Math.abs(scroller.scrollLeft - nextScrollLeft) <= 1) return
+
+  scroller.scrollLeft = nextScrollLeft
 }
 
-/**
- * Compact swipeable card: fixed title + dots, edge-to-edge snap pages,
- * optional whole-card activate for the active page.
- *
- * Uses a region (not a button) so nested page content and the scroll track
- * stay valid interactive descendants.
- */
 function SwipeableActionCardRoot({
   children,
   className,
   onClick,
   "aria-label": ariaLabel,
 }: SwipeableActionCardProps) {
-  const pages = collectPages(children)
+  const pages = useMemo(() => collectPages(children), [children])
   const pageCount = pages.length
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
-  const suppressClickRef = useRef(false)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const { ref: inViewRef, isInView } = useInView({ threshold: 0.4 })
 
-  const safeIndex = clampSwipeableActionCardIndex(activeIndex, pageCount)
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const pointerStartRef = useRef<PointerStart | null>(null)
+  const suppressClickRef = useRef(false)
+  const scrollFrameRef = useRef<number | null>(null)
+
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  const { ref: inViewRef, isInView } = useInView({
+    threshold: 0.4,
+  })
+
+  const safeIndex = clampSwipeableActionCardIndex(
+    activeIndex,
+    pageCount,
+  )
+
   const activePage = pages[safeIndex]
   const showDots = pageCount > 1
   const isPageDisabled = activePage?.disabled === true
-  const isActivating = typeof onClick === "function" && !isPageDisabled
+  const isActivating =
+    typeof onClick === "function" && !isPageDisabled
+
+  useEffect(() => {
+    setActiveIndex((currentIndex) =>
+      clampSwipeableActionCardIndex(currentIndex, pageCount),
+    )
+  }, [pageCount])
 
   useEffect(() => {
     syncScrollerToIndex(scrollerRef.current, safeIndex)
   }, [pageCount, safeIndex])
 
-  if (pageCount === 0 || !activePage) return null
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current != null) {
+        cancelAnimationFrame(scrollFrameRef.current)
+      }
+    }
+  }, [])
 
-  const handleScroll = () => {
-    suppressClickRef.current = true
-
-    const scroller = scrollerRef.current
-    if (!scroller) return
-
-    const nextIndex = resolveSwipeableActionCardIndex(
-      scroller.scrollLeft,
-      scroller.clientWidth,
-      pageCount,
-    )
-    if (nextIndex == null) return
-
-    setActiveIndex((current) => (current === nextIndex ? current : nextIndex))
-  }
-
-  const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
-    if (event.button !== 0) return
-    suppressClickRef.current = false
-    pointerStartRef.current = { x: event.clientX, y: event.clientY }
-  }
-
-  const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
-    const start = pointerStartRef.current
-    if (!start || suppressClickRef.current) return
-
-    const dx = event.clientX - start.x
-    const dy = event.clientY - start.y
-    if (dx * dx + dy * dy > TAP_SLOP_SQ) {
+  const handleScroll = useCallback(() => {
+    if (pointerStartRef.current != null) {
       suppressClickRef.current = true
     }
-  }
 
-  const clearPointer = () => {
-    pointerStartRef.current = null
-  }
+    if (scrollFrameRef.current != null) return
 
-  const handlePointerCancel = () => {
-    clearPointer()
-    suppressClickRef.current = true
-  }
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null
 
-  const handleClick = (event: MouseEvent<HTMLElement>) => {
-    if (suppressClickRef.current) {
+      const scroller = scrollerRef.current
+      if (!scroller) return
+
+      const nextIndex = resolveSwipeableActionCardIndex(
+        scroller.scrollLeft,
+        scroller.clientWidth,
+        pageCount,
+      )
+
+      if (nextIndex == null) return
+
+      setActiveIndex((currentIndex) =>
+        currentIndex === nextIndex ? currentIndex : nextIndex,
+      )
+    })
+  }, [pageCount])
+
+  const handlePointerDown = useCallback(
+    (event: PointerEvent<HTMLElement>) => {
+      if (
+        event.pointerType === "mouse" &&
+        event.button !== 0
+      ) {
+        return
+      }
+
+      if (!event.isPrimary) return
+
       suppressClickRef.current = false
-      return
-    }
-    if (isNestedInteractiveTarget(event.target, event.currentTarget)) return
 
-    onClick?.(safeIndex)
-  }
+      pointerStartRef.current = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+      }
+    },
+    [],
+  )
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Enter" && event.key !== " ") return
-    if (event.target !== event.currentTarget) return
+  const handlePointerMove = useCallback(
+    (event: PointerEvent<HTMLElement>) => {
+      const start = pointerStartRef.current
 
-    event.preventDefault()
-    onClick?.(safeIndex)
-  }
+      if (!start || start.pointerId !== event.pointerId) return
+      if (suppressClickRef.current) return
+
+      const deltaX = event.clientX - start.x
+      const deltaY = event.clientY - start.y
+      const movementSquared =
+        deltaX * deltaX + deltaY * deltaY
+
+      if (movementSquared > TAP_SLOP_SQ) {
+        suppressClickRef.current = true
+      }
+    },
+    [],
+  )
+
+  const clearPointer = useCallback(
+    (event?: PointerEvent<HTMLElement>) => {
+      if (
+        event &&
+        pointerStartRef.current?.pointerId !== event.pointerId
+      ) {
+        return
+      }
+
+      pointerStartRef.current = null
+    },
+    [],
+  )
+
+  const handlePointerCancel = useCallback(
+    (event: PointerEvent<HTMLElement>) => {
+      clearPointer(event)
+      suppressClickRef.current = true
+    },
+    [clearPointer],
+  )
+
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false
+        return
+      }
+
+      if (
+        isNestedInteractiveTarget(
+          event.target,
+          event.currentTarget,
+        )
+      ) {
+        return
+      }
+
+      onClick?.(safeIndex)
+    },
+    [onClick, safeIndex],
+  )
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return
+      if (event.target !== event.currentTarget) return
+
+      event.preventDefault()
+      onClick?.(safeIndex)
+    },
+    [onClick, safeIndex],
+  )
+
+  if (pageCount === 0 || !activePage) return null
 
   return (
     <SwipeableActionCardContext.Provider
-      value={{ isInView, activePageIndex: safeIndex }}
+      value={{
+        isInView,
+        activePageIndex: safeIndex,
+      }}
     >
       <div
         ref={inViewRef}
         className={cn(
           "rounded-xl bg-slate-100 py-3 text-slate-950",
-          isActivating &&
-            "cursor-pointer transition-colors hover:bg-slate-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+          isActivating && [
+            "cursor-pointer transition-colors",
+            "hover:bg-slate-200/80",
+            "focus-visible:outline-none",
+            "focus-visible:ring-2",
+            "focus-visible:ring-slate-400",
+          ],
           isPageDisabled && "cursor-default",
           className,
         )}
@@ -265,12 +390,22 @@ function SwipeableActionCardRoot({
         aria-label={ariaLabel}
         aria-disabled={isPageDisabled || undefined}
         tabIndex={isActivating ? 0 : undefined}
-        onPointerDown={isActivating ? handlePointerDown : undefined}
-        onPointerMove={isActivating ? handlePointerMove : undefined}
-        onPointerUp={isActivating ? clearPointer : undefined}
-        onPointerCancel={isActivating ? handlePointerCancel : undefined}
+        onPointerDown={
+          isActivating ? handlePointerDown : undefined
+        }
+        onPointerMove={
+          isActivating ? handlePointerMove : undefined
+        }
+        onPointerUp={
+          isActivating ? clearPointer : undefined
+        }
+        onPointerCancel={
+          isActivating ? handlePointerCancel : undefined
+        }
         onClick={isActivating ? handleClick : undefined}
-        onKeyDown={isActivating ? handleKeyDown : undefined}
+        onKeyDown={
+          isActivating ? handleKeyDown : undefined
+        }
       >
         <div
           className={cn(
@@ -282,6 +417,7 @@ function SwipeableActionCardRoot({
           <div
             className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5"
             aria-live={showDots ? "polite" : undefined}
+            aria-atomic={showDots ? true : undefined}
           >
             <div
               className={cn(
@@ -291,6 +427,7 @@ function SwipeableActionCardRoot({
             >
               {activePage.title}
             </div>
+
             {hasReactNodeContent(activePage.meta) && (
               <div
                 className={cn(
@@ -328,43 +465,58 @@ function SwipeableActionCardRoot({
 
         <div
           ref={scrollerRef}
-          className="mt-2 flex touch-pan-x snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className={cn(
+            "mt-2 flex overflow-x-auto",
+            "touch-auto",
+            "snap-x snap-mandatory",
+            "overscroll-x-contain",
+            "[scrollbar-width:none]",
+            "[&::-webkit-scrollbar]:hidden",
+          )}
           onScroll={showDots ? handleScroll : undefined}
-          aria-roledescription={showDots ? "carousel" : undefined}
+          aria-roledescription={
+            showDots ? "carousel" : undefined
+          }
           aria-label={showDots ? "Card pages" : undefined}
         >
-          {pages.map((page, index) => (
-            <SwipeableActionCardPageIndexContext.Provider
-              key={page.key}
-              value={index}
-            >
-              <div
-                className={cn(
-                  // `w-full` (not `min-w-full`) so wide content truncates
-                  // instead of stretching the page past the card.
-                  "w-full shrink-0 snap-center snap-always",
-                  page.className,
-                )}
-                aria-hidden={index === safeIndex ? undefined : true}
+          {pages.map((page, index) => {
+            const isActive = index === safeIndex
+
+            return (
+              <SwipeableActionCardPageIndexContext.Provider
+                key={page.key}
+                value={index}
               >
-                {page.content}
-              </div>
-            </SwipeableActionCardPageIndexContext.Provider>
-          ))}
+                <div
+                  className={cn(
+                    "w-full shrink-0 snap-center snap-always",
+                    page.className,
+                  )}
+                  aria-hidden={isActive ? undefined : true}
+                >
+                  {page.content}
+                </div>
+              </SwipeableActionCardPageIndexContext.Provider>
+            )
+          })}
         </div>
       </div>
     </SwipeableActionCardContext.Provider>
   )
 }
 
-function SwipeableActionCardPage(_props: SwipeableActionCardPageProps) {
-  // Marker child — props are collected by the parent; never mounted.
+function SwipeableActionCardPage(
+  _props: SwipeableActionCardPageProps,
+) {
   void _props
   return null
 }
 
 SwipeableActionCardPage.displayName = PAGE_DISPLAY_NAME
 
-export const SwipeableActionCard = Object.assign(SwipeableActionCardRoot, {
-  Page: SwipeableActionCardPage,
-})
+export const SwipeableActionCard = Object.assign(
+  SwipeableActionCardRoot,
+  {
+    Page: SwipeableActionCardPage,
+  },
+)

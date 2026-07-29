@@ -1,5 +1,17 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import {
   ROTATING_CONTENT_TRANSITION_MS,
@@ -11,10 +23,20 @@ import {
 } from "./SwipeableActionCard"
 
 let observerCallback: IntersectionObserverCallback | null = null
+
 const observe = vi.fn()
 const disconnect = vi.fn()
 
-class IntersectionObserverMock implements IntersectionObserver {
+let nextAnimationFrameId = 1
+
+let animationFrameCallbacks = new Map<
+  number,
+  FrameRequestCallback
+>()
+
+class IntersectionObserverMock
+  implements IntersectionObserver
+{
   readonly root = null
   readonly rootMargin = ""
   readonly thresholds = []
@@ -29,10 +51,14 @@ class IntersectionObserverMock implements IntersectionObserver {
   takeRecords = vi.fn(() => [])
 }
 
-function mockMatchMedia(prefersReducedMotion = false) {
+function mockMatchMedia(
+  prefersReducedMotion = false,
+) {
   vi.mocked(window.matchMedia).mockImplementation(
     (query: string): MediaQueryList => ({
-      matches: prefersReducedMotion && query.includes("prefers-reduced-motion"),
+      matches:
+        prefersReducedMotion &&
+        query.includes("prefers-reduced-motion"),
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -44,30 +70,70 @@ function mockMatchMedia(prefersReducedMotion = false) {
   )
 }
 
-function setDocumentVisibility(state: DocumentVisibilityState) {
+function setDocumentVisibility(
+  state: DocumentVisibilityState,
+) {
   Object.defineProperty(document, "visibilityState", {
     configurable: true,
     value: state,
   })
-  document.dispatchEvent(new Event("visibilitychange"))
+
+  document.dispatchEvent(
+    new Event("visibilitychange"),
+  )
 }
 
 function setCardInView(isIntersecting: boolean) {
   act(() => {
     observerCallback?.(
-      [{ isIntersecting } as IntersectionObserverEntry],
+      [
+        {
+          isIntersecting,
+          intersectionRatio: isIntersecting
+            ? 1
+            : 0,
+        } as IntersectionObserverEntry,
+      ],
       {} as IntersectionObserver,
     )
   })
 }
 
-function swipeToPage(scroller: HTMLElement, index: number, width = 320) {
+function flushAnimationFrames(timestamp = 0) {
+  act(() => {
+    const callbacks = [
+      ...animationFrameCallbacks.values(),
+    ]
+
+    animationFrameCallbacks.clear()
+
+    for (const callback of callbacks) {
+      callback(timestamp)
+    }
+  })
+}
+
+function swipeToPage(
+  scroller: HTMLElement,
+  index: number,
+  width = 320,
+) {
   Object.defineProperty(scroller, "clientWidth", {
     configurable: true,
     value: width,
   })
-  scroller.scrollLeft = index * width
-  fireEvent.scroll(scroller)
+
+  act(() => {
+    scroller.scrollLeft = index * width
+    fireEvent.scroll(scroller)
+  })
+
+  /*
+   * SwipeableActionCard updates its active page inside
+   * requestAnimationFrame. Flush the frame before advancing the
+   * RotatingContent timers.
+   */
+  flushAnimationFrames()
 }
 
 function PageRotator({
@@ -79,10 +145,15 @@ function PageRotator({
   items: string[]
   durationMs?: number
 }) {
-  const active = useSwipeableActionCardPageActive()
+  const active =
+    useSwipeableActionCardPageActive()
 
   return (
-    <RotatingContent aria-label={label} durationMs={durationMs} active={active}>
+    <RotatingContent
+      aria-label={label}
+      durationMs={durationMs}
+      active={active}
+    >
       {items.map((item) => (
         <p key={item}>{item}</p>
       ))}
@@ -96,9 +167,14 @@ function renderReviewCard(pageCount: 1 | 2 = 2) {
       <SwipeableActionCard.Page title="Lister reviews">
         <PageRotator
           label="Lister review teasers"
-          items={["Lister A", "Lister B", "Lister C"]}
+          items={[
+            "Lister A",
+            "Lister B",
+            "Lister C",
+          ]}
         />
       </SwipeableActionCard.Page>
+
       {pageCount > 1 && (
         <SwipeableActionCard.Page title="Listing reviews">
           <PageRotator
@@ -115,251 +191,463 @@ function advanceToNextItem(dwellMs: number) {
   act(() => {
     vi.advanceTimersByTime(dwellMs)
   })
+
   act(() => {
-    vi.advanceTimersByTime(ROTATING_CONTENT_TRANSITION_MS)
+    vi.advanceTimersByTime(
+      ROTATING_CONTENT_TRANSITION_MS,
+    )
   })
 }
 
-describe("SwipeableActionCard + RotatingContent integration", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    mockMatchMedia(false)
-    setDocumentVisibility("visible")
-    observerCallback = null
-    observe.mockClear()
-    disconnect.mockClear()
-    vi.stubGlobal("IntersectionObserver", IntersectionObserverMock)
-  })
+describe(
+  "SwipeableActionCard + RotatingContent integration",
+  () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
 
-  afterEach(() => {
-    setDocumentVisibility("visible")
-    vi.useRealTimers()
-    vi.unstubAllGlobals()
-  })
+      nextAnimationFrameId = 1
+      animationFrameCallbacks = new Map()
 
-  it("observes the card and starts out paused off-screen", () => {
-    renderReviewCard()
+      vi.stubGlobal(
+        "requestAnimationFrame",
+        vi.fn(
+          (
+            callback: FrameRequestCallback,
+          ): number => {
+            const id = nextAnimationFrameId
+            nextAnimationFrameId += 1
 
-    expect(observe).toHaveBeenCalledTimes(1)
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.queryByText("Lister B")).not.toBeInTheDocument()
+            animationFrameCallbacks.set(
+              id,
+              callback,
+            )
 
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.queryByText("Lister B")).not.toBeInTheDocument()
-  })
+            return id
+          },
+        ),
+      )
 
-  it("rotates only the active page after the card enters view", () => {
-    renderReviewCard()
-    setCardInView(true)
+      vi.stubGlobal(
+        "cancelAnimationFrame",
+        vi.fn((id: number) => {
+          animationFrameCallbacks.delete(id)
+        }),
+      )
 
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-    expect(screen.getByText("Listing X")).toBeInTheDocument()
-    expect(screen.queryByText("Listing Y")).not.toBeInTheDocument()
+      vi.stubGlobal(
+        "IntersectionObserver",
+        IntersectionObserverMock,
+      )
 
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister C")).toBeInTheDocument()
-    expect(screen.getByText("Listing X")).toBeInTheDocument()
-  })
-
-  it("pauses the previous page and rotates the newly active page after swipe", () => {
-    renderReviewCard()
-    setCardInView(true)
-
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-
-    swipeToPage(screen.getByLabelText("Card pages"), 1)
-
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-    expect(screen.queryByText("Lister C")).not.toBeInTheDocument()
-
-    advanceToNextItem(1000)
-    expect(screen.getByText("Listing Y")).toBeInTheDocument()
-  })
-
-  it("pauses mid-item when the card leaves view and resumes from that item when it returns", () => {
-    renderReviewCard()
-    setCardInView(true)
-
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-
-    setCardInView(false)
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-    expect(screen.queryByText("Lister C")).not.toBeInTheDocument()
-
-    setCardInView(true)
-    act(() => {
-      vi.advanceTimersByTime(999)
-    })
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-
-    advanceToNextItem(1)
-    expect(screen.getByText("Lister C")).toBeInTheDocument()
-  })
-
-  it("settles an in-flight transition when the card leaves view", () => {
-    renderReviewCard()
-    setCardInView(true)
-
-    act(() => {
-      vi.advanceTimersByTime(1000)
-    })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-
-    setCardInView(false)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-    expect(screen.queryByText("Lister A")).not.toBeInTheDocument()
-
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-    expect(screen.queryByText("Lister C")).not.toBeInTheDocument()
-  })
-
-  it("gates a single-page card on in-view the same way", () => {
-    renderReviewCard(1)
-
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.queryByText("Lister B")).not.toBeInTheDocument()
-
-    setCardInView(true)
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-  })
-
-  it("does not rotate when prefers-reduced-motion is set even while in view", () => {
-    mockMatchMedia(true)
-    renderReviewCard()
-    setCardInView(true)
-
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.queryByText("Lister B")).not.toBeInTheDocument()
-  })
-
-  it("pauses while the document is hidden even if the card stays in view", () => {
-    renderReviewCard()
-    setCardInView(true)
-
-    act(() => {
-      vi.advanceTimersByTime(500)
-    })
-
-    act(() => {
-      setDocumentVisibility("hidden")
-    })
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-
-    act(() => {
+      mockMatchMedia(false)
       setDocumentVisibility("visible")
+
+      observerCallback = null
+      observe.mockClear()
+      disconnect.mockClear()
     })
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-  })
 
-  it("stops after one full round on the active in-view page", () => {
-    renderReviewCard()
-    setCardInView(true)
+    afterEach(() => {
+      animationFrameCallbacks.clear()
 
-    advanceToNextItem(1000) // B
-    advanceToNextItem(1000) // C
-    advanceToNextItem(1000) // back to A, round done
+      setDocumentVisibility("visible")
 
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    act(() => {
-      vi.advanceTimersByTime(10_000)
+      vi.clearAllTimers()
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
     })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.queryByText("Lister B")).not.toBeInTheDocument()
-  })
 
-  it("disconnects the observer and clears timers on unmount mid-rotation", () => {
-    const { unmount } = renderReviewCard()
-    setCardInView(true)
+    it("observes the card and starts out paused off-screen", () => {
+      renderReviewCard()
 
-    act(() => {
-      vi.advanceTimersByTime(1000)
-    })
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
+      expect(observe).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister B"),
+      ).not.toBeInTheDocument()
 
-    unmount()
-    expect(disconnect).toHaveBeenCalled()
-
-    expect(() => {
       act(() => {
         vi.advanceTimersByTime(10_000)
       })
-    }).not.toThrow()
-  })
 
-  it("disconnects the observer on unmount while still off-screen", () => {
-    const { unmount } = renderReviewCard()
-    expect(observe).toHaveBeenCalled()
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister B"),
+      ).not.toBeInTheDocument()
+    })
 
-    unmount()
-    expect(disconnect).toHaveBeenCalled()
-  })
+    it("rotates only the active page after the card enters view", () => {
+      renderReviewCard()
+      setCardInView(true)
 
-  it("pauses the active rotator when pages shrink away mid-rotation", () => {
-    const { rerender } = render(
-      <SwipeableActionCard aria-label="Review highlights">
-        <SwipeableActionCard.Page title="Lister reviews">
-          <PageRotator
-            label="Lister review teasers"
-            items={["Lister A", "Lister B"]}
-          />
-        </SwipeableActionCard.Page>
-        <SwipeableActionCard.Page title="Listing reviews">
-          <PageRotator
-            label="Listing review teasers"
-            items={["Listing X", "Listing Y"]}
-          />
-        </SwipeableActionCard.Page>
-      </SwipeableActionCard>,
-    )
+      advanceToNextItem(1000)
 
-    setCardInView(true)
-    swipeToPage(screen.getByLabelText("Card pages"), 1)
-    advanceToNextItem(1000)
-    expect(screen.getByText("Listing Y")).toBeInTheDocument()
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText("Listing X"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Listing Y"),
+      ).not.toBeInTheDocument()
 
-    rerender(
-      <SwipeableActionCard aria-label="Review highlights">
-        <SwipeableActionCard.Page title="Lister reviews">
-          <PageRotator
-            label="Lister review teasers"
-            items={["Lister A", "Lister B"]}
-          />
-        </SwipeableActionCard.Page>
-      </SwipeableActionCard>,
-    )
+      advanceToNextItem(1000)
 
-    expect(screen.getByText("Lister A")).toBeInTheDocument()
-    expect(screen.queryByText("Listing Y")).not.toBeInTheDocument()
+      expect(
+        screen.getByText("Lister C"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText("Listing X"),
+      ).toBeInTheDocument()
+    })
 
-    advanceToNextItem(1000)
-    expect(screen.getByText("Lister B")).toBeInTheDocument()
-  })
-})
+    it("pauses the previous page and rotates the newly active page after swipe", () => {
+      renderReviewCard()
+      setCardInView(true)
+
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+
+      const listerRotator =
+        screen.getByLabelText(
+          "Lister review teasers",
+        )
+
+      const pausedListerText =
+        listerRotator.textContent
+
+      swipeToPage(
+        screen.getByLabelText("Card pages"),
+        1,
+      )
+
+      expect(
+        screen.getByText("Listing X"),
+      ).toBeInTheDocument()
+
+      /*
+       * The inactive lister page must stay frozen even while time
+       * advances far beyond its normal rotation interval.
+       */
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(listerRotator).toHaveTextContent(
+        pausedListerText ?? "",
+      )
+
+      /*
+       * The newly active listing page should rotate normally.
+       */
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Listing Y"),
+      ).toBeInTheDocument()
+    })
+
+    it("pauses mid-item when the card leaves view and resumes from that item when it returns", () => {
+      renderReviewCard()
+      setCardInView(true)
+
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+
+      setCardInView(false)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister C"),
+      ).not.toBeInTheDocument()
+
+      setCardInView(true)
+
+      act(() => {
+        vi.advanceTimersByTime(999)
+      })
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+
+      advanceToNextItem(1)
+
+      expect(
+        screen.getByText("Lister C"),
+      ).toBeInTheDocument()
+    })
+
+    it("settles an in-flight transition when the card leaves view", () => {
+      renderReviewCard()
+      setCardInView(true)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+
+      setCardInView(false)
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister A"),
+      ).not.toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister C"),
+      ).not.toBeInTheDocument()
+    })
+
+    it("gates a single-page card on in-view the same way", () => {
+      renderReviewCard(1)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister B"),
+      ).not.toBeInTheDocument()
+
+      setCardInView(true)
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+    })
+
+    it("does not rotate when prefers-reduced-motion is set even while in view", () => {
+      mockMatchMedia(true)
+
+      renderReviewCard()
+      setCardInView(true)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister B"),
+      ).not.toBeInTheDocument()
+    })
+
+    it("pauses while the document is hidden even if the card stays in view", () => {
+      renderReviewCard()
+      setCardInView(true)
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      act(() => {
+        setDocumentVisibility("hidden")
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+
+      act(() => {
+        setDocumentVisibility("visible")
+      })
+
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+    })
+
+    it("stops after one full round on the active in-view page", () => {
+      renderReviewCard()
+      setCardInView(true)
+
+      advanceToNextItem(1000)
+      advanceToNextItem(1000)
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("Lister B"),
+      ).not.toBeInTheDocument()
+    })
+
+    it("disconnects the observer and clears timers on unmount mid-rotation", () => {
+      const { unmount } = renderReviewCard()
+
+      setCardInView(true)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+
+      unmount()
+
+      expect(disconnect).toHaveBeenCalled()
+
+      expect(() => {
+        act(() => {
+          vi.advanceTimersByTime(10_000)
+        })
+      }).not.toThrow()
+    })
+
+    it("disconnects the observer on unmount while still off-screen", () => {
+      const { unmount } = renderReviewCard()
+
+      expect(observe).toHaveBeenCalled()
+
+      unmount()
+
+      expect(disconnect).toHaveBeenCalled()
+    })
+
+    it("pauses the active rotator when pages shrink away mid-rotation", () => {
+      const { rerender } = render(
+        <SwipeableActionCard aria-label="Review highlights">
+          <SwipeableActionCard.Page title="Lister reviews">
+            <PageRotator
+              label="Lister review teasers"
+              items={["Lister A", "Lister B"]}
+            />
+          </SwipeableActionCard.Page>
+
+          <SwipeableActionCard.Page title="Listing reviews">
+            <PageRotator
+              label="Listing review teasers"
+              items={["Listing X", "Listing Y"]}
+            />
+          </SwipeableActionCard.Page>
+        </SwipeableActionCard>,
+      )
+
+      setCardInView(true)
+
+      swipeToPage(
+        screen.getByLabelText("Card pages"),
+        1,
+      )
+
+      expect(
+        screen.getByText("Listing X"),
+      ).toBeInTheDocument()
+
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Listing Y"),
+      ).toBeInTheDocument()
+
+      rerender(
+        <SwipeableActionCard aria-label="Review highlights">
+          <SwipeableActionCard.Page title="Lister reviews">
+            <PageRotator
+              label="Lister review teasers"
+              items={["Lister A", "Lister B"]}
+            />
+          </SwipeableActionCard.Page>
+        </SwipeableActionCard>,
+      )
+
+      expect(
+        screen.queryByLabelText(
+          "Listing review teasers",
+        ),
+      ).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByText("Listing X"),
+      ).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByText("Listing Y"),
+      ).not.toBeInTheDocument()
+
+      expect(
+        screen.getByText("Lister A"),
+      ).toBeInTheDocument()
+
+      advanceToNextItem(1000)
+
+      expect(
+        screen.getByText("Lister B"),
+      ).toBeInTheDocument()
+
+      /*
+       * Advancing time again must not recreate or update the removed
+       * listing-page rotator.
+       */
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      expect(
+        screen.queryByLabelText(
+          "Listing review teasers",
+        ),
+      ).not.toBeInTheDocument()
+    })
+  },
+)
