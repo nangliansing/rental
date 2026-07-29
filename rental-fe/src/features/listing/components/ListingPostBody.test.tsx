@@ -70,7 +70,7 @@ describe("ListingPostBody", () => {
     expect(screen.getByRole("img", { name: "Bright rental room" })).toBeInTheDocument()
     expect(screen.getByText("฿14k")).toBeInTheDocument()
     expect(screen.getByText("1 person")).toBeInTheDocument()
-    expect(screen.getByText("Flexible")).toBeInTheDocument()
+    expect(screen.getByLabelText("Flexible")).toBeInTheDocument()
     expect(screen.getByText("Wifi · Balcony")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Helpful/ })).toBeInTheDocument()
     expect(screen.getByText(/month with electricity and water/)).toBeInTheDocument()
@@ -136,7 +136,7 @@ describe("ListingPostBody", () => {
     expect(screen.getByRole("button", { name: /Helpful/ })).toBeVisible()
   })
 
-  it("renders availability labels from listing data", () => {
+  it("renders availability badge on the photo from listing data", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
 
@@ -148,7 +148,7 @@ describe("ListingPostBody", () => {
       />,
     )
 
-    expect(screen.getByText("Available now")).toBeInTheDocument()
+    expect(screen.getByLabelText("Available now")).toBeInTheDocument()
 
     rerender(
       <ListingPostBody
@@ -158,9 +158,74 @@ describe("ListingPostBody", () => {
       />,
     )
 
-    expect(screen.getByText("Available from Aug 15, 2026")).toBeInTheDocument()
+    expect(screen.getByLabelText("Aug 15, 2026")).toBeInTheDocument()
+    expect(screen.queryByText("Available from Aug 15, 2026")).not.toBeInTheDocument()
 
     vi.useRealTimers()
+  })
+
+  it("makes the availability badge editable for owners", async () => {
+    const onAvailableAtChange = vi.fn()
+
+    render(
+      <ListingPostBody
+        listing={createSearchListing({ availableAt: null })}
+        isOwnListing
+        onAvailableAtChange={onAvailableAtChange}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit availability: Flexible" }),
+    )
+
+    expect(
+      screen.getByRole("dialog", { name: "When is the room available?" }),
+    ).toBeInTheDocument()
+    expect(onAvailableAtChange).not.toHaveBeenCalled()
+  })
+
+  it("keeps the availability badge read-only for non-owners", () => {
+    render(
+      <ListingPostBody
+        listing={createSearchListing({ availableAt: null })}
+        isOwnListing={false}
+        onAvailableAtChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: /Edit availability/ }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Flexible")).toBeInTheDocument()
+  })
+
+  it("surfaces submitting and error states from the card onto the badge", () => {
+    const { rerender } = render(
+      <ListingPostBody
+        listing={createSearchListing({ availableAt: null })}
+        isOwnListing
+        isAvailabilitySubmitting
+        onAvailableAtChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Saving availability" }),
+    ).toBeDisabled()
+
+    rerender(
+      <ListingPostBody
+        listing={createSearchListing({ availableAt: null })}
+        isOwnListing
+        availabilityError="Could not update listing availability."
+        onAvailableAtChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not update listing availability.",
+    )
   })
 
   it("normalizes malformed optional presentation data", () => {
