@@ -118,7 +118,7 @@ describe("patchListingSavedStateInCache", () => {
   it("patches every related family without touching unrelated caches", () => {
     const queryClient = createQueryClient()
     const ownerListKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -287,7 +287,7 @@ describe("patchListingSavedStateInCache", () => {
   it("preserves untouched sibling listing references", () => {
     const queryClient = createQueryClient()
     const key = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -408,7 +408,7 @@ describe("applyDeletedSavedListingToCache", () => {
   it("does not remove listing records from owner collections", () => {
     const queryClient = createQueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -478,7 +478,7 @@ describe("syncListingSavedState", () => {
     const queryClient = createQueryClient()
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -590,7 +590,7 @@ describe("syncListingSavedState", () => {
   it("does not remove listing records from non-saved-list caches on unsave", async () => {
     const queryClient = createQueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

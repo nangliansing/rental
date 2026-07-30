@@ -64,7 +64,7 @@ function setup() {
   const publicDetailKey = queryKeys.listings.publicDetail("listing-1", "user-1")
   const ownerDetailKey = queryKeys.listings.ownerDetail("listing-1")
   const ownerListKey = queryKeys.listings.ownerList({
-    visibility: "all",
+    filter: "all",
     sort: "latest",
     limit: 20,
   })

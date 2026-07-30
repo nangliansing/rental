@@ -3,7 +3,6 @@ import { useMemo, useState } from "react"
 import {
     useSearchOwnerListings,
     type OwnerListingSort,
-    type OwnerListingVisibilityFilter,
 } from "@/features/listing/api"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
@@ -31,15 +30,6 @@ type MyProfileListingsPanelProps = {
     sort: MyProfileListingSort
 }
 
-const VISIBILITY_FILTER_BY_PROFILE_FILTER: Record<
-    MyProfileListingFilter,
-    OwnerListingVisibilityFilter
-> = {
-    all: "all",
-    available: "public",
-    unavailable: "private",
-}
-
 const OWNER_SORT_BY_PROFILE_SORT: Record<
     MyProfileListingSort,
     OwnerListingSort
@@ -55,7 +45,7 @@ export function MyProfileListingsPanel({
     const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
     const preview = useListingGridPreview()
     const listingsQuery = useSearchOwnerListings({
-        visibility: VISIBILITY_FILTER_BY_PROFILE_FILTER[filter],
+        filter,
         sort: OWNER_SORT_BY_PROFILE_SORT[sort],
     })
 

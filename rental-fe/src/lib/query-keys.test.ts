@@ -27,11 +27,11 @@ describe("queryKeys", () => {
   it("preserves existing list-key shapes", () => {
     expect(
       queryKeys.listings.ownerList({
-        visibility: "public",
+        filter: "now",
         sort: "latest",
         limit: 20,
       }),
-    ).toEqual(["owner-listings", "public", "latest", 20])
+    ).toEqual(["owner-listings", "now", "latest", 20])
 
     expect(
       queryKeys.savedListings.list({ limit: 20 }),
@@ -65,7 +65,7 @@ describe("queryKeys", () => {
     expectMemberOf(
       queryKeys.listings.ownerLists,
       queryKeys.listings.ownerList({
-        visibility: "public",
+        filter: "now",
         sort: "latest",
         limit: 20,
       }),
@@ -384,7 +384,7 @@ describe("queryKeys", () => {
 
   it("is deterministic, parameter-sensitive, and JSON-safe", () => {
     const input = {
-      visibility: "public",
+      filter: "now",
       sort: "latest",
       limit: 20,
     } as const

@@ -9,25 +9,17 @@ import {
 } from "../../../shared/validators/index.js";
 
 import Listing from "../listing.model.js";
-import { serializeListingPayloadForApi } from "../utils/index.js";
+import {
+  applyOwnerListingFilterToMatch,
+  buildOwnerListingSort,
+  serializeListingPayloadForApi,
+} from "../utils/index.js";
 import { buildOwnerSearchListingsPipeline } from "../pipelines/index.js";
 import { buildOwnerListingAgentProfileQuery } from "./build-owner-listing-agent-profile-query.js";
 import {
+  validateOwnerListingFilter,
   validateOwnerListingSort,
-  validateOwnerListingVisibilityFilter,
 } from "../listing.validation.js";
-import {
-  OWNER_LISTING_SORTS,
-  OWNER_LISTING_VISIBILITY_FILTERS,
-} from "../listing.constants.js";
-
-const buildOwnerListingSort = (sort) => {
-  if (sort === OWNER_LISTING_SORTS.OLDEST) {
-    return { updatedAt: 1, _id: -1 };
-  }
-
-  return { updatedAt: -1, _id: 1 };
-};
 
 export const ownerSearchListingsService = async ({
   queryInput,
@@ -43,7 +35,7 @@ export const ownerSearchListingsService = async ({
 
   const page = validatePage(query.page);
   const limit = validateLimit(query.limit);
-  const visibility = validateOwnerListingVisibilityFilter(query.visibility);
+  const filter = validateOwnerListingFilter(query.filter);
   const sort = validateOwnerListingSort(query.sort);
   const skip = (page - 1) * limit;
 
@@ -52,13 +44,11 @@ export const ownerSearchListingsService = async ({
     isDeleted: false,
   };
 
-  if (visibility !== OWNER_LISTING_VISIBILITY_FILTERS.ALL) {
-    match.visibility = visibility;
-  }
+  applyOwnerListingFilterToMatch(match, query);
 
   const pipeline = buildOwnerSearchListingsPipeline({
     match,
-    sort: buildOwnerListingSort(sort),
+    sort: buildOwnerListingSort({ filter, sort }),
     page,
     skip,
     limit,

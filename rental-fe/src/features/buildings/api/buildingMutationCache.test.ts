@@ -393,7 +393,7 @@ describe("patchBuildingInRelatedQueries", () => {
       limit: 20,
     })
     const ownerListKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

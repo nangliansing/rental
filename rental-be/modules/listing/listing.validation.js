@@ -19,6 +19,7 @@ import {
   KITCHEN_TYPES,
   LISTING_FACILITIES,
   LISTING_VISIBILITIES,
+  OWNER_LISTING_FILTERS,
   OWNER_LISTING_SORTS,
   OWNER_LISTING_VISIBILITY_FILTERS,
 } from "./listing.constants.js";
@@ -46,6 +47,23 @@ export const validateOwnerListingVisibilityFilter = (input) => {
     "visibility",
     Object.values(OWNER_LISTING_VISIBILITY_FILTERS),
     OWNER_LISTING_VISIBILITY_FILTERS.ALL
+  );
+};
+
+export const validateOwnerListingFilter = (input) => {
+  if (input == null) return OWNER_LISTING_FILTERS.ALL;
+
+  if (typeof input !== "string") {
+    throw new AppError("filter must be a string", 422, "VALIDATION_ERROR");
+  }
+
+  const normalized = input.trim().toLowerCase();
+
+  return validateEnumValue(
+    normalized,
+    "filter",
+    Object.values(OWNER_LISTING_FILTERS),
+    OWNER_LISTING_FILTERS.ALL
   );
 };
 

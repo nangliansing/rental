@@ -35,6 +35,13 @@ export const OWNER_LISTING_VISIBILITY_FILTERS = Object.freeze({
     PRIVATE: LISTING_VISIBILITIES.PRIVATE,
 });
 
+export const OWNER_LISTING_FILTERS = Object.freeze({
+    ALL: "all",
+    NOW: "now",
+    SOON: "soon",
+    PRIVATE: "private",
+});
+
 export const OWNER_LISTING_SORTS = Object.freeze({
     LATEST: "latest",
     OLDEST: "oldest",
