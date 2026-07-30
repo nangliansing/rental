@@ -42,6 +42,10 @@ function syncHistoryAfterClose(entry: StackEntry) {
   window.history.back()
 }
 
+function shouldAdoptModalHistoryEntry() {
+  return isModalHistoryStateActive() && stack.length === 0
+}
+
 function handlePopstate() {
   if (suppressNextPopstate) {
     suppressNextPopstate = false
@@ -79,18 +83,37 @@ export function registerStackEntry({
   }
 
   if (tracksHistory && typeof window !== "undefined") {
-    window.history.pushState({ [MODAL_HISTORY_STATE_KEY]: true }, "")
-    entry.historyActive = true
+    if (shouldAdoptModalHistoryEntry()) {
+      entry.historyActive = true
+    } else {
+      window.history.pushState({ [MODAL_HISTORY_STATE_KEY]: true }, "")
+      entry.historyActive = true
+    }
   }
 
   stack.push(entry)
 
   return () => {
-    const current = findEntry(token)
-    if (!current) return
-
-    syncHistoryAfterClose(current)
+    unregisterStackEntry(token)
   }
+}
+
+export function unregisterStackEntry(
+  token: symbol,
+  options?: {
+    syncHistory?: boolean
+  },
+) {
+  const current = findEntry(token)
+  if (!current) return
+
+  if (options?.syncHistory === false) {
+    current.historyActive = false
+    removeEntry(token)
+    return
+  }
+
+  syncHistoryAfterClose(current)
 }
 
 export function requestStackClose(token: symbol) {

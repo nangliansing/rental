@@ -1,9 +1,13 @@
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import type { ListingGridCardListing } from "../listingGridCardTypes"
 
 type PreviewState = {
   listing: ListingGridCardListing
+}
+
+type ClosePreviewOptions = {
+  handoffToDetail?: boolean
 }
 
 function hasListingId(listing: ListingGridCardListing) {
@@ -12,13 +16,16 @@ function hasListingId(listing: ListingGridCardListing) {
 
 export function useListingGridPreview() {
   const [state, setState] = useState<PreviewState | null>(null)
+  const skipHistorySyncOnCloseRef = useRef(false)
 
   const openPreview = useCallback((listing: ListingGridCardListing) => {
+    skipHistorySyncOnCloseRef.current = false
     if (!hasListingId(listing)) return
     setState({ listing })
   }, [])
 
-  const closePreview = useCallback(() => {
+  const closePreview = useCallback((options?: ClosePreviewOptions) => {
+    skipHistorySyncOnCloseRef.current = options?.handoffToDetail ?? false
     setState(null)
   }, [])
 
@@ -27,5 +34,6 @@ export function useListingGridPreview() {
     isPreviewOpen: state != null,
     openPreview,
     closePreview,
+    skipHistorySyncOnCloseRef,
   }
 }

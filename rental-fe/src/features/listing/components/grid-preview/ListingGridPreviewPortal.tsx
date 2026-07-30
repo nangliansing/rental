@@ -19,8 +19,9 @@ export function ListingGridPreviewPortal({
       listing={preview.previewListing}
       onClose={preview.closePreview}
       showBuildingName={showBuildingName}
+      skipHistorySyncOnCloseRef={preview.skipHistorySyncOnCloseRef}
       onOpenDetail={(listingId) => {
-        preview.closePreview()
+        preview.closePreview({ handoffToDetail: true })
         onOpenDetail(listingId)
       }}
     />

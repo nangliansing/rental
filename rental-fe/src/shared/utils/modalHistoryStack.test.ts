@@ -5,15 +5,18 @@ import {
   isTopStackEntry,
   registerStackEntry,
   requestStackClose,
+  unregisterStackEntry,
 } from "./modalHistoryStack"
 
 describe("modalHistoryStack", () => {
   beforeEach(() => {
     __resetModalHistoryStackForTests()
+    window.history.replaceState({}, "")
   })
 
   afterEach(() => {
     __resetModalHistoryStackForTests()
+    window.history.replaceState({}, "")
   })
 
   it("pushes history when registering a tracked entry", () => {
@@ -101,6 +104,78 @@ describe("modalHistoryStack", () => {
     window.dispatchEvent(new PopStateEvent("popstate"))
 
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("hands off modal history from preview to detail without history.back", () => {
+    const pushState = vi.spyOn(window.history, "pushState")
+    const back = vi.spyOn(window.history, "back")
+    const onClosePreview = vi.fn()
+    const onCloseDetail = vi.fn()
+    const previewToken = Symbol("preview")
+    const detailToken = Symbol("detail")
+
+    registerStackEntry({
+      token: previewToken,
+      onClose: onClosePreview,
+      tracksHistory: true,
+    })
+
+    expect(pushState).toHaveBeenCalledOnce()
+
+    unregisterStackEntry(previewToken, { syncHistory: false })
+    expect(back).not.toHaveBeenCalled()
+    expect(isTopStackEntry(previewToken)).toBe(false)
+
+    pushState.mockClear()
+
+    registerStackEntry({
+      token: detailToken,
+      onClose: onCloseDetail,
+      tracksHistory: true,
+    })
+
+    expect(pushState).not.toHaveBeenCalled()
+    expect(isTopStackEntry(detailToken)).toBe(true)
+
+    window.dispatchEvent(new PopStateEvent("popstate"))
+
+    expect(onCloseDetail).toHaveBeenCalledOnce()
+    expect(onClosePreview).not.toHaveBeenCalled()
+  })
+
+  it("still pushes history for nested tracked modals", () => {
+    const pushState = vi.spyOn(window.history, "pushState")
+
+    registerStackEntry({
+      token: Symbol("outer"),
+      onClose: vi.fn(),
+      tracksHistory: true,
+    })
+
+    pushState.mockClear()
+
+    registerStackEntry({
+      token: Symbol("inner"),
+      onClose: vi.fn(),
+      tracksHistory: true,
+    })
+
+    expect(pushState).toHaveBeenCalledOnce()
+  })
+
+  it("syncs history when unregistering a tracked entry normally", () => {
+    const back = vi.spyOn(window.history, "back")
+    const token = Symbol("modal")
+
+    registerStackEntry({
+      token,
+      onClose: vi.fn(),
+      tracksHistory: true,
+    })
+
+    unregisterStackEntry(token)
+
+    expect(back).toHaveBeenCalledOnce()
   })
 
   it("does not history.back when the modal entry was replaced", () => {

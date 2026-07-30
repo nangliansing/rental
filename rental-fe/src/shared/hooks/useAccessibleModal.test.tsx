@@ -1,26 +1,35 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { useAccessibleModal } from "./useAccessibleModal"
 
-function TestModal({
+function TrackedModal({
+  isOpen,
   onClose,
   children,
+  skipHistorySyncRef,
 }: {
+  isOpen: boolean
   onClose: () => void
   children?: ReactNode
+  skipHistorySyncRef?: React.RefObject<boolean>
 }) {
   const { containerRef, onBackdropClick } = useAccessibleModal({
-    isOpen: true,
+    isOpen,
     onClose,
+    skipHistorySyncRef,
   })
+
+  if (!isOpen) return null
 
   return (
     <div data-testid="backdrop" onClick={onBackdropClick}>
       <div ref={containerRef} role="dialog" aria-modal="true">
-        <button type="button" autoFocus>First</button>
+        <button type="button" autoFocus>
+          First
+        </button>
         <button type="button">Last</button>
         {children}
       </div>
@@ -39,7 +48,8 @@ describe("useAccessibleModal", () => {
         <>
           <button type="button" onClick={() => setOpen(true)}>Open</button>
           {open && (
-            <TestModal
+            <TrackedModal
+              isOpen
               onClose={() => {
                 onClose()
                 setOpen(false)
@@ -74,7 +84,8 @@ describe("useAccessibleModal", () => {
     function Harness() {
       const [open, setOpen] = useState(true)
       return open ? (
-        <TestModal
+        <TrackedModal
+          isOpen
           onClose={() => {
             onClose()
             setOpen(false)
@@ -97,13 +108,56 @@ describe("useAccessibleModal", () => {
   it("only closes from a direct backdrop click", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    render(<TestModal onClose={onClose} />)
+    render(<TrackedModal onClose={onClose} isOpen />)
 
     await user.click(screen.getByRole("dialog"))
     expect(onClose).not.toHaveBeenCalled()
 
     await user.click(screen.getByTestId("backdrop"))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("skips history sync on unmount when skipHistorySyncRef is set", async () => {
+    const back = vi.spyOn(window.history, "back")
+
+    function HandoffHarness() {
+      const skipHistorySyncRef = useRef(false)
+      const [previewOpen, setPreviewOpen] = useState(true)
+      const [detailOpen, setDetailOpen] = useState(false)
+
+      return (
+        <>
+          {previewOpen && (
+            <TrackedModal
+              isOpen
+              skipHistorySyncRef={skipHistorySyncRef}
+              onClose={() => setPreviewOpen(false)}
+            />
+          )}
+          {detailOpen && (
+            <TrackedModal isOpen onClose={() => setDetailOpen(false)} />
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              skipHistorySyncRef.current = true
+              setPreviewOpen(false)
+              setDetailOpen(true)
+            }}
+          >
+            Hand off
+          </button>
+        </>
+      )
+    }
+
+    render(<HandoffHarness />)
+    back.mockClear()
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Hand off" }))
+
+    expect(back).not.toHaveBeenCalled()
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
   })
 
   it("keeps nested scroll locks and closes only the topmost modal", async () => {
@@ -115,8 +169,8 @@ describe("useAccessibleModal", () => {
 
       return (
         <>
-          {outerOpen && <TestModal onClose={() => setOuterOpen(false)} />}
-          {innerOpen && <TestModal onClose={() => setInnerOpen(false)} />}
+          {outerOpen && <TrackedModal isOpen onClose={() => setOuterOpen(false)} />}
+          {innerOpen && <TrackedModal isOpen onClose={() => setInnerOpen(false)} />}
         </>
       )
     }
