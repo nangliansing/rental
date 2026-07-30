@@ -98,6 +98,15 @@ export function buildListingUrl(listingId: string) {
   return window.location.origin + "/listings/" + listingId
 }
 
+export function getListingDetailPath(listingId: unknown): string | null {
+  if (typeof listingId !== "string") return null
+
+  const normalizedId = listingId.trim()
+  if (!normalizedId) return null
+
+  return `/listings/${encodeURIComponent(normalizedId)}`
+}
+
 function isNonNegativeFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
 }

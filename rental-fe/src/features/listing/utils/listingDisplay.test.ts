@@ -9,6 +9,7 @@ import {
   formatContract,
   formatMoney,
   formatRate,
+  getListingDetailPath,
   getSortedListingPhotos,
 } from "./listingDisplay"
 
@@ -67,4 +68,12 @@ describe("getSortedListingPhotos", () => {
       expect(getSortedListingPhotos(media)).toEqual([])
     },
   )
+
+  it("builds listing detail paths defensively", () => {
+    expect(getListingDetailPath("listing-1")).toBe("/listings/listing-1")
+    expect(getListingDetailPath("  listing 2  ")).toBe("/listings/listing%202")
+    expect(getListingDetailPath("")).toBeNull()
+    expect(getListingDetailPath("   ")).toBeNull()
+    expect(getListingDetailPath(null)).toBeNull()
+  })
 })

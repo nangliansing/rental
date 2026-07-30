@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useCallback, useEffect, type ReactNode } from "react"
 import { FileQuestion, Loader2 } from "lucide-react"
 import { useNavigate, useParams } from "react-router-dom"
 
@@ -8,9 +8,15 @@ import { useNavigateBack } from "@/shared/hooks/useNavigateBack"
 
 import { ListingDetailContent } from "../components/ListingDetailContent"
 import { useListingDetailData } from "../hooks/useListingDetailData"
+import { getListingDetailPath } from "../utils/listingDisplay"
+
+function normalizeListingRouteId(listingId: unknown) {
+  return typeof listingId === "string" ? listingId.trim() : ""
+}
 
 export function ListingDetailPage() {
   const { listingId } = useParams<{ listingId: string }>()
+  const navigate = useNavigate()
   const navigateBack = useNavigateBack("/")
   const { isAuthenticated } = useAuth()
   const agentProfileQuery = useMyAgentProfile({
@@ -19,6 +25,26 @@ export function ListingDetailPage() {
   const { listing, isLoading, viewerUserId } = useListingDetailData({
     listingId,
   })
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [listingId])
+
+  const handleListingSelect = useCallback(
+    (nextListingId: string) => {
+      const normalizedNextId = normalizeListingRouteId(nextListingId)
+      if (!normalizedNextId) return
+
+      const currentListingId = normalizeListingRouteId(listingId)
+      if (normalizedNextId === currentListingId) return
+
+      const nextPath = getListingDetailPath(normalizedNextId)
+      if (!nextPath) return
+
+      navigate(nextPath)
+    },
+    [listingId, navigate],
+  )
 
   if (isLoading) {
     return (
@@ -46,6 +72,7 @@ export function ListingDetailPage() {
         currentUserId={viewerUserId}
         canCreateListing={agentProfileQuery.canCreateListing}
         onDeleted={navigateBack}
+        onListingSelect={handleListingSelect}
       />
     </ListingDetailShell>
   )
