@@ -23,12 +23,18 @@ const HEADER_GUTTER_CLASS = "px-4"
 /** Ignore small pointer jitter so taps still activate after a light touch. */
 const TAP_SLOP_PX = 10
 const TAP_SLOP_SQ = TAP_SLOP_PX * TAP_SLOP_PX
+type SwipeableScrollAxisLock = "both" | "x" | "y"
+const SCROLLER_TOUCH_ACTION: Record<SwipeableScrollAxisLock, string> = {
+  both: "manipulation",
+  x: "pan-x",
+  y: "pan-y",
+}
 /**
- * Horizontal snap track: allow vertical page scroll when the finger starts here.
- * `touch-pan-x` blocks parent scrolling; native overflow-x still handles sideways swipes.
+ * Horizontal snap track: browser directional lock via touch-manipulation, then
+ * commit to pan-x or pan-y after slop so both page scroll and carousel swipe work.
  */
 const SCROLLER_CLASS =
-  "mt-2 flex touch-pan-y snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+  "mt-2 flex touch-manipulation snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 
 type SwipeableActionCardContextValue = {
   isInView: boolean
@@ -88,6 +94,33 @@ export function clampSwipeableActionCardIndex(index: number, length: number) {
   if (length <= 0) return 0
   if (!Number.isFinite(index)) return 0
   return Math.min(Math.max(Math.trunc(index), 0), length - 1)
+}
+
+/** Locks carousel/page scroll to one axis once movement exceeds slop. */
+export function resolveSwipeableScrollAxisLock(
+  dx: number,
+  dy: number,
+  slopSq: number = TAP_SLOP_SQ,
+): "x" | "y" | null {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || slopSq < 0) return null
+
+  const distanceSq = dx * dx + dy * dy
+  if (distanceSq <= slopSq) return null
+
+  return Math.abs(dx) > Math.abs(dy) ? "x" : "y"
+}
+
+function applyScrollerTouchAction(
+  scroller: HTMLDivElement | null,
+  axis: SwipeableScrollAxisLock,
+) {
+  if (!scroller) return
+
+  try {
+    scroller.style.touchAction = SCROLLER_TOUCH_ACTION[axis]
+  } catch {
+    // Style writes must never break interaction handling.
+  }
 }
 
 function isPageElement(
@@ -178,6 +211,8 @@ function SwipeableActionCardRoot({
   const pageCount = pages.length
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
+  const scrollerGestureRef = useRef<{ x: number; y: number } | null>(null)
+  const scrollerAxisLockRef = useRef<SwipeableScrollAxisLock>("both")
   const suppressClickRef = useRef(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const { ref: inViewRef, isInView } = useInView({ threshold: 0.4 })
@@ -192,7 +227,44 @@ function SwipeableActionCardRoot({
     syncScrollerToIndex(scrollerRef.current, safeIndex)
   }, [pageCount, safeIndex])
 
+  useEffect(
+    () => () => {
+      applyScrollerTouchAction(scrollerRef.current, "both")
+    },
+    [],
+  )
+
   if (pageCount === 0 || !activePage) return null
+
+  const resetScrollerAxisLock = () => {
+    scrollerGestureRef.current = null
+    scrollerAxisLockRef.current = "both"
+    applyScrollerTouchAction(scrollerRef.current, "both")
+  }
+
+  const handleScrollerPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!showDots || event.button !== 0) return
+
+    scrollerGestureRef.current = { x: event.clientX, y: event.clientY }
+    scrollerAxisLockRef.current = "both"
+    applyScrollerTouchAction(scrollerRef.current, "both")
+  }
+
+  const handleScrollerPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!showDots || scrollerAxisLockRef.current !== "both") return
+
+    const start = scrollerGestureRef.current
+    if (!start) return
+
+    const axis = resolveSwipeableScrollAxisLock(
+      event.clientX - start.x,
+      event.clientY - start.y,
+    )
+    if (axis == null) return
+
+    scrollerAxisLockRef.current = axis
+    applyScrollerTouchAction(scrollerRef.current, axis)
+  }
 
   const handleScroll = () => {
     suppressClickRef.current = true
@@ -337,6 +409,10 @@ function SwipeableActionCardRoot({
           className={SCROLLER_CLASS}
           data-testid="swipeable-action-card-scroller"
           onScroll={showDots ? handleScroll : undefined}
+          onPointerDown={showDots ? handleScrollerPointerDown : undefined}
+          onPointerMove={showDots ? handleScrollerPointerMove : undefined}
+          onPointerUp={showDots ? resetScrollerAxisLock : undefined}
+          onPointerCancel={showDots ? resetScrollerAxisLock : undefined}
           aria-roledescription={showDots ? "carousel" : undefined}
           aria-label={showDots ? "Card pages" : undefined}
         >

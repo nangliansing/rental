@@ -6,6 +6,19 @@ import {
   useSwipeableActionCardPageActive,
 } from "./SwipeableActionCard"
 
+function expectScrollerTouchAction(
+  scroller: HTMLElement,
+  axis: "both" | "x" | "y",
+) {
+  const expected = {
+    both: "manipulation",
+    x: "pan-x",
+    y: "pan-y",
+  }[axis]
+
+  expect(scroller.style.touchAction || "manipulation").toBe(expected)
+}
+
 function renderCard({
   onClick,
   pageCount = 2,
@@ -64,13 +77,15 @@ function getDots() {
 describe("SwipeableActionCard", () => {
   describe("touch-action / page scroll contract", () => {
     it.each([1, 2, 3] as const)(
-      "uses pan-y (never pan-x) on the snap track for %i page(s)",
+      "uses touch-manipulation (never a fixed pan axis) on the snap track for %i page(s)",
       (pageCount) => {
         renderCard({ pageCount })
 
         const scroller = getScroller()
-        expect(scroller).toHaveClass("touch-pan-y")
+        expect(scroller).toHaveClass("touch-manipulation")
         expect(scroller).not.toHaveClass("touch-pan-x")
+        expect(scroller).not.toHaveClass("touch-pan-y")
+        expectScrollerTouchAction(scroller, "both")
       },
     )
 
@@ -95,16 +110,17 @@ describe("SwipeableActionCard", () => {
       const card = getCard()
       expect(card).not.toHaveClass("touch-pan-x")
       expect(card).not.toHaveClass("touch-pan-y")
+      expect(card).not.toHaveClass("touch-manipulation")
     })
 
-    it("keeps pan-y on the snap track without onClick handlers", () => {
+    it("keeps touch-manipulation on the snap track without onClick handlers", () => {
       renderCard({ pageCount: 2 })
 
-      expect(getScroller()).toHaveClass("touch-pan-y")
+      expect(getScroller()).toHaveClass("touch-manipulation")
       expect(getCard()).not.toHaveAttribute("tabindex")
     })
 
-    it("keeps pan-y on the snap track while the active page is disabled", () => {
+    it("keeps touch-manipulation on the snap track while the active page is disabled", () => {
       render(
         <SwipeableActionCard onClick={vi.fn()} aria-label="Promo card">
           <SwipeableActionCard.Page title="Page one">A</SwipeableActionCard.Page>
@@ -115,7 +131,7 @@ describe("SwipeableActionCard", () => {
       )
 
       swipeToPage(getScroller(), 1)
-      expect(getScroller()).toHaveClass("touch-pan-y")
+      expect(getScroller()).toHaveClass("touch-manipulation")
     })
 
     it("allows the snap track inside a vertically scrollable page shell", () => {
@@ -134,8 +150,49 @@ describe("SwipeableActionCard", () => {
       const scroller = getScroller()
 
       expect(pageShell).toHaveClass("overflow-y-auto")
-      expect(scroller).toHaveClass("touch-pan-y")
+      expect(scroller).toHaveClass("touch-manipulation")
       expect(pageShell).not.toHaveClass("touch-pan-x")
+    })
+
+    it("locks to pan-x after a horizontal drag on the snap track", () => {
+      renderCard({ onClick: vi.fn(), pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+
+      expectScrollerTouchAction(scroller, "x")
+    })
+
+    it("locks to pan-y after a vertical drag on the snap track", () => {
+      renderCard({ onClick: vi.fn(), pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 0, clientY: 40 })
+
+      expectScrollerTouchAction(scroller, "y")
+    })
+
+    it("resets the snap track touch axis after the gesture ends", () => {
+      renderCard({ onClick: vi.fn(), pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+      fireEvent.pointerUp(scroller, { clientX: 40, clientY: 0 })
+
+      expectScrollerTouchAction(scroller, "both")
+    })
+
+    it("does not axis-lock the snap track for a single page", () => {
+      renderCard({ pageCount: 1 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+
+      expectScrollerTouchAction(scroller, "both")
     })
 
     it("never calls preventDefault on pointer moves (native scroll stays enabled)", () => {
@@ -161,6 +218,136 @@ describe("SwipeableActionCard", () => {
         scroller.dispatchEvent(move)
         expect(preventDefault).not.toHaveBeenCalled()
       }
+    })
+  })
+
+  describe("directional axis lock scenarios", () => {
+    it("locks to vertical scrolling for equal diagonal movement", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 20, clientY: 20 })
+
+      expectScrollerTouchAction(scroller, "y")
+    })
+
+    it("does not lock before tap slop is exceeded", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 9, clientY: 0 })
+
+      expectScrollerTouchAction(scroller, "both")
+    })
+
+    it("locks at the first axis and ignores later opposite movement", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 0, clientY: 80 })
+
+      expectScrollerTouchAction(scroller, "x")
+    })
+
+    it("ignores non-primary pointer buttons on the snap track", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 2, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+
+      expectScrollerTouchAction(scroller, "both")
+    })
+
+    it("resets the snap track touch axis on pointer cancel", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+      fireEvent.pointerCancel(scroller)
+
+      expectScrollerTouchAction(scroller, "both")
+    })
+
+    it("supports consecutive gestures with opposite axis locks", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+      fireEvent.pointerUp(scroller, { clientX: 40, clientY: 0 })
+      expectScrollerTouchAction(scroller, "both")
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 0, clientY: 40 })
+      expectScrollerTouchAction(scroller, "y")
+    })
+
+    it("axis-locks even when the card has no onClick handler", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+
+      expectScrollerTouchAction(scroller, "x")
+      expect(getCard()).not.toHaveClass("cursor-pointer")
+    })
+
+    it("axis-locks while the active page is disabled", () => {
+      render(
+        <SwipeableActionCard onClick={vi.fn()} aria-label="Promo card">
+          <SwipeableActionCard.Page title="Page one">A</SwipeableActionCard.Page>
+          <SwipeableActionCard.Page title="Page two" disabled>
+            B
+          </SwipeableActionCard.Page>
+        </SwipeableActionCard>,
+      )
+
+      const scroller = getScroller()
+      swipeToPage(scroller, 1)
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 0, clientY: 40 })
+
+      expectScrollerTouchAction(scroller, "y")
+    })
+
+    it("unmounts cleanly mid axis lock", () => {
+      const { unmount } = renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+
+      expect(() => unmount()).not.toThrow()
+    })
+
+    it("still swipes pages after a horizontal axis lock gesture ends", () => {
+      renderCard({ pageCount: 2 })
+      const scroller = getScroller()
+
+      fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+      fireEvent.pointerUp(scroller, { clientX: 40, clientY: 0 })
+
+      swipeToPage(scroller, 1)
+      expect(screen.getByText("Page two")).toBeInTheDocument()
+    })
+
+    it("does not attach axis-lock handlers to the header region", () => {
+      renderCard({ onClick: vi.fn(), pageCount: 2 })
+      const title = screen.getByText("Page one")
+
+      fireEvent.pointerDown(title, { button: 0, clientX: 0, clientY: 0 })
+      fireEvent.pointerMove(title, { clientX: 40, clientY: 0 })
+
+      expect(getScroller().style.touchAction).toBe("")
     })
   })
 
@@ -251,10 +438,10 @@ describe("SwipeableActionCard", () => {
   })
 
   describe("single-page snap track", () => {
-    it("still exposes the snap track with pan-y for one page", () => {
+    it("still exposes the snap track with touch-manipulation for one page", () => {
       renderCard({ pageCount: 1 })
 
-      expect(getScroller()).toHaveClass("touch-pan-y")
+      expect(getScroller()).toHaveClass("touch-manipulation")
       expect(screen.queryByLabelText("Card pages")).not.toBeInTheDocument()
     })
 
@@ -436,18 +623,19 @@ describe("SwipeableActionCard", () => {
       renderCard({ pageCount: 2 })
 
       const scroller = screen.getByLabelText("Card pages")
-      expect(scroller).toHaveClass("snap-x", "touch-pan-y")
+      expect(scroller).toHaveClass("snap-x", "touch-manipulation")
       for (const body of within(scroller).getAllByText(/Body/)) {
         expect(body.parentElement).toHaveClass("w-full", "snap-center")
       }
     })
 
-    it("uses pan-y on the snap track so vertical page scroll is not blocked", () => {
+    it("uses touch-manipulation on the snap track so neither scroll axis is permanently blocked", () => {
       renderCard({ pageCount: 2 })
 
       const scroller = screen.getByLabelText("Card pages")
-      expect(scroller).toHaveClass("touch-pan-y")
+      expect(scroller).toHaveClass("touch-manipulation")
       expect(scroller).not.toHaveClass("touch-pan-x")
+      expect(scroller).not.toHaveClass("touch-pan-y")
     })
   })
 

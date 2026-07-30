@@ -322,13 +322,14 @@ describe("SwipeableActionCard + RotatingContent integration", () => {
     expect(disconnect).toHaveBeenCalled()
   })
 
-  it("keeps pan-y on the snap track so vertical gestures do not break teaser rotation", () => {
+  it("keeps touch-manipulation on the snap track while vertical gestures rotate teasers", () => {
     renderReviewCard()
     setCardInView(true)
 
     const scroller = screen.getByTestId("swipeable-action-card-scroller")
-    expect(scroller).toHaveClass("touch-pan-y")
+    expect(scroller).toHaveClass("touch-manipulation")
     expect(scroller).not.toHaveClass("touch-pan-x")
+    expect(scroller).not.toHaveClass("touch-pan-y")
 
     fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
     fireEvent.pointerMove(scroller, { clientX: 0, clientY: 40 })
@@ -336,6 +337,42 @@ describe("SwipeableActionCard + RotatingContent integration", () => {
 
     advanceToNextItem(1000)
     expect(screen.getByText("Lister B")).toBeInTheDocument()
+  })
+
+  it("swipes to the listing page after a horizontal axis lock gesture", () => {
+    renderReviewCard()
+    setCardInView(true)
+
+    const scroller = screen.getByTestId("swipeable-action-card-scroller")
+    fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(scroller, { clientX: 40, clientY: 0 })
+    expect(scroller.style.touchAction).toBe("pan-x")
+    fireEvent.pointerUp(scroller, { clientX: 40, clientY: 0 })
+
+    swipeToPage(scroller, 1)
+    expect(screen.getByText("Listing reviews")).toBeInTheDocument()
+    expect(screen.getByText("Listing X")).toBeInTheDocument()
+
+    advanceToNextItem(1000)
+    expect(screen.getByText("Listing Y")).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    expect(screen.queryByText("Lister C")).not.toBeInTheDocument()
+  })
+
+  it("resets axis lock between swipe and the next vertical teaser scroll gesture", () => {
+    renderReviewCard()
+    setCardInView(true)
+    const scroller = screen.getByTestId("swipeable-action-card-scroller")
+
+    swipeToPage(scroller, 1)
+    fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(scroller, { clientX: 0, clientY: 40 })
+    expect(scroller.style.touchAction).toBe("pan-y")
+    fireEvent.pointerUp(scroller, { clientX: 0, clientY: 40 })
+    expect(scroller.style.touchAction).toBe("manipulation")
   })
 
   it("pauses the active rotator when pages shrink away mid-rotation", () => {

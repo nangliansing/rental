@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   clampSwipeableActionCardIndex,
   resolveSwipeableActionCardIndex,
+  resolveSwipeableScrollAxisLock,
 } from "./SwipeableActionCard"
 
 describe("clampSwipeableActionCardIndex", () => {
@@ -36,6 +37,40 @@ describe("clampSwipeableActionCardIndex", () => {
   it("supports a single-page list", () => {
     expect(clampSwipeableActionCardIndex(0, 1)).toBe(0)
     expect(clampSwipeableActionCardIndex(5, 1)).toBe(0)
+  })
+})
+
+describe("resolveSwipeableScrollAxisLock", () => {
+  it("returns null until movement exceeds slop", () => {
+    expect(resolveSwipeableScrollAxisLock(0, 0)).toBeNull()
+    expect(resolveSwipeableScrollAxisLock(9, 0)).toBeNull()
+    expect(resolveSwipeableScrollAxisLock(0, 9)).toBeNull()
+  })
+
+  it("prefers horizontal carousel scrolling for dominant x movement", () => {
+    expect(resolveSwipeableScrollAxisLock(40, 0)).toBe("x")
+    expect(resolveSwipeableScrollAxisLock(20, 10)).toBe("x")
+  })
+
+  it("prefers vertical page scrolling for dominant y movement", () => {
+    expect(resolveSwipeableScrollAxisLock(0, 40)).toBe("y")
+    expect(resolveSwipeableScrollAxisLock(10, 20)).toBe("y")
+  })
+
+  it("defensively handles invalid input", () => {
+    expect(resolveSwipeableScrollAxisLock(Number.NaN, 40)).toBeNull()
+    expect(resolveSwipeableScrollAxisLock(40, Number.POSITIVE_INFINITY)).toBeNull()
+    expect(resolveSwipeableScrollAxisLock(40, 0, -1)).toBeNull()
+  })
+
+  it("respects a custom slop threshold", () => {
+    expect(resolveSwipeableScrollAxisLock(3, 0, 16)).toBeNull()
+    expect(resolveSwipeableScrollAxisLock(5, 0, 16)).toBe("x")
+  })
+
+  it("locks vertically when horizontal and vertical deltas are equal", () => {
+    expect(resolveSwipeableScrollAxisLock(20, 20)).toBe("y")
+    expect(resolveSwipeableScrollAxisLock(-20, -20)).toBe("y")
   })
 })
 
