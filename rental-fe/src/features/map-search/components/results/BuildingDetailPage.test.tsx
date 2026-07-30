@@ -120,6 +120,16 @@ describe("BuildingDetailPage", () => {
     const preview = screen.getByRole("button", { name: "Open listing ฿14k" })
 
     await user.click(preview)
+
+    expect(
+      screen.getByRole("dialog", { name: "Preview listing ฿14k" }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Preview listing ฿14k. Tap for full details.",
+      }),
+    )
     rerender(
       <BuildingDetailSessionProvider>
         <BuildingDetailPage onBack={vi.fn()} />

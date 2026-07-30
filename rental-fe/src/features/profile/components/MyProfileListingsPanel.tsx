@@ -2,12 +2,15 @@ import { useMemo, useState } from "react"
 
 import {
     useSearchOwnerListings,
-    type OwnerListing,
     type OwnerListingSort,
     type OwnerListingVisibilityFilter,
 } from "@/features/listing/api"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
+import {
+    ListingGridPreviewPortal,
+    useListingGridPreview,
+} from "@/features/listing/components/grid-preview"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
 import {
     ListingCollectionMessage,
@@ -50,6 +53,7 @@ export function MyProfileListingsPanel({
     sort,
 }: MyProfileListingsPanelProps) {
     const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
+    const preview = useListingGridPreview()
     const listingsQuery = useSearchOwnerListings({
         visibility: VISIBILITY_FILTER_BY_PROFILE_FILTER[filter],
         sort: OWNER_SORT_BY_PROFILE_SORT[sort],
@@ -100,13 +104,18 @@ export function MyProfileListingsPanel({
                 endMessage="No more listings"
             >
                 {listings.map((listing) => (
-                    <MyProfileListingGridItem
+                    <ListingGridCard
                         key={listing._id}
                         listing={listing}
-                        onOpen={setSelectedListingId}
+                        onActivate={preview.openPreview}
                     />
                 ))}
             </ListingCardGrid>
+
+            <ListingGridPreviewPortal
+                preview={preview}
+                onOpenDetail={setSelectedListingId}
+            />
 
             <ListingDetailModal
                 listingId={selectedListingId}
@@ -115,14 +124,4 @@ export function MyProfileListingsPanel({
             />
         </ProfileTabPanel>
     )
-}
-
-function MyProfileListingGridItem({
-    listing,
-    onOpen,
-}: {
-    listing: OwnerListing
-    onOpen: (listingId: string) => void
-}) {
-    return <ListingGridCard listing={listing} onOpen={onOpen} />
 }

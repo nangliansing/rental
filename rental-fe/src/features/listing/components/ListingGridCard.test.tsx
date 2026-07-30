@@ -8,6 +8,7 @@ import {
   createSearchListing,
 } from "@/test/fixtures/listings"
 
+import { LISTING_GRID_AVAILABLE_NOW_INDICATOR_CLASS_NAME } from "./grid-preview"
 import { ListingGridCard } from "./ListingGridCard"
 
 describe("ListingGridCard", () => {
@@ -44,7 +45,7 @@ describe("ListingGridCard", () => {
 
   it("uses safe fallbacks and opens through the supplied callback", async () => {
     const user = userEvent.setup()
-    const onOpen = vi.fn()
+    const onActivate = vi.fn()
     const listing = createSearchListing({
       rent: Number.POSITIVE_INFINITY,
       bedroomCount: -1,
@@ -52,7 +53,7 @@ describe("ListingGridCard", () => {
       media: [null, { secureUrl: " " }] as never,
     })
 
-    render(<ListingGridCard listing={listing} onOpen={onOpen} />)
+    render(<ListingGridCard listing={listing} onActivate={onActivate} />)
 
     const button = screen.getByRole("button", {
       name: "Open listing ฿--",
@@ -61,11 +62,12 @@ describe("ListingGridCard", () => {
       "DIV",
     )
     expect(screen.getByText("Room")).toBeInTheDocument()
+    expect(screen.queryByText(/^Dep /)).not.toBeInTheDocument()
 
     await user.click(button)
 
-    expect(onOpen).toHaveBeenCalledOnce()
-    expect(onOpen).toHaveBeenCalledWith("listing-1", button)
+    expect(onActivate).toHaveBeenCalledOnce()
+    expect(onActivate).toHaveBeenCalledWith(listing, button)
   })
 
   it("omits a whitespace-only building name", () => {
@@ -81,5 +83,76 @@ describe("ListingGridCard", () => {
     )
 
     expect(screen.queryByText("Bangkapi Residence")).not.toBeInTheDocument()
+  })
+
+  it("shows a green availability dot when the listing is available now", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    const listing = createSearchListing({
+      availableAt: "2026-07-29T00:00:00+07:00",
+    })
+
+    render(
+      <MemoryRouter>
+        <ListingGridCard listing={listing} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByLabelText("Available now")).toHaveClass(
+      LISTING_GRID_AVAILABLE_NOW_INDICATOR_CLASS_NAME,
+    )
+
+    vi.useRealTimers()
+  })
+
+  it("omits the availability dot for flexible listings", () => {
+    render(
+      <MemoryRouter>
+        <ListingGridCard listing={createSearchListing({ availableAt: null })} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
+  })
+
+  it("omits the availability dot for a future availability date", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    render(
+      <MemoryRouter>
+        <ListingGridCard
+          listing={createSearchListing({
+            availableAt: "2026-08-15T00:00:00+07:00",
+          })}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
+  it("shows fine print only in full overlay density", () => {
+    const listing = createSearchListing({ availableAt: null })
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <ListingGridCard listing={listing} overlayDensity="compact" />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText(/^Dep /)).not.toBeInTheDocument()
+
+    rerender(
+      <MemoryRouter>
+        <ListingGridCard listing={listing} overlayDensity="full" />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/^Dep /)).toBeInTheDocument()
+    expect(screen.getByText("Flexible")).toBeInTheDocument()
   })
 })

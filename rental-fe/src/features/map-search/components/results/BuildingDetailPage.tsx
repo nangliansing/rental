@@ -3,8 +3,11 @@ import { ChevronLeft, SearchX } from "lucide-react"
 import type React from "react"
 
 import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
-import { useBuildingDetailSession } from "../../context/BuildingDetailSessionContext"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
+import {
+  ListingGridPreviewPortal,
+  useListingGridPreview,
+} from "@/features/listing/components/grid-preview"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
 import {
   CollectionRefreshStatus,
@@ -15,8 +18,9 @@ import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 
 import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuilding"
-import { CollectionRefreshErrorBanner } from "./CollectionRefreshErrorBanner"
+import { useBuildingDetailSession } from "../../context/BuildingDetailSessionContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
+import { CollectionRefreshErrorBanner } from "./CollectionRefreshErrorBanner"
 import {
   BUILDING_DETAIL_LISTINGS_HEADING_CLASS,
   RESULTS_PANEL_LISTING_GRID_CLASS,
@@ -34,6 +38,7 @@ export function BuildingDetailPage({
   onBack,
 }: BuildingDetailPageProps) {
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const preview = useListingGridPreview()
   const exploreNeighbourhood = useBuildingDetailSession()
   const {
     selectedBuilding: building,
@@ -163,13 +168,23 @@ export function BuildingDetailPage({
                 <ListingGridCard
                   key={listing._id}
                   listing={listing}
-                  onOpen={openListing}
+                  showBuildingName={false}
+                  onActivate={(item, trigger) => {
+                    listingTriggerRef.current = trigger
+                    preview.openPreview(item)
+                  }}
                 />
               ))}
             </ListingCardGrid>
           </>
         )}
       </div>
+
+      <ListingGridPreviewPortal
+        preview={preview}
+        showBuildingName={false}
+        onOpenDetail={openListing}
+      />
     </>
   )
 }
