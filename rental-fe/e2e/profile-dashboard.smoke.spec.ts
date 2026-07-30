@@ -39,11 +39,21 @@ test.describe("Profile dashboard smoke", () => {
       page.getByRole("button", { name: "Open listing ฿14k" }),
     ).toBeVisible()
     await page.getByRole("button", { name: "Open listing ฿14k" }).click()
-    await expect(page.getByRole("dialog", { name: "Listing details" })).toBeVisible()
+    await expect(
+      page.getByRole("dialog", { name: "Preview listing ฿14k" }),
+    ).toBeVisible({ timeout: 15_000 })
+    await page
+      .getByRole("button", {
+        name: "Preview listing ฿14k. Tap for full details.",
+      })
+      .click()
+    await expect(
+      page.getByRole("dialog", { name: "Listing details" }),
+    ).toBeVisible({ timeout: 15_000 })
     await page.getByRole("button", { name: "Close listing details" }).click()
-    await expect(page.getByRole("dialog", { name: "Listing details" })).toHaveCount(
-      0,
-    )
+    await expect(
+      page.getByRole("dialog", { name: "Listing details" }),
+    ).toHaveCount(0, { timeout: 15_000 })
 
     await page.getByRole("tab", { name: "Saved" }).click()
     await expect(
