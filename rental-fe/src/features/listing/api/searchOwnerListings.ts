@@ -10,11 +10,11 @@ import {
   readRecord,
 } from "./listingResponseParsers"
 
-export type OwnerListingVisibilityFilter = "all" | "public" | "private"
+export type OwnerListingFilter = "all" | "now" | "soon" | "private"
 export type OwnerListingSort = "latest" | "oldest"
 
 export type SearchOwnerListingsInput = {
-  visibility?: OwnerListingVisibilityFilter
+  filter?: OwnerListingFilter
   sort?: OwnerListingSort
   page?: number
   limit?: number
@@ -31,11 +31,7 @@ export type SearchOwnerListingsResponse = {
 }
 
 const INVALID_OWNER_LISTINGS_RESPONSE = "INVALID_OWNER_LISTINGS_RESPONSE"
-const VISIBILITY_FILTERS: OwnerListingVisibilityFilter[] = [
-  "all",
-  "public",
-  "private",
-]
+const LISTING_FILTERS: OwnerListingFilter[] = ["all", "now", "soon", "private"]
 const SORT_OPTIONS: OwnerListingSort[] = ["latest", "oldest"]
 
 const invalidResponse = () =>
@@ -126,15 +122,15 @@ const parseSearchOwnerListingsResponse = (
 }
 
 export async function searchOwnerListings({
-  visibility = "all",
+  filter = "all",
   sort = "latest",
   page = 1,
   limit = DEFAULT_LISTING_PAGE_SIZE,
   signal,
 }: SearchOwnerListingsInput = {}) {
-  if (!VISIBILITY_FILTERS.includes(visibility)) {
+  if (!LISTING_FILTERS.includes(filter)) {
     throw new ApiError(
-      `Invalid visibility: ${String(visibility)}`,
+      `Invalid filter: ${String(filter)}`,
       422,
       "VALIDATION_ERROR",
     )
@@ -151,7 +147,7 @@ export async function searchOwnerListings({
   const normalizedPage = validateIntegerRange(page, "page", 10000)
   const normalizedLimit = validateIntegerRange(limit, "limit", 100)
   const searchParams = new URLSearchParams({
-    visibility,
+    filter,
     sort,
     page: String(normalizedPage),
     limit: String(normalizedLimit),

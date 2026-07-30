@@ -4,6 +4,15 @@ Return the authenticated user's non-deleted listings for their listing-managemen
 
 This endpoint is owner-scoped. The caller cannot supply a user id or retrieve another user's listings.
 
+Owner profile tabs map to the `filter` query parameter:
+
+| Tab | `filter` |
+| --- | --- |
+| All | `all` |
+| Now | `now` |
+| Soon | `soon` |
+| Private | `private` |
+
 ## Endpoint
 
 ```http
@@ -39,23 +48,123 @@ Suspended, inactive, deleted, or missing users cannot access this endpoint.
 | --- | --- | --- | --- |
 | `page` | no | `1` | Integer from `1` to `10000` |
 | `limit` | no | `20` | Integer from `1` to `100` |
-| `visibility` | no | `ALL` | `ALL`, `PUBLIC`, or `PRIVATE` |
+| `filter` | no | `all` | `all`, `now`, `soon`, or `private` |
+| `visibility` | no | `ALL` | `ALL`, `PUBLIC`, or `PRIVATE` (legacy; ignored when `filter` is present) |
 | `sort` | no | `latest` | `latest` or `oldest` |
+
+### Filters
+
+`filter` is trimmed and case-insensitive. For example, `NOW` becomes `now`.
+
+Availability boundaries use the Thailand calendar (`Asia/Bangkok`, UTC+7). See [`available-at-response.md`](./available-at-response.md) for how `availableAt` is stored and serialized.
+
+| Filter | Meaning |
+| --- | --- |
+| `all` | All non-deleted listings owned by the caller (public and private, any `availableAt`) |
+| `now` | Public listings with a set `availableAt` on or before today (Bangkok calendar) |
+| `soon` | Public listings with `availableAt` on or after tomorrow (Bangkok calendar) |
+| `private` | All private listings |
+
+Mongo match constraints applied per filter:
+
+| Filter | Match fields |
+| --- | --- |
+| `all` | none beyond `{ listedBy, isDeleted: false }` |
+| `now` | `visibility: PUBLIC`, `availableAt: { $ne: null, $lt: startOfTomorrowBangkok }` |
+| `soon` | `visibility: PUBLIC`, `availableAt: { $gte: startOfTomorrowBangkok }` |
+| `private` | `visibility: PRIVATE` |
+
+Rules:
+
+- Flexible public listings (`availableAt: null`) appear only under `all`, not `now` or `soon`.
+- `now` and `soon` never return private listings.
+- `private` returns all private listings regardless of `availableAt`.
+
+### Legacy `visibility`
 
 `visibility` is trimmed and case-insensitive. For example, `private` becomes `PRIVATE`.
 
-`sort` is trimmed and case-insensitive. `latest` sorts by `updatedAt` descending; `oldest` sorts by `updatedAt` ascending. `_id` is used as a deterministic tie-breaker.
+When `filter` is **absent**, legacy clients may still restrict results by public/private visibility:
 
-When `visibility` is omitted or is `ALL`, both public and private listings are returned.
+| `visibility` | Meaning |
+| --- | --- |
+| `ALL` | Public and private listings (default when omitted) |
+| `PUBLIC` | Public listings only |
+| `PRIVATE` | Private listings only |
+
+When `filter` is **present**, `visibility` is ignored. For example, `?filter=private&visibility=PUBLIC` returns private listings only.
+
+### Sorting
+
+`sort` is trimmed and case-insensitive.
+
+| Filter | Primary sort | Tie-breakers |
+| --- | --- | --- |
+| `all`, `now`, `private` | `updatedAt` (`latest` → descending, `oldest` → ascending) | `_id` |
+| `soon` | `availableAt` ascending (soonest availability first) | `updatedAt`, then `_id` |
+
+For `filter=soon`, the requested `sort` value applies only as a tie-breaker when multiple listings share the same availability date.
+
+Mongo sort shapes:
+
+```js
+// filter=all | now | private, sort=latest
+{ updatedAt: -1, _id: 1 }
+
+// filter=all | now | private, sort=oldest
+{ updatedAt: 1, _id: -1 }
+
+// filter=soon, sort=latest
+{ availableAt: 1, updatedAt: -1, _id: 1 }
+
+// filter=soon, sort=oldest
+{ availableAt: 1, updatedAt: 1, _id: -1 }
+```
+
+### Pagination
+
+- `page` defaults to `1`.
+- `limit` defaults to `20`.
+- A valid page beyond the last result returns an empty `listings` array and preserves `pagination.total`.
 
 ## Request Body
 
 No request body is required.
 
-## Example Request
+## Example Requests
+
+Default owner listing query:
 
 ```http
-GET /api/v1/listings?page=1&limit=5&visibility=PUBLIC&sort=latest
+GET /api/v1/listings
+Authorization: Bearer ACCESS_TOKEN
+```
+
+Available-now tab:
+
+```http
+GET /api/v1/listings?filter=now&sort=latest
+Authorization: Bearer ACCESS_TOKEN
+```
+
+Available-soon tab (sorted by availability date):
+
+```http
+GET /api/v1/listings?filter=soon&sort=latest
+Authorization: Bearer ACCESS_TOKEN
+```
+
+Private tab with pagination:
+
+```http
+GET /api/v1/listings?filter=private&page=1&limit=5
+Authorization: Bearer ACCESS_TOKEN
+```
+
+Legacy public-only query (no `filter` param):
+
+```http
+GET /api/v1/listings?visibility=PUBLIC&sort=latest
 Authorization: Bearer ACCESS_TOKEN
 ```
 
@@ -160,15 +269,20 @@ Body:
 ```txt
 authenticate request
 require a current active user
-validate query parameters
-build owner-scoped match using current user id
-exclude soft-deleted listings
-apply optional visibility filter
+validate query parameters (page, limit, filter, sort, legacy visibility)
+build owner-scoped match: { listedBy, isDeleted: false }
+apply listing filter (filter takes precedence over legacy visibility)
+build Mongo sort (availableAt-first when filter=soon, otherwise updatedAt-first)
 sort and paginate in MongoDB
 populate building and caller saved-state data
 load caller agent profile in parallel
 return listings, profile, and pagination
 ```
+
+Implementation utilities:
+
+- `applyOwnerListingFilterToMatch` — applies `filter` or legacy `visibility` to the Mongo match
+- `buildOwnerListingSort` — builds the Mongo `$sort` object
 
 The user id always comes from the authenticated request. The client cannot override `listedBy`.
 
@@ -192,11 +306,44 @@ The visibility-filtered owner query uses:
 }
 ```
 
-These indexes support owner scoping, soft-delete exclusion, visibility filtering, and latest-first pagination. MongoDB can scan an index in reverse for oldest-first sorting.
+The owner `soon` query uses:
+
+```js
+{
+  listedBy: 1,
+  isDeleted: 1,
+  visibility: 1,
+  availableAt: 1,
+  updatedAt: -1,
+  _id: 1
+}
+```
+
+These indexes support owner scoping, soft-delete exclusion, visibility filtering, availability sorting, and latest-first pagination. MongoDB can scan an index in reverse for oldest-first sorting.
 
 ## Error Responses
 
 All query validation errors return `422 Unprocessable Entity` with code `VALIDATION_ERROR`.
+
+### Invalid Filter
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "message": "Invalid filter: BAD"
+}
+```
+
+Duplicate filter parameters are rejected because the resulting value is not a string:
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "message": "filter must be a string"
+}
+```
 
 ### Invalid Visibility
 
@@ -305,27 +452,30 @@ Status: `404 Not Found`
 
 ## Tested Checklist
 
-Backend scenario suite: `30/30` passed.
+Backend integration suite: `test/owner-search-listings.fetch.integration.test.js` — `30/30` passed.
+
+Unit suites:
+
+- `test/owner-listing-filter.test.js` — `4/4` passed
+- `test/owner-listing-sort.test.js` — `2/2` passed
 
 ```txt
 default query and default pagination
 agent profile present and absent
-PUBLIC, PRIVATE, and ALL visibility filters
-case normalization
-latest and oldest ordering
-valid pagination and page beyond total
+filter=all, now, soon, private
+filter case normalization and precedence over legacy visibility
+legacy PUBLIC, PRIVATE, and ALL visibility filters
+sort=latest and sort=oldest for non-soon filters
+filter=soon sorts by availableAt ascending with updatedAt tie-breakers
+valid pagination, second page, and page beyond total
 caller with no listings
 caller ownership enforcement
 soft-deleted listing exclusion
-invalid query and session inputs
-invalid actor id
-invalid visibility value and type
-invalid sort value and type
-page minimum, maximum, numeric, and integer validation
-limit minimum, maximum, numeric, and integer validation
-active user accepted
-missing and malformed Authorization header
-invalid access token
+flexible public listings excluded from now and soon
+response includes building, availableAt, and isSavedByMe
+invalid filter, visibility, sort, page, and limit values
+duplicate filter parameters rejected
+missing and invalid access token
 suspended user
 inactive user
 missing user
@@ -336,19 +486,16 @@ Postman checklist:
 ```txt
 active user login
 default owner listing response
-PUBLIC filter
-PRIVATE filter
-explicit lowercase all filter
-latest sorting
-oldest sorting
+filter=all, now, soon, private
+legacy PUBLIC and PRIVATE visibility filters
+filter=soon availability-date ordering
+latest and oldest sorting
 second page pagination
 page beyond total
-invalid visibility value and duplicate visibility parameters
-invalid sort value and duplicate sort parameters
+invalid filter, visibility, and sort values
+duplicate filter parameters
 page below minimum and above maximum
-page non-number and non-integer
 limit below minimum and above maximum
-limit non-number and non-integer
 missing Authorization header
 empty bearer token
 invalid access token

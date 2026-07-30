@@ -70,11 +70,21 @@ listingSchema.index({
   _id: 1,
 });
 
-// Owner listing dashboard filtered by availability
+// Owner listing dashboard filtered by visibility
 listingSchema.index({
   listedBy: 1,
   isDeleted: 1,
   visibility: 1,
+  updatedAt: -1,
+  _id: 1,
+});
+
+// Owner "soon" tab: match on visibility + availableAt, sort by availability date
+listingSchema.index({
+  listedBy: 1,
+  isDeleted: 1,
+  visibility: 1,
+  availableAt: 1,
   updatedAt: -1,
   _id: 1,
 });

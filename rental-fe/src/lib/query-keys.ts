@@ -1,5 +1,5 @@
 type OwnerListingKeyInput = {
-  visibility: string
+  filter: string
   sort: string
   limit: number
 }
@@ -212,8 +212,8 @@ export const queryKeys = {
   },
   listings: {
     ownerLists: roots.ownerListings,
-    ownerList: ({ visibility, sort, limit }: OwnerListingKeyInput) =>
-      childKey(roots.ownerListings, visibility, sort, limit),
+    ownerList: ({ filter, sort, limit }: OwnerListingKeyInput) =>
+      childKey(roots.ownerListings, filter, sort, limit),
     ownerDetails: roots.ownerListingDetails,
     ownerDetail: (listingId: string | undefined) =>
       childKey(roots.ownerListingDetails, listingId),

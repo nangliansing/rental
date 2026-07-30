@@ -52,7 +52,7 @@ describe("updateAgentProfileProjections", () => {
   it("patches nested agentProfile projections across related families", () => {
     const queryClient = createQueryClient()
     const ownerListKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

@@ -54,7 +54,7 @@ function setup() {
     "viewer-1",
   )
   const ownerListKey = queryKeys.listings.ownerList({
-    visibility: "all",
+    filter: "all",
     sort: "latest",
     limit: 20,
   })

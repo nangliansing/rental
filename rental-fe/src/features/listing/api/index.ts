@@ -27,8 +27,8 @@ export {
 } from "./usePublicListingById"
 export {
   searchOwnerListings,
+  type OwnerListingFilter,
   type OwnerListingSort,
-  type OwnerListingVisibilityFilter,
   type SearchOwnerListingsInput,
   type SearchOwnerListingsResponse,
 } from "./searchOwnerListings"

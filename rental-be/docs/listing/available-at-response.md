@@ -48,7 +48,7 @@ Dates are stored and compared as the start of the calendar day in `Asia/Bangkok`
 
 ## Affected Fetch Endpoints
 
-- `GET /api/v1/listings`
+- `GET /api/v1/listings` — also uses `availableAt` for owner `filter=now` / `filter=soon` matching and `filter=soon` sorting. See [`owner-search-listing.md`](./owner-search-listing.md).
 - `GET /api/v1/listings/:listingId`
 - `GET /api/v1/search/listings/:listingId`
 - `GET /api/v1/search/agents/:agentProfileId/listings`

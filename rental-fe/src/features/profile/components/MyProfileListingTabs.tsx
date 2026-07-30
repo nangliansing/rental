@@ -18,7 +18,7 @@ import {
 } from "../utils/profileLayoutStyles"
 
 export type MyProfileMainTab = "listings" | "pending" | "saved" | "reviews"
-export type MyProfileListingFilter = "all" | "available" | "unavailable"
+export type MyProfileListingFilter = "all" | "now" | "soon" | "private"
 export type MyProfileListingSort = "latest" | "oldest"
 export type MyProfilePendingFilter =
     | "all"
@@ -64,12 +64,16 @@ const LISTING_FILTERS: {
         label: "All",
     },
     {
-        id: "available",
-        label: "Available",
+        id: "now",
+        label: "Now",
     },
     {
-        id: "unavailable",
-        label: "Unavailable",
+        id: "soon",
+        label: "Soon",
+    },
+    {
+        id: "private",
+        label: "Private",
     },
 ]
 
@@ -187,7 +191,7 @@ function ListingTabControls({
             <SegmentedTabs
                 options={LISTING_FILTERS}
                 value={activeFilter}
-                aria-label="Listing availability"
+                aria-label="Listing filters"
                 onChange={onFilterChange}
             />
 

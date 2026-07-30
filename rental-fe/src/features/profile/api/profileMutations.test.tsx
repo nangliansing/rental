@@ -137,7 +137,7 @@ describe("profile mutations", () => {
       isActive: true,
     }
     const ownerListKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

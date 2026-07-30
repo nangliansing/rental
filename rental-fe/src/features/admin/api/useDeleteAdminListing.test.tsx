@@ -38,7 +38,7 @@ function setup(currentUserId = "admin-1") {
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   })
   const ownerKey = queryKeys.listings.ownerList({
-    visibility: "all",
+    filter: "all",
     sort: "latest",
     limit: 20,
   })

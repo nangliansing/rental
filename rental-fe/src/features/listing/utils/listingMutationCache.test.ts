@@ -183,7 +183,7 @@ describe("patchListingInRelatedQueries", () => {
   it("preserves untouched sibling listing references", () => {
     const queryClient = new QueryClient()
     const key = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -296,7 +296,7 @@ describe("captureRelatedListingQueries / restoreListingCacheSnapshot", () => {
   it("dedupes overlapping prefixes when capturing", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -312,7 +312,7 @@ describe("captureRelatedListingQueries / restoreListingCacheSnapshot", () => {
     const queryClient = new QueryClient()
     const ownerDetailKey = queryKeys.listings.ownerDetail("listing-1")
     const ownerListKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -349,7 +349,7 @@ describe("removeDeletedListingDetails", () => {
     const ownerDetailKey = queryKeys.listings.ownerDetail("listing-1")
     const publicDetailKey = queryKeys.listings.publicDetail("listing-1", "user-1")
     const ownerListKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -482,7 +482,7 @@ describe("optimisticallyDeleteListing", () => {
   it("keeps every infinite page total consistent after removing one listing", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 1,
     })
@@ -600,7 +600,7 @@ describe("optimisticallyDeleteListing", () => {
   it("is a no-op on absent listing data without throwing", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -619,7 +619,7 @@ describe("optimisticallyDeleteListing", () => {
   it("dedupes overlapping collection prefixes to one write per cached query", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -645,7 +645,7 @@ describe("optimisticallyDeleteListing", () => {
   it("clamps collection totals at zero when removing every direct listing row", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -665,7 +665,7 @@ describe("optimisticallyDeleteListing", () => {
   it("leaves non-finite pagination totals unchanged", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -685,7 +685,7 @@ describe("optimisticallyDeleteListing", () => {
   it("removes duplicate listing rows from the same collection page", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -705,7 +705,7 @@ describe("optimisticallyDeleteListing", () => {
   it("handles empty infinite-list caches without throwing", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -805,7 +805,7 @@ describe("optimisticallyDeleteListing", () => {
   it("combines removal, saved-list nulling, and visibility patching in one delete", () => {
     const queryClient = new QueryClient()
     const ownerKey = queryKeys.listings.ownerList({
-      visibility: "all",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

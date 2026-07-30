@@ -25,13 +25,19 @@ const LISTING_EMPTY_COPY: Record<
             href: MAP_SEARCH_LIST_ROOM_PATH,
         },
     },
-    available: {
-        title: "No available listings",
-        description: "Listings visible to renters will appear here.",
+    now: {
+        title: "No listings available now",
+        description:
+            "Public listings available today or earlier will appear here.",
     },
-    unavailable: {
-        title: "No unavailable listings",
-        description: "Private listings hidden from renters will appear here.",
+    soon: {
+        title: "No upcoming listings",
+        description:
+            "Public listings with a future availability date will appear here.",
+    },
+    private: {
+        title: "No private listings",
+        description: "Listings hidden from renters will appear here.",
     },
 }
 
