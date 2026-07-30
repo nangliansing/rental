@@ -89,6 +89,17 @@ describe("database index contracts", () => {
       { unique: true },
     );
     assertSchemaIndex(
+      "BuildingFollow",
+      { userId: 1, buildingId: 1 },
+      { unique: true },
+    );
+    assertSchemaIndex("BuildingFollow", { userId: 1, createdAt: -1, _id: -1 });
+    assertSchemaIndex("BuildingFollow", {
+      buildingId: 1,
+      createdAt: -1,
+      _id: -1,
+    });
+    assertSchemaIndex(
       "Notification",
       { expiresAt: 1 },
       { expireAfterSeconds: 0 },

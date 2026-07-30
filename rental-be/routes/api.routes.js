@@ -12,6 +12,7 @@ import buildingEditRequestRoutes from "../modules/building-edit-request/building
 import reportRoutes from "../modules/report/report.routes.js";
 import notificationRoutes from "../modules/notification/notification.routes.js";
 import savedListingRoutes from "../modules/saved-listing/saved-listing.routes.js";
+import buildingFollowRoutes from "../modules/building-follow/building-follow.routes.js";
 import listerReviewRoutes from "../modules/lister-review/lister-review.routes.js";
 import reviewReportRoutes from "../modules/review-report/review-report.routes.js";
 import adminRoutes from "./admin.routes.js";
@@ -29,6 +30,7 @@ router.use("/building-edit-requests", buildingEditRequestRoutes);
 router.use("/reports", reportRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/saved-listings", savedListingRoutes);
+router.use("/building-follows", buildingFollowRoutes);
 router.use("/lister-reviews", listerReviewRoutes);
 router.use("/review-reports", reviewReportRoutes);
 router.use("/admin", adminRoutes);
