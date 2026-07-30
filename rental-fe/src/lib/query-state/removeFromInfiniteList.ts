@@ -1,13 +1,12 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 
 import {
+  applyToCachedQueries,
   dropFiniteTotal,
-  forEachCachedQuery,
   isFunction,
   isInfiniteCollection,
   isInfiniteListCollection,
   isPositiveFiniteCount,
-  isQueryKey,
   isQueryStateRecord,
   readArrayLength,
   readPageItems,
@@ -208,17 +207,9 @@ export function removeFromInfiniteListInQueries<T extends QueryStateRecord>(
 ) {
   if (!isFunction(match)) return
 
-  forEachCachedQuery(queryClient, queryKeys, (query) => {
-    if (!isQueryKey(query.queryKey)) return
-
-    try {
-      queryClient.setQueryData(query.queryKey, (current: unknown) =>
-        removeFromInfiniteList(current, match),
-      )
-    } catch {
-      // Keep going; one key failure must not block the rest.
-    }
-  })
+  applyToCachedQueries(queryClient, queryKeys, (current) =>
+    removeFromInfiniteList(current, match),
+  )
 }
 
 export type {

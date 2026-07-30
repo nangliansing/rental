@@ -1,10 +1,9 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 
 import {
-  forEachCachedQuery,
+  applyToCachedQueries,
   isFlatListCollection,
   isFunction,
-  isQueryKey,
   tryMapMatchingItems,
   type FlatListCollection,
   type QueryStateMatcher,
@@ -89,17 +88,9 @@ export function updateInFlatListInQueries<T extends QueryStateRecord>(
 ) {
   if (!isFunction(match) || !isFunction(update)) return
 
-  forEachCachedQuery(queryClient, queryKeys, (query) => {
-    if (!isQueryKey(query.queryKey)) return
-
-    try {
-      queryClient.setQueryData(query.queryKey, (current: unknown) =>
-        updateInFlatList(current, match, update),
-      )
-    } catch {
-      // Keep going; one key failure must not block the rest.
-    }
-  })
+  applyToCachedQueries(queryClient, queryKeys, (current) =>
+    updateInFlatList(current, match, update),
+  )
 }
 
 export type {

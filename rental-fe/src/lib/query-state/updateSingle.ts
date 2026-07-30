@@ -1,7 +1,7 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 
 import {
-  forEachCachedQuery,
+  applyToCachedQueries,
   isFunction,
   isQueryStateRecord,
   safeMatch,
@@ -60,15 +60,9 @@ export function updateSingleInQueries<T extends QueryStateRecord>(
 ) {
   if (!isFunction(match) || !isFunction(update)) return
 
-  forEachCachedQuery(queryClient, queryKeys, (query) => {
-    try {
-      queryClient.setQueryData(query.queryKey, (current: unknown) =>
-        updateSingle(current, match, update),
-      )
-    } catch {
-      // Keep going; one key failure must not block the rest.
-    }
-  })
+  applyToCachedQueries(queryClient, queryKeys, (current) =>
+    updateSingle(current, match, update),
+  )
 }
 
 export type {

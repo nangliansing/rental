@@ -1,6 +1,19 @@
 import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query"
 
 import { queryKeys } from "@/lib/query-keys"
+import { updateDeepInQueries } from "@/lib/query-state"
+import {
+  dropFiniteTotal,
+  isInfiniteCollection,
+  isPositiveFiniteCount,
+  isQueryStateRecord,
+  readArrayLength,
+  tryFilterMatchingItems,
+  tryMapMatchingItems,
+  type ItemFilterResult,
+  type QueryStateMatcher,
+  type QueryStateRecord,
+} from "@/lib/query-state/shared"
 
 import type {
   ListerReview,
@@ -10,7 +23,8 @@ import type {
 import type { SearchListerReviewsResponse } from "./searchListerReviews"
 
 /** Cache shape of the infinite review lists under `queryKeys.listerReviews`. */
-export type ListerReviewsCacheData = InfiniteData<SearchListerReviewsResponse>
+export type ListerReviewsCacheData =
+  InfiniteData<SearchListerReviewsResponse>
 
 export const REVIEW_WRITE_SCOPE_ID = "lister-review-write"
 
@@ -93,105 +107,89 @@ export function restoreReviewQueries(
   })
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+type ListerReviewPageBundle = {
+  page: QueryStateRecord
+  pageData: QueryStateRecord
+  reviews: unknown[]
+  myReview: unknown
+}
+
+function readFinitePageTotal(pagination: unknown): boolean {
+  if (!isQueryStateRecord(pagination)) return false
+
+  try {
+    const total = pagination.total
+    return typeof total === "number" && Number.isFinite(total)
+  } catch {
+    return false
+  }
+}
+
+function readListerReviewPage(page: unknown): ListerReviewPageBundle | undefined {
+  try {
+    if (!isQueryStateRecord(page) || isInfiniteCollection(page)) {
+      return undefined
+    }
+
+    const pageData = page.data
+    if (!isQueryStateRecord(pageData)) return undefined
+
+    const reviews = pageData.reviews
+    if (!Array.isArray(reviews)) return undefined
+    if (readArrayLength(reviews) === undefined) return undefined
+    if (!readFinitePageTotal(page.pagination)) return undefined
+
+    return {
+      page,
+      pageData,
+      reviews,
+      myReview: pageData.myReview,
+    }
+  } catch {
+    return undefined
+  }
 }
 
 /**
  * Guards the helpers below against non-infinite caches. Only `useInfiniteQuery`
- * data has `pages`; anything else is left untouched instead of crashing.
+ * data with `{ data: { reviews, myReview? } }` pages is accepted.
  */
 function isInfiniteListerReviewsData(
   value: unknown,
-): value is InfiniteData<SearchListerReviewsResponse> {
-  return (
-    isRecord(value) &&
-    Array.isArray(value.pages) &&
-    value.pages.every(
-      (page) =>
-        isRecord(page) &&
-        isRecord(page.data) &&
-        Array.isArray(page.data.reviews) &&
-        isRecord(page.pagination) &&
-        typeof page.pagination.total === "number" &&
-        Number.isFinite(page.pagination.total),
-    )
-  )
-}
+): value is ListerReviewsCacheData {
+  if (!isInfiniteCollection(value)) return false
 
-export function removeReviewFromListerReviewData(
-  current: ListerReviewsCacheData | undefined,
-  reviewId: string,
-): ListerReviewsCacheData | undefined {
-  if (!isInfiniteListerReviewsData(current)) return current
+  try {
+    const pages = value.pages
+    const pageCount = readArrayLength(pages)
+    if (pageCount === undefined) return false
 
-  const removedCount = current.pages.reduce(
-    (count, page) =>
-      count +
-      page.data.reviews.filter((review) => review._id === reviewId).length,
-    0,
-  )
-  const removesMyReview = current.pages.some(
-    (page) => page.data.myReview?._id === reviewId,
-  )
-  if (removedCount === 0 && !removesMyReview) return current
+    for (let index = 0; index < pageCount; index += 1) {
+      if (readListerReviewPage(pages[index]) === undefined) return false
+    }
 
-  return {
-    ...current,
-    pages: current.pages.map((page) => ({
-      ...page,
-      data: {
-        ...page.data,
-        myReview:
-          page.data.myReview?._id === reviewId ? null : page.data.myReview,
-        reviews: page.data.reviews.filter((review) => review._id !== reviewId),
-      },
-      pagination: {
-        ...page.pagination,
-        total: Math.max(0, page.pagination.total - removedCount),
-      },
-    })),
+    return true
+  } catch {
+    return false
   }
 }
 
-export function setMyReviewInListerReviewData(
-  current: ListerReviewsCacheData | undefined,
-  review: ListerReview,
-): ListerReviewsCacheData | undefined {
-  if (!isInfiniteListerReviewsData(current)) return current
+const isReviewId =
+  (reviewId: string): QueryStateMatcher<QueryStateRecord> =>
+  (value) =>
+    value._id === reviewId
 
-  return {
-    ...current,
-    pages: current.pages.map((page) => ({
-      ...page,
-      data: { ...page.data, myReview: review },
-    })),
-  }
+/** Strict shape guard for deep cache patches outside review-list arrays. */
+function isReviewRecord(reviewId: string): QueryStateMatcher<QueryStateRecord> {
+  return (value) =>
+    value._id === reviewId &&
+    typeof value.reviewerId === "string" &&
+    typeof value.listerProfileId === "string" &&
+    typeof value.rating === "number"
 }
 
-export function replaceReviewInListerReviewData(
-  current: ListerReviewsCacheData | undefined,
-  optimisticReviewId: string,
-  review: ListerReview,
-): ListerReviewsCacheData | undefined {
-  if (!isInfiniteListerReviewsData(current)) return current
-
-  return {
-    ...current,
-    pages: current.pages.map((page) => ({
-      ...page,
-      data: {
-        ...page.data,
-        myReview:
-          page.data.myReview?._id === optimisticReviewId
-            ? review
-            : page.data.myReview,
-        reviews: page.data.reviews.map((item) =>
-          item._id === optimisticReviewId ? review : item,
-        ),
-      },
-    })),
-  }
+function myReviewMatchesId(myReview: unknown, reviewId: string) {
+  return isQueryStateRecord(myReview) && myReview._id === reviewId
 }
 
 const RATING_COUNT_KEY = {
@@ -202,12 +200,30 @@ const RATING_COUNT_KEY = {
   5: "fiveStars",
 } as const
 
-export function addReviewToSummary(
-  current: ListerReviewSummary | null | undefined,
-  rating: number,
-  tags: ListerReviewTag[],
-): ListerReviewSummary {
-  const summary = current ?? {
+type ValidRating = keyof typeof RATING_COUNT_KEY
+
+function normalizeCount(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, Math.trunc(value))
+    : 0
+}
+
+function normalizeAverage(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(5, Math.max(0, value))
+    : 0
+}
+
+function normalizeRating(rating: unknown): ValidRating | null {
+  return Number.isInteger(rating) &&
+    (rating as number) >= 1 &&
+    (rating as number) <= 5
+    ? (rating as ValidRating)
+    : null
+}
+
+function emptySummary(): ListerReviewSummary {
+  return {
     averageRating: 0,
     reviewCount: 0,
     ratingCounts: {
@@ -219,20 +235,12 @@ export function addReviewToSummary(
     },
     tagCounts: [],
   }
-  const normalizeCount = (value: unknown) =>
-    typeof value === "number" && Number.isFinite(value)
-      ? Math.max(0, Math.trunc(value))
-      : 0
-  const previousReviewCount = normalizeCount(summary.reviewCount)
-  const previousAverage =
-    typeof summary.averageRating === "number" &&
-    Number.isFinite(summary.averageRating)
-      ? Math.min(5, Math.max(0, summary.averageRating))
-      : 0
-  const normalizedRating: keyof typeof RATING_COUNT_KEY | null =
-    Number.isInteger(rating) && rating >= 1 && rating <= 5
-      ? (rating as keyof typeof RATING_COUNT_KEY)
-      : null
+}
+
+function normalizeSummaryBase(
+  current: ListerReviewSummary | null | undefined,
+) {
+  const summary = current ?? emptySummary()
   const ratingCounts = {
     oneStar: normalizeCount(summary.ratingCounts?.oneStar),
     twoStars: normalizeCount(summary.ratingCounts?.twoStars),
@@ -241,38 +249,262 @@ export function addReviewToSummary(
     fiveStars: normalizeCount(summary.ratingCounts?.fiveStars),
   }
   const tagCounts = new Map<ListerReviewTag, number>()
-  for (const entry of Array.isArray(summary.tagCounts)
-    ? summary.tagCounts
-    : []) {
+
+  for (const entry of Array.isArray(summary.tagCounts) ? summary.tagCounts : []) {
+    if (!entry || typeof entry.tag !== "string") continue
     tagCounts.set(
-      entry.tag,
-      (tagCounts.get(entry.tag) ?? 0) + normalizeCount(entry.count),
+      entry.tag as ListerReviewTag,
+      (tagCounts.get(entry.tag as ListerReviewTag) ?? 0) +
+        normalizeCount(entry.count),
     )
   }
 
-  if (normalizedRating === null) {
-    return {
-      averageRating: previousAverage,
-      reviewCount: previousReviewCount,
-      ratingCounts,
-      tagCounts: [...tagCounts].map(([tag, count]) => ({ tag, count })),
-    }
+  return {
+    averageRating: normalizeAverage(summary.averageRating),
+    reviewCount: normalizeCount(summary.reviewCount),
+    ratingCounts,
+    tagCounts,
+  }
+}
+
+function summaryFromBase(
+  base: ReturnType<typeof normalizeSummaryBase>,
+): ListerReviewSummary {
+  return {
+    averageRating: base.averageRating,
+    reviewCount: base.reviewCount,
+    ratingCounts: base.ratingCounts,
+    tagCounts: [...base.tagCounts.entries()].map(([tag, count]) => ({
+      tag,
+      count,
+    })),
+  }
+}
+
+export function removeReviewFromListerReviewData(
+  current: ListerReviewsCacheData | undefined,
+  reviewId: string,
+): ListerReviewsCacheData | undefined {
+  if (current === undefined) return current
+  if (!isInfiniteListerReviewsData(current)) return current
+
+  const match = isReviewId(reviewId)
+  const pages = current.pages
+  const pageCount = readArrayLength(pages)
+  if (pageCount === undefined) return current
+
+  type RemovePass = ListerReviewPageBundle & {
+    filtered: ItemFilterResult
+    clearsMyReview: boolean
   }
 
-  const reviewCount = previousReviewCount + 1
+  const passes: RemovePass[] = []
+  let totalRemoved = 0
+  let clearsMyReviewAnywhere = false
+
+  for (let index = 0; index < pageCount; index += 1) {
+    const bundle = readListerReviewPage(pages[index])
+    if (bundle === undefined) return current
+
+    const filtered = tryFilterMatchingItems(bundle.reviews, match)
+    if (filtered.status === "failed") return current
+
+    const clearsMyReview = myReviewMatchesId(bundle.myReview, reviewId)
+    clearsMyReviewAnywhere ||= clearsMyReview
+
+    if (filtered.status === "updated") {
+      if (!isPositiveFiniteCount(filtered.removedCount)) return current
+      totalRemoved += filtered.removedCount
+    }
+
+    passes.push({ ...bundle, filtered, clearsMyReview })
+  }
+
+  if (totalRemoved === 0 && !clearsMyReviewAnywhere) return current
+
+  const nextPages: QueryStateRecord[] = []
+
+  for (const pass of passes) {
+    const itemsChanged = pass.filtered.status === "updated"
+    const nextReviews =
+      itemsChanged && pass.filtered.status === "updated"
+        ? pass.filtered.next
+        : pass.reviews
+    if (!Array.isArray(nextReviews)) return current
+
+    const myReviewChanged =
+      pass.clearsMyReview && pass.myReview !== null && pass.myReview !== undefined
+    const dataChanged = itemsChanged || myReviewChanged
+
+    let nextPage: QueryStateRecord = pass.page
+
+    if (dataChanged) {
+      nextPage = {
+        ...pass.page,
+        data: {
+          ...pass.pageData,
+          myReview: pass.clearsMyReview ? null : pass.myReview,
+          reviews: nextReviews,
+        },
+      }
+    }
+
+    if (isPositiveFiniteCount(totalRemoved)) {
+      const nextPagination = dropFiniteTotal(pass.page.pagination, totalRemoved)
+      if (
+        nextPagination !== undefined &&
+        !Object.is(nextPagination, pass.page.pagination)
+      ) {
+        nextPage = { ...nextPage, pagination: nextPagination }
+      }
+    }
+
+    nextPages.push(nextPage)
+  }
+
+  if (nextPages.length !== pageCount) return current
+
+  return {
+    ...current,
+    pages: nextPages,
+  } as ListerReviewsCacheData
+}
+
+export function setMyReviewInListerReviewData(
+  current: ListerReviewsCacheData | undefined,
+  review: ListerReview,
+): ListerReviewsCacheData | undefined {
+  if (current === undefined) return current
+  if (!isInfiniteListerReviewsData(current)) return current
+  if (!isQueryStateRecord(review)) return current
+
+  const pages = current.pages
+  const pageCount = readArrayLength(pages)
+  if (pageCount === undefined) return current
+
+  let changed = false
+  const nextPages: QueryStateRecord[] = []
+
+  for (let index = 0; index < pageCount; index += 1) {
+    const bundle = readListerReviewPage(pages[index])
+    if (bundle === undefined) return current
+
+    if (Object.is(bundle.myReview, review)) {
+      nextPages.push(bundle.page)
+      continue
+    }
+
+    changed = true
+    nextPages.push({
+      ...bundle.page,
+      data: {
+        ...bundle.pageData,
+        myReview: review,
+      },
+    })
+  }
+
+  if (!changed) return current
+
+  return {
+    ...current,
+    pages: nextPages,
+  } as ListerReviewsCacheData
+}
+
+export function replaceReviewInListerReviewData(
+  current: ListerReviewsCacheData | undefined,
+  optimisticReviewId: string,
+  review: ListerReview,
+): ListerReviewsCacheData | undefined {
+  if (current === undefined) return current
+  if (!isInfiniteListerReviewsData(current)) return current
+  if (!isQueryStateRecord(review)) return current
+
+  const match = isReviewId(optimisticReviewId)
+  const pages = current.pages
+  const pageCount = readArrayLength(pages)
+  if (pageCount === undefined) return current
+
+  let changed = false
+  const nextPages: QueryStateRecord[] = []
+
+  for (let index = 0; index < pageCount; index += 1) {
+    const bundle = readListerReviewPage(pages[index])
+    if (bundle === undefined) return current
+
+    const mapped = tryMapMatchingItems(bundle.reviews, match, () => review)
+    if (mapped.status === "failed") return current
+
+    let nextMyReview = bundle.myReview
+    if (
+      isQueryStateRecord(bundle.myReview) &&
+      bundle.myReview._id === optimisticReviewId &&
+      !Object.is(bundle.myReview, review)
+    ) {
+      nextMyReview = review
+      changed = true
+    }
+
+    if (mapped.status === "updated") changed = true
+
+    if (
+      mapped.status === "unchanged" &&
+      Object.is(nextMyReview, bundle.myReview)
+    ) {
+      nextPages.push(bundle.page)
+      continue
+    }
+
+    nextPages.push({
+      ...bundle.page,
+      data: {
+        ...bundle.pageData,
+        myReview: nextMyReview,
+        reviews:
+          mapped.status === "updated" ? mapped.next : bundle.reviews,
+      },
+    })
+  }
+
+  if (!changed) return current
+
+  return {
+    ...current,
+    pages: nextPages,
+  } as ListerReviewsCacheData
+}
+
+export function addReviewToSummary(
+  current: ListerReviewSummary | null | undefined,
+  rating: number,
+  tags: ListerReviewTag[],
+): ListerReviewSummary {
+  const base = normalizeSummaryBase(current)
+  const normalizedRating = normalizeRating(rating)
+
+  if (normalizedRating === null) {
+    return summaryFromBase(base)
+  }
+
+  const reviewCount = base.reviewCount + 1
   const ratingKey = RATING_COUNT_KEY[normalizedRating]
+  const ratingCounts = { ...base.ratingCounts }
   ratingCounts[ratingKey] += 1
-  for (const tag of new Set(tags)) {
-    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+
+  for (const tag of new Set(Array.isArray(tags) ? tags : [])) {
+    base.tagCounts.set(tag, (base.tagCounts.get(tag) ?? 0) + 1)
   }
 
   return {
     averageRating:
-      (previousAverage * previousReviewCount + normalizedRating) /
-      reviewCount,
+      (base.averageRating * base.reviewCount + normalizedRating) / reviewCount,
     reviewCount,
     ratingCounts,
-    tagCounts: [...tagCounts].map(([tag, count]) => ({ tag, count })),
+    tagCounts: [...base.tagCounts.entries()].map(([tag, count]) => ({
+      tag,
+      count,
+    })),
   }
 }
 
@@ -281,41 +513,48 @@ export function replaceReviewInSummary(
   previousReview: Pick<ListerReview, "rating" | "tags">,
   nextReview: Pick<ListerReview, "rating" | "tags">,
 ): ListerReviewSummary {
-  const reviewCount = current.reviewCount
-  const previousRatingKey =
-    RATING_COUNT_KEY[previousReview.rating as keyof typeof RATING_COUNT_KEY]
-  const nextRatingKey =
-    RATING_COUNT_KEY[nextReview.rating as keyof typeof RATING_COUNT_KEY]
-  const ratingCounts = { ...current.ratingCounts }
-  if (previousRatingKey) {
-    ratingCounts[previousRatingKey] = Math.max(
-      0,
-      ratingCounts[previousRatingKey] - 1,
-    )
-  }
-  if (nextRatingKey) ratingCounts[nextRatingKey] += 1
+  const base = normalizeSummaryBase(current)
+  const reviewCount = base.reviewCount
+  const previousRating = normalizeRating(previousReview.rating)
+  const nextRating = normalizeRating(nextReview.rating)
+  const ratingCounts = { ...base.ratingCounts }
 
-  const tagCounts = new Map(
-    current.tagCounts.map(({ tag, count }) => [tag, count]),
+  if (previousRating !== null) {
+    const previousKey = RATING_COUNT_KEY[previousRating]
+    ratingCounts[previousKey] = Math.max(0, ratingCounts[previousKey] - 1)
+  }
+  if (nextRating !== null) {
+    const nextKey = RATING_COUNT_KEY[nextRating]
+    ratingCounts[nextKey] += 1
+  }
+
+  const previousTags = new Set(
+    Array.isArray(previousReview.tags) ? previousReview.tags : [],
   )
-  new Set(previousReview.tags).forEach((tag) => {
-    tagCounts.set(tag, Math.max(0, (tagCounts.get(tag) ?? 0) - 1))
-  })
-  new Set(nextReview.tags).forEach((tag) => {
-    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
-  })
+  const nextTags = new Set(
+    Array.isArray(nextReview.tags) ? nextReview.tags : [],
+  )
+
+  for (const tag of previousTags) {
+    base.tagCounts.set(tag, Math.max(0, (base.tagCounts.get(tag) ?? 0) - 1))
+  }
+  for (const tag of nextTags) {
+    base.tagCounts.set(tag, (base.tagCounts.get(tag) ?? 0) + 1)
+  }
+
+  const averageRating =
+    reviewCount > 0 && previousRating !== null && nextRating !== null
+      ? (base.averageRating * reviewCount -
+          previousRating +
+          nextRating) /
+        reviewCount
+      : base.averageRating
 
   return {
-    averageRating:
-      reviewCount > 0
-        ? (current.averageRating * reviewCount -
-            previousReview.rating +
-            nextReview.rating) /
-          reviewCount
-        : current.averageRating,
+    averageRating: normalizeAverage(averageRating),
     reviewCount,
     ratingCounts,
-    tagCounts: [...tagCounts.entries()]
+    tagCounts: [...base.tagCounts.entries()]
       .filter(([, count]) => count > 0)
       .map(([tag, count]) => ({ tag, count })),
   }
@@ -325,134 +564,70 @@ export function removeReviewFromSummary(
   current: ListerReviewSummary,
   review: Pick<ListerReview, "rating" | "tags">,
 ): ListerReviewSummary {
-  const reviewCount = Math.max(0, current.reviewCount - 1)
-  const ratingKey = RATING_COUNT_KEY[review.rating as keyof typeof RATING_COUNT_KEY]
-  const ratingCounts = { ...current.ratingCounts }
-  if (ratingKey) ratingCounts[ratingKey] = Math.max(0, ratingCounts[ratingKey] - 1)
+  const base = normalizeSummaryBase(current)
+  const reviewCount = Math.max(0, base.reviewCount - 1)
+  const rating = normalizeRating(review.rating)
+  const ratingCounts = { ...base.ratingCounts }
 
-  const removedTags = new Set(review.tags)
+  if (rating !== null) {
+    const ratingKey = RATING_COUNT_KEY[rating]
+    ratingCounts[ratingKey] = Math.max(0, ratingCounts[ratingKey] - 1)
+  }
+
+  const removedTags = new Set(Array.isArray(review.tags) ? review.tags : [])
+  for (const tag of removedTags) {
+    base.tagCounts.set(tag, Math.max(0, (base.tagCounts.get(tag) ?? 0) - 1))
+  }
+
+  const averageRating =
+    reviewCount > 0 && rating !== null
+      ? Math.max(
+          0,
+          (base.averageRating * base.reviewCount - rating) / reviewCount,
+        )
+      : 0
+
   return {
-    averageRating:
-      reviewCount > 0
-        ? Math.max(
-            0,
-            (current.averageRating * current.reviewCount - review.rating) /
-              reviewCount,
-          )
-        : 0,
+    averageRating: normalizeAverage(averageRating),
     reviewCount,
     ratingCounts,
-    tagCounts: current.tagCounts
-      .map((entry) => ({
-        ...entry,
-        count: Math.max(
-          0,
-          entry.count - (removedTags.has(entry.tag) ? 1 : 0),
-        ),
-      }))
-      .filter(({ count }) => count > 0),
+    tagCounts: [...base.tagCounts.entries()]
+      .filter(([, count]) => count > 0)
+      .map(([tag, count]) => ({ tag, count })),
   }
 }
 
-function patchReview<T>(value: T, reviewId: string, review: ListerReview): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const patched = patchReview(item, reviewId, review)
-      changed ||= patched !== item
-      return patched
-    })
-    return (changed ? next : value) as T
-  }
-  if (!isRecord(value)) return value
-
-  const isReview =
-    value._id === reviewId &&
-    typeof value.reviewerId === "string" &&
-    typeof value.listerProfileId === "string" &&
-    typeof value.rating === "number"
-  let next: Record<string, unknown> = isReview ? review : value
-
-  for (const [key, child] of Object.entries(next)) {
-    const patched = patchReview(child, reviewId, review)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-  return next as T
-}
-
+/**
+ * Replaces every occurrence of the review (matched by id + review shape) at
+ * any depth in the cached queries under `keys`. Delegates the deep traversal
+ * to the defensive `query-state` layer: never throws, copy-on-write, and
+ * atomic per cache entry.
+ */
 export function patchReviewInQueries(
   queryClient: QueryClient,
   keys: QueryKey[],
   reviewId: string,
   review: ListerReview,
 ) {
-  const patched = new Set<string>()
-  keys.forEach((queryKey) => {
-    queryClient.getQueryCache().findAll({ queryKey }).forEach((query) => {
-      if (patched.has(query.queryHash)) return
-      patched.add(query.queryHash)
-      queryClient.setQueryData(query.queryKey, (current: unknown) =>
-        patchReview(current, reviewId, review),
-      )
-    })
-  })
+  updateDeepInQueries(queryClient, keys, isReviewRecord(reviewId), () => review)
 }
 
-function patchReviewSummary<T>(
-  value: T,
-  listerProfileId: string,
-  reviewSummary: ListerReviewSummary,
-): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const patched = patchReviewSummary(item, listerProfileId, reviewSummary)
-      changed ||= patched !== item
-      return patched
-    })
-    return (changed ? next : value) as T
-  }
-
-  if (!isRecord(value)) return value
-
-  const isAffectedProfile =
-    value._id === listerProfileId && "reviewSummary" in value
-  let next: Record<string, unknown> = isAffectedProfile
-    ? { ...value, reviewSummary }
-    : value
-
-  for (const [key, child] of Object.entries(next)) {
-    const patched = patchReviewSummary(child, listerProfileId, reviewSummary)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-
-  return next as T
-}
-
+/**
+ * Writes `reviewSummary` onto every cached projection of the lister profile
+ * (matched by id + presence of a `reviewSummary` field) at any depth.
+ */
 export function patchReviewSummaryInQueries(
   queryClient: QueryClient,
   keys: QueryKey[],
   listerProfileId: string,
   reviewSummary: ListerReviewSummary,
 ) {
-  const patched = new Set<string>()
-
-  keys.forEach((queryKey) => {
-    queryClient
-      .getQueryCache()
-      .findAll({ queryKey })
-      .forEach((query) => {
-        if (patched.has(query.queryHash)) return
-        patched.add(query.queryHash)
-        queryClient.setQueryData(query.queryKey, (current: unknown) =>
-          patchReviewSummary(current, listerProfileId, reviewSummary),
-        )
-      })
-  })
+  updateDeepInQueries(
+    queryClient,
+    keys,
+    (value) => value._id === listerProfileId && "reviewSummary" in value,
+    (value) => ({ ...value, reviewSummary }),
+  )
 }
 
 export async function invalidateReviewQueries(

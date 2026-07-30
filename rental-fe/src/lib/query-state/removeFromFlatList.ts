@@ -1,11 +1,10 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 
 import {
+  applyToCachedQueries,
   dropFiniteTotal,
-  forEachCachedQuery,
   isFlatListCollection,
   isFunction,
-  isQueryKey,
   tryFilterMatchingItems,
   type FlatListCollection,
   type QueryStateMatcher,
@@ -108,17 +107,9 @@ export function removeFromFlatListInQueries<T extends QueryStateRecord>(
 ) {
   if (!isFunction(match)) return
 
-  forEachCachedQuery(queryClient, queryKeys, (query) => {
-    if (!isQueryKey(query.queryKey)) return
-
-    try {
-      queryClient.setQueryData(query.queryKey, (current: unknown) =>
-        removeFromFlatList(current, match),
-      )
-    } catch {
-      // Keep going; one key failure must not block the rest.
-    }
-  })
+  applyToCachedQueries(queryClient, queryKeys, (current) =>
+    removeFromFlatList(current, match),
+  )
 }
 
 export type { FlatListCollection, QueryStateMatcher, QueryStateRecord }

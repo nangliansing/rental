@@ -293,6 +293,31 @@ export function isPositiveFiniteCount(value: unknown): value is number {
 }
 
 /**
+ * Depth cap for the deep traversal helpers. Cached server payloads are parsed
+ * JSON, so legitimate trees stay shallow; anything deeper is treated as
+ * hostile input and aborts the whole operation.
+ */
+export const MAX_TRAVERSAL_DEPTH = 64
+
+/**
+ * Own-property write that cannot trigger prototype setters. A plain
+ * `target[key] = value` with a key like "__proto__" (valid in JSON payloads)
+ * would pollute the object's prototype instead of writing own data.
+ */
+export function setOwnProperty(
+  target: QueryStateRecord,
+  key: string,
+  value: unknown,
+) {
+  Object.defineProperty(target, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  })
+}
+
+/**
  * Drops a finite `pagination.total` by `removedCount`, clamped at 0.
  * Returns `undefined` when the total cannot be adjusted safely.
  */
@@ -329,6 +354,32 @@ export function isUsableQueryClient(
   } catch {
     return false
   }
+}
+
+/**
+ * Applies a cache-value transform to every unique cached query under the
+ * given key prefixes. Shared backbone of all `*InQueries` helpers.
+ * Never throws: invalid client/keys and per-query failures are skipped, and
+ * one failing `setQueryData` never blocks the remaining queries.
+ */
+export function applyToCachedQueries(
+  queryClient: QueryClient,
+  queryKeys: readonly QueryKey[],
+  transform: (current: unknown) => unknown,
+) {
+  if (!isFunction(transform)) return
+
+  forEachCachedQuery(queryClient, queryKeys, (query) => {
+    if (!isQueryKey(query.queryKey)) return
+
+    try {
+      queryClient.setQueryData(query.queryKey, (current: unknown) =>
+        transform(current),
+      )
+    } catch {
+      // Keep going; one key failure must not block the rest.
+    }
+  })
 }
 
 /**

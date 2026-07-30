@@ -1,5 +1,9 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
+import {
+  removeDeepInQueries,
+  updateDeepInQueries,
+} from "@/lib/query-state"
 
 export type ListingCacheSnapshot = Array<{
   data: unknown
@@ -24,187 +28,22 @@ export const listingCollectionQueryKeys: QueryKey[] = [
   queryKeys.savedListings.all,
 ]
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
-}
+const listingCollectionPrefixes: QueryKey[] = [
+  queryKeys.listings.ownerLists,
+  queryKeys.mapSearch.listingsInBuilding,
+  queryKeys.agentListings.lists,
+  queryKeys.mapSearch.buildings,
+]
 
-function patchListing<T>(
-  value: T,
-  listingId: string,
-  changes: object,
-): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const patched = patchListing(item, listingId, changes)
-      changed ||= patched !== item
-      return patched
-    })
-    return (changed ? next : value) as T
-  }
+const isListingRecord =
+  (listingId: string) =>
+  (value: Record<string, unknown>) =>
+    value._id === listingId
 
-  if (!isRecord(value)) return value
-
-  let next: Record<string, unknown> = value
-  if (value._id === listingId) {
-    next = { ...value, ...changes }
-  }
-
-  for (const [key, child] of Object.entries(next)) {
-    const patched = patchListing(child, listingId, changes)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-
-  return next as T
-}
-
-function removeListing<T>(value: T, listingId: string): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value
-      .filter((item) => {
-        const shouldRemove = isRecord(item) && item._id === listingId
-        changed ||= shouldRemove
-        return !shouldRemove
-      })
-      .map((item) => {
-        const patched = removeListing(item, listingId)
-        changed ||= patched !== item
-        return patched
-      })
-    return (changed ? next : value) as T
-  }
-
-  if (!isRecord(value)) return value
-
-  let next: Record<string, unknown> = value
-  for (const [key, child] of Object.entries(value)) {
-    const patched = removeListing(child, listingId)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-  return next as T
-}
-
-function directListings(value: unknown): unknown[] | null {
-  if (!isRecord(value)) return null
-  if (Array.isArray(value.data)) return value.data
-  if (isRecord(value.data) && Array.isArray(value.data.listings)) {
-    return value.data.listings
-  }
-  return null
-}
-
-function removeListingFromCountedCollection<T>(
-  value: T,
-  listingId: string,
-  collectionRemovedCount?: number,
-): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value
-      .filter((item) => {
-        const shouldRemove = isRecord(item) && item._id === listingId
-        changed ||= shouldRemove
-        return !shouldRemove
-      })
-      .map((item) => {
-        const patched = removeListingFromCountedCollection(item, listingId)
-        changed ||= patched !== item
-        return patched
-      })
-    return (changed ? next : value) as T
-  }
-
-  if (!isRecord(value)) return value
-
-  if (Array.isArray(value.pages)) {
-    const removesListing = value.pages.some((page) =>
-      directListings(page)?.some(
-        (item) => isRecord(item) && item._id === listingId,
-      ),
-    )
-    if (removesListing) {
-      return {
-        ...value,
-        pages: value.pages.map((page) =>
-          removeListingFromCountedCollection(page, listingId, 1),
-        ),
-      } as T
-    }
-  }
-
-  const pagination = isRecord(value.pagination) ? value.pagination : null
-  const data = value.data
-  const listings = directListings(value)
-
-  if (pagination && listings) {
-    const removedCount = listings.filter(
-      (item) => isRecord(item) && item._id === listingId,
-    ).length
-    const nextListings = listings.filter(
-      (item) => !(isRecord(item) && item._id === listingId),
-    )
-    const nextData = Array.isArray(data)
-      ? nextListings
-      : { ...(data as Record<string, unknown>), listings: nextListings }
-
-    return {
-      ...value,
-      data: removeListing(nextData, listingId),
-      pagination: {
-        ...pagination,
-        total:
-          typeof pagination.total === "number"
-            ? Math.max(
-                0,
-                pagination.total -
-                  (collectionRemovedCount ?? removedCount),
-              )
-            : pagination.total,
-      },
-    } as T
-  }
-
-  let next: Record<string, unknown> = value
-  for (const [key, child] of Object.entries(value)) {
-    const patched = removeListingFromCountedCollection(child, listingId)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-  return next as T
-}
-
-function markSavedListingUnavailable<T>(value: T, listingId: string): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const patched = markSavedListingUnavailable(item, listingId)
-      changed ||= patched !== item
-      return patched
-    })
-    return (changed ? next : value) as T
-  }
-
-  if (!isRecord(value)) return value
-
-  let next: Record<string, unknown> = value
-  if (value.listingId === listingId && value.listing !== null) {
-    next = { ...value, listing: null }
-  }
-
-  for (const [key, child] of Object.entries(next)) {
-    const patched = markSavedListingUnavailable(child, listingId)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-  return next as T
-}
+const isSavedListingWithLiveListing =
+  (listingId: string) =>
+  (value: Record<string, unknown>) =>
+    value.listingId === listingId && value.listing !== null
 
 export async function cancelRelatedListingQueries(
   queryClient: QueryClient,
@@ -243,20 +82,12 @@ export function patchListingInRelatedQueries(
   listingId: string,
   changes: object,
 ) {
-  const patchedQueries = new Set<string>()
-
-  relatedListingQueryKeys(listingId).forEach((queryKey) => {
-    queryClient
-      .getQueryCache()
-      .findAll({ queryKey })
-      .forEach((query) => {
-        if (patchedQueries.has(query.queryHash)) return
-        patchedQueries.add(query.queryHash)
-        queryClient.setQueryData(query.queryKey, (current: unknown) =>
-          patchListing(current, listingId, changes),
-        )
-      })
-  })
+  updateDeepInQueries(
+    queryClient,
+    relatedListingQueryKeys(listingId),
+    isListingRecord(listingId),
+    (listing) => ({ ...listing, ...changes }),
+  )
 }
 
 export function restoreListingCacheSnapshot(
@@ -272,22 +103,19 @@ export function optimisticallyDeleteListing(
   queryClient: QueryClient,
   listingId: string,
 ) {
-  const collectionPrefixes: QueryKey[] = [
-    queryKeys.listings.ownerLists,
-    queryKeys.mapSearch.listingsInBuilding,
-    queryKeys.agentListings.lists,
-    queryKeys.mapSearch.buildings,
-  ]
+  // Saved-listing caches are intentionally excluded: saved rows keep their
+  // snapshot and only have the embedded live listing marked unavailable.
+  removeDeepInQueries(
+    queryClient,
+    listingCollectionPrefixes,
+    isListingRecord(listingId),
+  )
 
-  collectionPrefixes.forEach((queryKey) => {
-    queryClient.setQueriesData({ queryKey }, (current: unknown) =>
-      removeListingFromCountedCollection(current, listingId),
-    )
-  })
-
-  queryClient.setQueriesData(
-    { queryKey: queryKeys.savedListings.all },
-    (current: unknown) => markSavedListingUnavailable(current, listingId),
+  updateDeepInQueries(
+    queryClient,
+    [queryKeys.savedListings.all],
+    isSavedListingWithLiveListing(listingId),
+    (saved) => ({ ...saved, listing: null }),
   )
 
   patchListingInRelatedQueries(queryClient, listingId, {

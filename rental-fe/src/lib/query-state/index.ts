@@ -30,6 +30,14 @@ export {
   removeFromInfiniteList,
   removeFromInfiniteListInQueries,
 } from "./removeFromInfiniteList"
+export {
+  updateDeep,
+  updateDeepInQueries,
+} from "./updateDeep"
+export {
+  removeDeep,
+  removeDeepInQueries,
+} from "./removeDeep"
 export type {
   FlatListCollection,
   InfiniteListCollection,

@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query"
 
 import type { AuthUser } from "@/features/auth/types"
 import { queryKeys } from "@/lib/query-keys"
+import { updateDeepInQueries } from "@/lib/query-state"
 
 export type AdminUserProjectionSnapshot = Array<{
   data: unknown
@@ -20,6 +21,19 @@ export const adminUserProjectionKeys = (userId: string): QueryKey[] => [
   queryKeys.admin.suspensions.lists,
   queryKeys.admin.suspensions.details,
 ]
+
+const isAdminUserProjection =
+  (userId: string) =>
+  (value: Record<string, unknown>) =>
+    value._id === userId &&
+    typeof value.status === "string" &&
+    (typeof value.email === "string" || "authProvider" in value)
+
+function definedChanges(changes: Partial<AuthUser>) {
+  return Object.fromEntries(
+    Object.entries(changes).filter(([, value]) => value !== undefined),
+  )
+}
 
 export async function captureAdminUserProjections(
   queryClient: QueryClient,
@@ -42,40 +56,20 @@ export async function captureAdminUserProjections(
   return [...captured.values()]
 }
 
-function patchUser<T>(value: T, userId: string, changes: Partial<AuthUser>): T {
-  if (Array.isArray(value)) {
-    return value.map((item) => patchUser(item, userId, changes)) as T
-  }
-  if (!value || typeof value !== "object") return value
-
-  const record = value as Record<string, unknown>
-  let next = record
-  const isUserProjection =
-    record._id === userId &&
-    typeof record.status === "string" &&
-    (typeof record.email === "string" || "authProvider" in record)
-
-  if (isUserProjection) next = { ...record, ...changes }
-
-  for (const [key, child] of Object.entries(next)) {
-    const patched = patchUser(child, userId, changes)
-    if (patched === child) continue
-    if (next === record) next = { ...record }
-    next[key] = patched
-  }
-  return next as T
-}
-
 export function patchAdminUserProjections(
   queryClient: QueryClient,
   userId: string,
   changes: Partial<AuthUser>,
 ) {
-  adminUserProjectionKeys(userId).forEach((queryKey) => {
-    queryClient.setQueriesData({ queryKey }, (current: unknown) =>
-      patchUser(current, userId, changes),
-    )
-  })
+  const patch = definedChanges(changes)
+  if (Object.keys(patch).length === 0) return
+
+  updateDeepInQueries(
+    queryClient,
+    adminUserProjectionKeys(userId),
+    isAdminUserProjection(userId),
+    (current) => ({ ...current, ...patch }),
+  )
 }
 
 export function restoreAdminUserProjections(

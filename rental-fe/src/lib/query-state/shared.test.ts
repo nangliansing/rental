@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  applyToCachedQueries,
   dropFiniteTotal,
   forEachCachedQuery,
   isPositiveFiniteCount,
@@ -331,6 +332,75 @@ describe("query-state shared guards", () => {
     })
 
     expect(readPageItems(page)).toBeUndefined()
+  })
+})
+
+describe("applyToCachedQueries", () => {
+  it("applies the transform to every unique query and validates keys", () => {
+    const validKey = ["listing", "valid"] as const
+    const store = new Map<string, unknown>([
+      [JSON.stringify(validKey), { count: 1 }],
+    ])
+    const setQueryData = vi.fn(
+      (key: unknown, updater: (current: unknown) => unknown) => {
+        store.set(JSON.stringify(key), updater(store.get(JSON.stringify(key))))
+      },
+    )
+    const queryClient = {
+      getQueryCache: () => ({
+        findAll: () => [
+          { queryHash: "bad", queryKey: "not-an-array" },
+          { queryHash: "good", queryKey: validKey },
+          { queryHash: "good", queryKey: validKey },
+        ],
+      }),
+      setQueryData,
+    } as unknown as QueryClient
+
+    applyToCachedQueries(queryClient, [["listing"]], (current) => ({
+      ...(current as Record<string, unknown>),
+      count: 2,
+    }))
+
+    expect(setQueryData).toHaveBeenCalledTimes(1)
+    expect(store.get(JSON.stringify(validKey))).toEqual({ count: 2 })
+  })
+
+  it("continues after a throwing setQueryData and ignores invalid transforms", () => {
+    const goodKey = ["listing", "good"] as const
+    const badKey = ["listing", "bad"] as const
+    const store = new Map<string, unknown>([
+      [JSON.stringify(goodKey), 1],
+      [JSON.stringify(badKey), 1],
+    ])
+    const setQueryData = vi.fn(
+      (key: unknown, updater: (current: unknown) => unknown) => {
+        if (JSON.stringify(key) === JSON.stringify(badKey)) {
+          throw new Error("set failed")
+        }
+        store.set(JSON.stringify(key), updater(store.get(JSON.stringify(key))))
+      },
+    )
+    const queryClient = {
+      getQueryCache: () => ({
+        findAll: () => [
+          { queryHash: "bad", queryKey: badKey },
+          { queryHash: "good", queryKey: goodKey },
+        ],
+      }),
+      setQueryData,
+    } as unknown as QueryClient
+
+    expect(() =>
+      applyToCachedQueries(queryClient, [["listing"]], (current) =>
+        typeof current === "number" ? current + 1 : current,
+      ),
+    ).not.toThrow()
+    expect(store.get(JSON.stringify(goodKey))).toBe(2)
+
+    expect(() =>
+      applyToCachedQueries(queryClient, [["listing"]], null as never),
+    ).not.toThrow()
   })
 })
 

@@ -1,11 +1,10 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 
 import {
-  forEachCachedQuery,
+  applyToCachedQueries,
   isFlatListCollection,
   isFunction,
   isInfiniteListCollection,
-  isQueryKey,
   readArrayLength,
   readPageItems,
   tryMapMatchingItems,
@@ -144,17 +143,9 @@ export function updateInInfiniteListInQueries<T extends QueryStateRecord>(
 ) {
   if (!isFunction(match) || !isFunction(update)) return
 
-  forEachCachedQuery(queryClient, queryKeys, (query) => {
-    if (!isQueryKey(query.queryKey)) return
-
-    try {
-      queryClient.setQueryData(query.queryKey, (current: unknown) =>
-        updateInInfiniteList(current, match, update),
-      )
-    } catch {
-      // Keep going; one key failure must not block the rest.
-    }
-  })
+  applyToCachedQueries(queryClient, queryKeys, (current) =>
+    updateInInfiniteList(current, match, update),
+  )
 }
 
 export type {
