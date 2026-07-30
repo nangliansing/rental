@@ -41,18 +41,19 @@ frontend.
 
 ## Optional Authentication
 
-Authentication only changes the `isSavedByMe` value populated on listings.
-It does not change which public buildings or listings are searchable.
+Authentication changes viewer-specific fields only. It does not change which public buildings or listings are searchable.
 
 | Token or user state | Result |
 | --- | --- |
 | No token | Continue anonymously |
 | Invalid or expired access token | Continue anonymously |
-| Valid token for an `ACTIVE` user | Populate viewer-specific saved state |
+| Valid token for an `ACTIVE` user | Populate viewer-specific follow and saved state |
 | Valid token for a suspended, inactive, deleted, or missing user | Continue anonymously |
 
-For an anonymous viewer, every returned listing has
-`"isSavedByMe": false`.
+For an anonymous viewer:
+
+- every returned building has `"isFollowing": false`
+- every returned listing has `"isSavedByMe": false`
 
 ## Geometry
 
@@ -238,6 +239,7 @@ Status:
       },
       "minRent": 14500,
       "maxRent": 22000,
+      "isFollowing": false,
       "listings": [
         {
           "_id": "6a596137e24814847ca9713c",
@@ -347,13 +349,36 @@ The frontend should convert any map-library coordinate objects into plain
 `[longitude, latitude]` arrays before calling the endpoint. Do not reverse the
 coordinate order.
 
+## isFollowing
+
+Each returned building includes `isFollowing`.
+
+- anonymous viewer: `false`
+- invalid token: `false`
+- suspended/inactive/missing viewer user: `false`
+- active viewer who follows the building: `true`
+- active viewer who does not follow the building: `false`
+
+The follow lookup runs after pagination so only buildings on the requested page are enriched.
+
+## isSavedByMe
+
+Each returned listing includes `isSavedByMe` using the same anonymous-viewer rules as above.
+
 ## Implementation notes
 
 - The line geometry is buffered by `distanceMeters` before querying MongoDB.
 - Buildings are matched through the existing `location` `2dsphere` index.
 - The endpoint reuses the map search's filtering, listing population,
-  projection, deterministic ordering, saved-state enrichment, and pagination
-  pipeline.
+  projection, deterministic ordering, saved-state enrichment, follow-state
+  enrichment, and pagination pipeline.
+
+Automated coverage:
+
+```txt
+test/search-buildings-near-lines.integration.test.js
+test/building-is-following.integration.test.js
+```
 
 Before deploying to a new environment, audit its physical indexes and verify
 the near-lines execution plan with that environment's `MONGODB_URI`:

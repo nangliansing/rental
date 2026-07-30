@@ -1,5 +1,6 @@
 // Done
 // modules/search/pipelines/helpers/build-search-buildings.pipeline.js
+import { buildIsFollowingFieldStages } from "../../../building-follow/pipelines/index.js";
 import { buildBuildingMatchStages } from "./build-building-match-stages.js";
 import { buildListingsFromBuildingLookupStages } from "./build-listings-from-building-lookup-stages.js";
 
@@ -53,6 +54,7 @@ export const buildSearchBuildingsPipeline = ({
                 data: [
                     { $skip: skip },
                     { $limit: limit },
+                    ...buildIsFollowingFieldStages(viewerUserId),
                     {
                         $project: {
                             name: 1,
@@ -64,6 +66,7 @@ export const buildSearchBuildingsPipeline = ({
                             minRent: 1,
                             maxRent: 1,
                             listings: 1,
+                            isFollowing: 1,
                         },
                     },
                 ],
