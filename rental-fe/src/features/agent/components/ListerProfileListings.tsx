@@ -3,6 +3,10 @@ import { useState } from "react"
 
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import { ListingDetailModal } from "@/features/listing/components/ListingDetailModal"
+import {
+  ListingGridPreviewPortal,
+  useListingGridPreview,
+} from "@/features/listing/components/grid-preview"
 import { ProfileTabPanel } from "@/features/profile/components/ProfileTabPanel"
 import { PROFILE_TAB_CONTENT_TOP_CLASS } from "@/features/profile/utils/profileLayoutStyles"
 import type { SearchListing } from "@/features/map-search/types"
@@ -34,6 +38,7 @@ export function ListerProfileListings({
   onRetry,
 }: ListerProfileListingsProps) {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
+  const preview = useListingGridPreview()
 
   if (isLoading) {
     return (
@@ -75,10 +80,15 @@ export function ListerProfileListings({
           <ListingGridCard
             key={listing._id}
             listing={listing}
-            onOpen={setSelectedListingId}
+            onActivate={preview.openPreview}
           />
         ))}
       </ListingCardGrid>
+
+      <ListingGridPreviewPortal
+        preview={preview}
+        onOpenDetail={setSelectedListingId}
+      />
 
       <ListingDetailModal
         listingId={selectedListingId}

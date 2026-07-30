@@ -9,6 +9,10 @@ import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 import type { ListingDetailListing } from "../types"
 import { buildListingDirectionsDestination } from "../utils/buildListingDirectionsDestination"
 import { ListingGridCard } from "./ListingGridCard"
+import {
+  ListingGridPreviewPortal,
+  useListingGridPreview,
+} from "./grid-preview"
 import { ListingPostCard } from "./ListingPostCard"
 import { ListingDetailReviewsSection } from "./reviews/ListingDetailReviewsSection"
 
@@ -120,6 +124,7 @@ function MoreListingsInBuilding({
   currentListingId: string
   onListingSelect?: (listingId: string) => void
 }) {
+  const preview = useListingGridPreview()
   const listingsQuery = useSearchListingsInBuilding({
     buildingId: building?._id,
     filters: EMPTY_LISTING_FILTERS,
@@ -181,10 +186,17 @@ function MoreListingsInBuilding({
           <ListingGridCard
             key={listing._id}
             listing={listing}
-            onOpen={(listingId) => onListingSelect?.(listingId)}
+            showBuildingName={false}
+            onActivate={preview.openPreview}
           />
         ))}
       </ListingCardGrid>
+
+      <ListingGridPreviewPortal
+        preview={preview}
+        showBuildingName={false}
+        onOpenDetail={(listingId) => onListingSelect?.(listingId)}
+      />
     </section>
   )
 }
