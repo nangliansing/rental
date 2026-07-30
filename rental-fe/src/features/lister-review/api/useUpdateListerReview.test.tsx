@@ -29,6 +29,13 @@ const review = {
   deletedAt: null,
   createdAt: "2026-07-01T00:00:00.000Z",
   updatedAt: "2026-07-01T00:00:00.000Z",
+  reviewer: {
+    userId: "user-1",
+    name: "Jane Doe",
+    displayName: "Jane",
+    profilePhoto: null,
+    isVerified: true,
+  },
 }
 const oldSummary = {
   averageRating: 4,
@@ -100,14 +107,21 @@ describe("useUpdateListerReview", () => {
   })
 
   it("reconciles server data and invalidates only the target review lists", async () => {
-    mocks.updateListerReview.mockResolvedValue({ review: updatedReview, reviewSummary: newSummary })
+    mocks.updateListerReview.mockResolvedValue({
+      review: { ...updatedReview, reviewer: undefined },
+      reviewSummary: newSummary,
+    })
     const { result, queryClient, reviewsKey, reportKey } = setup()
     const invalidate = vi.spyOn(queryClient, "invalidateQueries")
 
     act(() => result.current.mutate(variables))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({ pages: [{ data: { myReview: updatedReview } }] })
-    expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: updatedReview })
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [{ data: { myReview: { rating: 2, reviewer: review.reviewer } } }],
+    })
+    expect(queryClient.getQueryData(reportKey)).toMatchObject({
+      review: { rating: 2, reviewer: review.reviewer },
+    })
     expect(invalidate).toHaveBeenCalledTimes(2)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviews.byLister("profile-1"), refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"), refetchType: "active" })

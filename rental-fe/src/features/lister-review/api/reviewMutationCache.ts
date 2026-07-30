@@ -597,6 +597,40 @@ export function removeReviewFromSummary(
   }
 }
 
+function mergeReviewerProjection(
+  previous: ListerReview["reviewer"],
+  next: ListerReview["reviewer"],
+): ListerReview["reviewer"] {
+  if (!next) return previous
+  if (!previous) return next
+
+  return {
+    ...previous,
+    ...next,
+    name: next.name ?? previous.name,
+    displayName: next.displayName ?? previous.displayName,
+    profilePhoto: next.profilePhoto ?? previous.profilePhoto,
+  }
+}
+
+/**
+ * Applies authoritative mutation fields from `next` while keeping embedded
+ * list/search projections (e.g. reviewer name and photo) when the write
+ * response omits or strips them.
+ */
+export function mergeListerReviewWithServerResponse(
+  previous: ListerReview,
+  next: ListerReview,
+): ListerReview {
+  if (previous._id !== next._id) return next
+
+  return {
+    ...previous,
+    ...next,
+    reviewer: mergeReviewerProjection(previous.reviewer, next.reviewer),
+  }
+}
+
 /**
  * Replaces every occurrence of the review (matched by id + review shape) at
  * any depth in the cached queries under `keys`. Delegates the deep traversal
@@ -610,6 +644,29 @@ export function patchReviewInQueries(
   review: ListerReview,
 ) {
   updateDeepInQueries(queryClient, keys, isReviewRecord(reviewId), () => review)
+}
+
+/**
+ * Reconciles a mutation response onto cached review copies without dropping
+ * embedded projections that list/search queries include but write endpoints
+ * often omit.
+ */
+export function patchReviewFromServerInQueries(
+  queryClient: QueryClient,
+  keys: QueryKey[],
+  reviewId: string,
+  serverReview: ListerReview,
+) {
+  updateDeepInQueries(
+    queryClient,
+    keys,
+    isReviewRecord(reviewId),
+    (current) =>
+      mergeListerReviewWithServerResponse(
+        current as unknown as ListerReview,
+        serverReview,
+      ),
+  )
 }
 
 /**

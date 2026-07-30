@@ -7,6 +7,8 @@ import type { ListerReview } from "./createListerReview"
 import {
   addReviewToSummary,
   listerReviewRefetchQueryKeys,
+  mergeListerReviewWithServerResponse,
+  patchReviewFromServerInQueries,
   patchReviewInQueries,
   patchReviewSummaryInQueries,
   removeReviewFromListerReviewData,
@@ -509,6 +511,138 @@ describe("removeReviewFromSummary", () => {
         fiveStars: 0,
       },
       tagCounts: [],
+    })
+  })
+})
+
+describe("mergeListerReviewWithServerResponse", () => {
+  const reviewer = {
+    userId: "user-1",
+    name: "Jane Doe",
+    displayName: "Jane",
+    profilePhoto: {
+      publicId: "photo-1",
+      secureUrl: "https://example.com/jane.jpg",
+      resourceType: "image",
+      format: "jpg",
+      width: 100,
+      height: 100,
+      bytes: 1000,
+      position: 0,
+      alt: null,
+      isCover: false,
+    },
+    isVerified: true,
+  }
+
+  it("keeps cached reviewer display when the write response omits it", () => {
+    expect(
+      mergeListerReviewWithServerResponse(
+        { ...review, reviewer },
+        {
+          ...review,
+          visibility: { ...review.visibility, isCollapsed: true },
+          updatedAt: "2026-07-22T00:00:00.000Z",
+        },
+      ),
+    ).toMatchObject({
+      visibility: { isCollapsed: true },
+      updatedAt: "2026-07-22T00:00:00.000Z",
+      reviewer,
+    })
+  })
+
+  it("fills missing reviewer labels from cache when the server sends only ids", () => {
+    expect(
+      mergeListerReviewWithServerResponse(
+        { ...review, reviewer },
+        {
+          ...review,
+          reviewer: {
+            userId: "user-1",
+            name: null,
+            displayName: null,
+            profilePhoto: null,
+            isVerified: true,
+          },
+        },
+      ).reviewer,
+    ).toEqual(reviewer)
+  })
+
+  it("prefers server reviewer fields when the response includes display info", () => {
+    const serverReviewer = {
+      ...reviewer,
+      displayName: "Updated Name",
+    }
+
+    expect(
+      mergeListerReviewWithServerResponse(
+        { ...review, reviewer },
+        { ...review, reviewer: serverReviewer },
+      ).reviewer,
+    ).toEqual(serverReviewer)
+  })
+
+  it("returns the server review unchanged when ids do not match", () => {
+    const serverReview = { ...review, _id: "review-2", comment: "Other" }
+
+    expect(
+      mergeListerReviewWithServerResponse({ ...review, reviewer }, serverReview),
+    ).toBe(serverReview)
+  })
+})
+
+describe("patchReviewFromServerInQueries", () => {
+  const reviewer = {
+    userId: "user-1",
+    name: "Jane Doe",
+    displayName: "Jane",
+    profilePhoto: null,
+    isVerified: true,
+  }
+  const reviewsKey = queryKeys.listerReviews.list({
+    listerProfileId: "profile-1",
+    sort: "latest",
+    limit: 10,
+  })
+
+  it("preserves cached reviewer projections while applying server fields", () => {
+    const queryClient = createQueryClient()
+    queryClient.setQueryData(reviewsKey, {
+      pageParams: [1],
+      pages: [
+        {
+          success: true,
+          data: {
+            myReview: null,
+            reviews: [{ ...review, reviewer }],
+          },
+          pagination: { page: 1, limit: 10, total: 1 },
+        },
+      ],
+    })
+
+    patchReviewFromServerInQueries(queryClient, [reviewsKey], review._id, {
+      ...review,
+      visibility: { ...review.visibility, isCollapsed: true },
+      updatedAt: "2026-07-22T00:00:00.000Z",
+    })
+
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [
+        {
+          data: {
+            reviews: [
+              {
+                visibility: { isCollapsed: true },
+                updatedAt: "2026-07-22T00:00:00.000Z",
+                reviewer,
+              },
+            ],
+          },
+        },
+      ],
     })
   })
 })

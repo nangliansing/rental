@@ -29,9 +29,17 @@ const review = {
   deletedAt: null,
   createdAt: "2026-07-01T00:00:00.000Z",
   updatedAt: "2026-07-01T00:00:00.000Z",
+  reviewer: {
+    userId: "user-1",
+    name: "Jane Doe",
+    displayName: "Jane",
+    profilePhoto: null,
+    isVerified: true,
+  },
 }
 const serverReview = {
   ...review,
+  reviewer: undefined,
   visibility: {
     isCollapsed: true,
     collapsedBy: "owner-1",
@@ -94,11 +102,53 @@ describe("useToggleListerReviewCollapse", () => {
 
     act(() => result.current.mutate({ review }))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({ pages: [{ data: { reviews: [serverReview] } }] })
-    expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: serverReview })
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [{
+        data: {
+          reviews: [{
+            visibility: { isCollapsed: true },
+            reviewer: review.reviewer,
+          }],
+        },
+      }],
+    })
+    expect(queryClient.getQueryData(reportKey)).toMatchObject({
+      review: {
+        visibility: { isCollapsed: true },
+        reviewer: review.reviewer,
+      },
+    })
     // Collapsed reviews drop out of teasers, so those queries must refetch.
     expect(invalidate).toHaveBeenCalledTimes(2)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviews.byLister("profile-1"), refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"), refetchType: "active" })
+  })
+
+  it("preserves reviewer display through the full optimistic reconcile cycle", async () => {
+    mocks.toggleListerReviewCollapse.mockResolvedValue(serverReview)
+    const { result, queryClient, reviewsKey } = setup()
+
+    act(() => result.current.mutate({ review }))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+        pages: [{ data: { reviews: [{ visibility: { isCollapsed: true } }] } }],
+      }),
+    )
+    expect(
+      (
+        queryClient.getQueryData(reviewsKey) as {
+          pages: [{ data: { reviews: [{ reviewer?: { displayName?: string } }] } }]
+        }
+      ).pages[0].data.reviews[0].reviewer?.displayName,
+    ).toBe("Jane")
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(
+      (
+        queryClient.getQueryData(reviewsKey) as {
+          pages: [{ data: { reviews: [{ reviewer?: { displayName?: string } }] } }]
+        }
+      ).pages[0].data.reviews[0].reviewer?.displayName,
+    ).toBe("Jane")
   })
 })
