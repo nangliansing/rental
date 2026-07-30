@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import {
+  createListingAgentProfile,
   createSearchBuilding,
   createSearchListing,
 } from "@/test/fixtures/listings"
@@ -54,6 +55,54 @@ describe("ListingGridCardOverlayContent", () => {
     )
 
     expect(screen.queryByText("Bangkapi Residence")).not.toBeInTheDocument()
+  })
+
+  it("shows agent attribution in building context", () => {
+    const listing = {
+      ...createSearchListing({
+        agentProfile: createListingAgentProfile({
+          displayName: "Mina Chen",
+          isVerified: true,
+          reviewSummary: {
+            averageRating: 4.5,
+            reviewCount: 35,
+            ratingCounts: {
+              oneStar: 0,
+              twoStars: 0,
+              threeStars: 0,
+              fourStars: 10,
+              fiveStars: 25,
+            },
+            tagCounts: [],
+          },
+        }),
+      }),
+      building: createSearchBuilding(),
+    }
+
+    render(
+      <ListingGridCardOverlayContent
+        listing={listing}
+        showAgentAttribution
+      />,
+    )
+
+    expect(screen.getByText("Mina Chen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Verified lister")).toBeInTheDocument()
+    expect(screen.getByText("4.5 (35)")).toBeInTheDocument()
+  })
+
+  it("hides agent attribution by default", () => {
+    const listing = {
+      ...createSearchListing({
+        agentProfile: createListingAgentProfile({ displayName: "Mina Chen" }),
+      }),
+      building: createSearchBuilding(),
+    }
+
+    render(<ListingGridCardOverlayContent listing={listing} />)
+
+    expect(screen.queryByText("Mina Chen")).not.toBeInTheDocument()
   })
 
   it("skips availability label work when fine print is hidden", () => {
