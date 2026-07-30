@@ -206,7 +206,7 @@ export function removePendingPostFromInfiniteData(
   if (current === undefined) return current
 
   const result = removeFromInfiniteList(current, isPendingPostId(pendingPostId))
-  return result as OwnerPendingPostsInfiniteData | undefined
+  return result as unknown as OwnerPendingPostsInfiniteData | undefined
 }
 
 export function transitionOwnerPendingPostInInfiniteData(
@@ -231,7 +231,7 @@ export function transitionOwnerPendingPostInInfiniteData(
       ...changes,
       status,
     }))
-    return result as OwnerPendingPostsInfiniteData | undefined
+    return result as unknown as OwnerPendingPostsInfiniteData | undefined
   }
 
   return removePendingPostFromInfiniteData(current, pendingPostId)

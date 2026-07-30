@@ -125,11 +125,11 @@ export function transitionAdminPendingPostInInfiniteData(
 
   if (belongsInList) {
     const result = updateInInfiniteList(current, match, () => transitionedPost)
-    return result as AdminPendingPostsInfiniteData | undefined
+    return result as unknown as AdminPendingPostsInfiniteData | undefined
   }
 
   const result = removeFromInfiniteList(current, match)
-  return result as AdminPendingPostsInfiniteData | undefined
+  return result as unknown as AdminPendingPostsInfiniteData | undefined
 }
 
 export function createOptimisticRejectedPendingPost(

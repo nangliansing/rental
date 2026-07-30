@@ -26,5 +26,5 @@ export function removePlatformAdminFromInfiniteData(
   if (!isInfiniteListCollection(current)) return current
 
   const result = removeFromInfiniteList(current, isPlatformAdminId(userId))
-  return result as AdminPlatformAdminsInfiniteData | undefined
+  return result as unknown as AdminPlatformAdminsInfiniteData | undefined
 }
