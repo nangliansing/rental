@@ -74,6 +74,7 @@ export function ListingGridPreviewModal({
               showBuildingName={showBuildingName}
               showFinePrint
               showAvailabilityInFinePrint={false}
+              showAgentAttribution={!showBuildingName}
             />
           </button>
         </div>

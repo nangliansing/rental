@@ -22,12 +22,14 @@ import {
   formatRate,
 } from "../../utils/listingDisplay"
 import { getListingAvailabilityLabel } from "../../utils/listingAvailability"
+import { ListingGridCardAgentAttribution } from "./ListingGridCardAgentAttribution"
 
 export type ListingGridCardOverlayContentProps = {
   listing: ListingGridCardListing
   showBuildingName?: boolean
   showFinePrint?: boolean
   showAvailabilityInFinePrint?: boolean
+  showAgentAttribution?: boolean
 }
 
 export function ListingGridCardOverlayContent({
@@ -35,6 +37,7 @@ export function ListingGridCardOverlayContent({
   showBuildingName = true,
   showFinePrint = false,
   showAvailabilityInFinePrint = true,
+  showAgentAttribution = false,
 }: ListingGridCardOverlayContentProps) {
   const buildingName = listing.building?.name?.trim()
   const availabilityLabel =
@@ -90,6 +93,9 @@ export function ListingGridCardOverlayContent({
             <span className="truncate">{availabilityLabel}</span>
           )}
         </ListingGridCardFinePrint>
+      )}
+      {showAgentAttribution && (
+        <ListingGridCardAgentAttribution agent={listing.agentProfile} />
       )}
     </ListingGridCardOverlay>
   )

@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  createListingAgentProfile,
   createSearchBuilding,
   createSearchListing,
 } from "@/test/fixtures/listings"
@@ -135,6 +136,56 @@ describe("listing grid preview integration", () => {
 
       expect(
         within(screen.getByRole("dialog")).queryByText("Bangkapi Residence"),
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows lister attribution in building-context preview", async () => {
+      const user = userEvent.setup()
+      const listing = createSearchListing({
+        building: createSearchBuilding(),
+        agentProfile: createListingAgentProfile({
+          displayName: "Mina Chen",
+          isVerified: true,
+          reviewSummary: {
+            averageRating: 4.5,
+            reviewCount: 35,
+            ratingCounts: {
+              oneStar: 0,
+              twoStars: 0,
+              threeStars: 0,
+              fourStars: 10,
+              fiveStars: 25,
+            },
+            tagCounts: [],
+          },
+        }),
+      })
+
+      render(
+        <GridPreviewHarness listing={listing} showBuildingName={false} />,
+      )
+
+      await user.click(screen.getByRole("button", { name: "Open listing ฿14k" }))
+
+      const dialog = within(screen.getByRole("dialog"))
+      expect(dialog.getByText("Mina Chen")).toBeInTheDocument()
+      expect(dialog.getByLabelText("Verified lister")).toBeInTheDocument()
+      expect(dialog.getByText("4.5 (35)")).toBeInTheDocument()
+    })
+
+    it("does not show lister attribution outside building context", async () => {
+      const user = userEvent.setup()
+      const listing = createSearchListing({
+        building: createSearchBuilding(),
+        agentProfile: createListingAgentProfile({ displayName: "Mina Chen" }),
+      })
+
+      render(<GridPreviewHarness listing={listing} showBuildingName />)
+
+      await user.click(screen.getByRole("button", { name: "Open listing ฿14k" }))
+
+      expect(
+        within(screen.getByRole("dialog")).queryByText("Mina Chen"),
       ).not.toBeInTheDocument()
     })
   })
