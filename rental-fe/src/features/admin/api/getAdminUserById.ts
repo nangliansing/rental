@@ -155,9 +155,13 @@ function parseGetAdminUserByIdResponse(value: unknown): AdminUserDetails {
   }
 }
 
-export async function getAdminUserById(userId: string) {
+export async function getAdminUserById(
+  userId: string,
+  signal?: AbortSignal,
+) {
   const response = await apiClient.get<unknown>(
     `/admin/users/${encodeURIComponent(userId)}`,
+    { signal },
   )
 
   return parseGetAdminUserByIdResponse(response.data)

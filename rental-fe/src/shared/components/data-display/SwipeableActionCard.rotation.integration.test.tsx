@@ -322,6 +322,22 @@ describe("SwipeableActionCard + RotatingContent integration", () => {
     expect(disconnect).toHaveBeenCalled()
   })
 
+  it("keeps pan-y on the snap track so vertical gestures do not break teaser rotation", () => {
+    renderReviewCard()
+    setCardInView(true)
+
+    const scroller = screen.getByTestId("swipeable-action-card-scroller")
+    expect(scroller).toHaveClass("touch-pan-y")
+    expect(scroller).not.toHaveClass("touch-pan-x")
+
+    fireEvent.pointerDown(scroller, { button: 0, clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(scroller, { clientX: 0, clientY: 40 })
+    fireEvent.pointerUp(scroller, { clientX: 0, clientY: 40 })
+
+    advanceToNextItem(1000)
+    expect(screen.getByText("Lister B")).toBeInTheDocument()
+  })
+
   it("pauses the active rotator when pages shrink away mid-rotation", () => {
     const { rerender } = render(
       <SwipeableActionCard aria-label="Review highlights">

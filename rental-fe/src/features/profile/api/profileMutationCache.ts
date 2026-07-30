@@ -7,11 +7,15 @@ import {
   restoreQueryCacheSnapshot,
   type QueryCacheSnapshot,
 } from "@/lib/query-cache-snapshot"
+import { updateDeepInQueries } from "@/lib/query-state"
+import { isQueryStateRecord } from "@/lib/query-state/shared"
 
 import type { AgentProfile } from "./createAgentProfile"
 import type { AgentProfileFormSubmitValues } from "../components/AgentProfileForm"
 
 export type ProfileCacheSnapshot = QueryCacheSnapshot
+
+export const PROFILE_WRITE_SCOPE_ID = "profile-write"
 
 export const profileProjectionQueryKeys: QueryKey[] = [
   queryKeys.profiles.me,
@@ -32,23 +36,17 @@ export const profileProjectionQueryKeys: QueryKey[] = [
   queryKeys.admin.reports.details,
   queryKeys.admin.reviewReports.lists,
   queryKeys.admin.reviewReports.details,
-  queryKeys.admin.platformAdmins.list,
+  queryKeys.admin.platformAdmins.lists,
   queryKeys.admin.users.details,
 ]
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
-}
-
-function isAgentProfileProjection(
-  value: Record<string, unknown>,
-  profileId: string,
-) {
-  return (
+const isAgentProfileProjection =
+  (profileId: string) =>
+  (value: Record<string, unknown>) =>
     value._id === profileId &&
-    ("displayName" in value || "profilePhoto" in value || "userId" in value)
-  )
-}
+    ("displayName" in value ||
+      "profilePhoto" in value ||
+      "userId" in value)
 
 function definedChanges(
   changes: AgentProfileFormSubmitValues | Partial<AgentProfile>,
@@ -56,38 +54,6 @@ function definedChanges(
   return Object.fromEntries(
     Object.entries(changes).filter(([, value]) => value !== undefined),
   )
-}
-
-function patchAgentProfileProjection<T>(
-  value: T,
-  profileId: string,
-  changes: Record<string, unknown>,
-): T {
-  if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const patched = patchAgentProfileProjection(item, profileId, changes)
-      changed ||= patched !== item
-      return patched
-    })
-    return (changed ? next : value) as T
-  }
-
-  if (!isRecord(value)) return value
-
-  let next: Record<string, unknown> = value
-  if (isAgentProfileProjection(value, profileId)) {
-    next = { ...value, ...changes }
-  }
-
-  for (const [key, child] of Object.entries(next)) {
-    const patched = patchAgentProfileProjection(child, profileId, changes)
-    if (patched === child) continue
-    if (next === value) next = { ...value }
-    next[key] = patched
-  }
-
-  return next as T
 }
 
 export async function cancelProfileProjectionQueries(
@@ -118,12 +84,14 @@ export function updateAgentProfileProjections(
   queryKeysToUpdate: QueryKey[] = profileProjectionQueryKeys,
 ) {
   const patch = definedChanges(changes)
+  if (Object.keys(patch).length === 0) return
 
-  queryKeysToUpdate.forEach((queryKey) => {
-    queryClient.setQueriesData({ queryKey }, (current) =>
-      patchAgentProfileProjection(current, profileId, patch),
-    )
-  })
+  updateDeepInQueries(
+    queryClient,
+    queryKeysToUpdate,
+    isAgentProfileProjection(profileId),
+    (current) => ({ ...current, ...patch }),
+  )
 }
 
 export const deletedProfileQueryKeys: QueryKey[] = [
@@ -142,22 +110,39 @@ const deletedProfileQueriesToRemove: QueryKey[] = [
   queryKeys.listerReviews.lists,
 ]
 
-const deletedProfileCollectionsToRefresh: QueryKey[] = [
+export const deletedProfileCollectionsToRefresh: QueryKey[] = [
   queryKeys.mapSearch.buildings,
   queryKeys.mapSearch.listingsInBuilding,
   queryKeys.savedListings.all,
 ]
 
 export async function reconcileDeletedProfileQueries(queryClient: QueryClient) {
-  deletedProfileQueriesToRemove.forEach((queryKey) => {
-    queryClient.removeQueries({ queryKey })
-  })
+  removeDeletedProfileQueries(queryClient)
 
   await Promise.all(
     deletedProfileCollectionsToRefresh.map((queryKey) =>
       queryClient.invalidateQueries({ queryKey, refetchType: "active" }),
     ),
   )
+}
+
+export function removeDeletedProfileQueries(queryClient: QueryClient) {
+  const failures: unknown[] = []
+
+  deletedProfileQueriesToRemove.forEach((queryKey) => {
+    try {
+      queryClient.removeQueries({ queryKey })
+    } catch (error) {
+      failures.push(error)
+    }
+  })
+
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      "Unable to remove every deleted-profile cache family.",
+    )
+  }
 }
 
 export function cacheMyAgentProfile(
@@ -168,6 +153,6 @@ export function cacheMyAgentProfile(
   queryClient.setQueryData(
     queryKeys.profiles.detail(profile._id),
     (current: unknown) =>
-      isRecord(current) ? { ...current, ...profile } : profile,
+      isQueryStateRecord(current) ? { ...current, ...profile } : profile,
   )
 }

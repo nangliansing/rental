@@ -16,36 +16,85 @@ type ListerReviewKeyInput = {
   limit: number
 }
 
+/**
+ * Query-key identity is owned by this module. Keep key segments JSON-safe and
+ * build child keys from their family prefix so partial matching remains
+ * predictable.
+ */
+const key = <const TSegments extends readonly unknown[]>(...segments: TSegments) =>
+  segments
+
+const childKey = <
+  const TPrefix extends readonly unknown[],
+  const TSegments extends readonly unknown[],
+>(
+  prefix: TPrefix,
+  ...segments: TSegments
+) => [...prefix, ...segments] as const
+
+const roots = {
+  auth: key("current-user"),
+  profiles: key("agent-profiles"),
+  notifications: key("notifications"),
+  ownerPendingPosts: key("owner-pending-posts"),
+  savedListings: key("saved-listings"),
+  listerReviews: key("lister-reviews"),
+  listerReviewTeasers: key("lister-review-teasers"),
+  agentListings: key("agent-listings"),
+  buildings: key("building"),
+  buildingSearch: key("building-search"),
+  listingsInBuilding: key("search-listings-in-building"),
+  ownerListings: key("owner-listings"),
+  ownerListingDetails: key("owner-listing"),
+  publicListingDetails: key("public-listing"),
+  adminPendingPosts: key("admin-pending-posts"),
+  adminBuildingEditRequests: key("admin-building-edit-requests"),
+  adminBuildingEditRequestDetails: key("admin-building-edit-request"),
+  adminReports: key("admin-reports"),
+  adminReportDetails: key("admin-report"),
+  adminReviewReports: key("admin-review-reports"),
+  adminReviewReportDetails: key("admin-review-report"),
+  adminSuspensions: key("admin-suspensions"),
+  adminSuspensionDetails: key("admin-suspension"),
+  adminPlatformAdmins: key("admin-platform-admins"),
+  adminUserDetails: key("admin-user"),
+} as const
+
 export const queryKeys = {
   auth: {
-    currentUser: ["current-user"] as const,
+    all: roots.auth,
+    currentUser: roots.auth,
   },
   profiles: {
-    all: ["agent-profiles"] as const,
-    me: ["agent-profiles", "me"] as const,
-    details: ["agent-profiles", "detail"] as const,
+    all: roots.profiles,
+    me: childKey(roots.profiles, "me"),
+    details: childKey(roots.profiles, "detail"),
     detail: (agentProfileId: string) =>
-      ["agent-profiles", "detail", agentProfileId] as const,
+      childKey(roots.profiles, "detail", agentProfileId),
   },
   notifications: {
-    me: ["notifications", "me"] as const,
+    all: roots.notifications,
+    me: childKey(roots.notifications, "me"),
   },
   pendingPosts: {
-    ownerLists: ["owner-pending-posts"] as const,
+    all: roots.ownerPendingPosts,
+    ownerLists: roots.ownerPendingPosts,
     ownerList: ({ status, limit }: { status: string; limit: number }) =>
-      ["owner-pending-posts", status, limit] as const,
+      childKey(roots.ownerPendingPosts, status, limit),
   },
   savedListings: {
-    all: ["saved-listings"] as const,
+    all: roots.savedListings,
+    lists: roots.savedListings,
     list: ({ limit }: { limit: number }) =>
-      ["saved-listings", limit] as const,
+      childKey(roots.savedListings, limit),
   },
   listerReviews: {
-    lists: ["lister-reviews"] as const,
+    all: roots.listerReviews,
+    lists: roots.listerReviews,
     byLister: (listerProfileId: string) =>
-      ["lister-reviews", listerProfileId] as const,
+      childKey(roots.listerReviews, listerProfileId),
     list: ({ listerProfileId, sort, limit }: ListerReviewKeyInput) =>
-      ["lister-reviews", listerProfileId, sort, limit] as const,
+      childKey(roots.listerReviews, listerProfileId, sort, limit),
   },
   /**
    * Separate namespace from `listerReviews`: teasers cache a flat single page,
@@ -53,20 +102,24 @@ export const queryKeys = {
    * review mutations from patching one cache with the other's shape.
    */
   listerReviewTeasers: {
-    lists: ["lister-review-teasers"] as const,
+    all: roots.listerReviewTeasers,
+    lists: roots.listerReviewTeasers,
     byLister: (listerProfileId: string) =>
-      ["lister-review-teasers", listerProfileId] as const,
+      childKey(roots.listerReviewTeasers, listerProfileId),
     list: ({ listerProfileId, sort, limit }: ListerReviewKeyInput) =>
-      ["lister-review-teasers", listerProfileId, sort, limit] as const,
+      childKey(roots.listerReviewTeasers, listerProfileId, sort, limit),
   },
   agentListings: {
-    lists: ["agent-listings"] as const,
+    all: roots.agentListings,
+    lists: roots.agentListings,
     list: ({ agentProfileId, sort, limit }: AgentListingKeyInput) =>
-      ["agent-listings", agentProfileId, sort, limit] as const,
+      childKey(roots.agentListings, agentProfileId, sort, limit),
   },
   buildings: {
+    all: roots.buildings,
+    details: roots.buildings,
     detail: (buildingId: string | undefined) =>
-      ["building", buildingId] as const,
+      childKey(roots.buildings, buildingId),
     neighbourhood: (
       buildingId: string | undefined,
       {
@@ -76,11 +129,16 @@ export const queryKeys = {
         radiusM: number
         fetchRadiusM: number
       },
-    ) =>
-      ["building", buildingId, "neighbourhood", radiusM, fetchRadiusM] as const,
+    ) => childKey(
+      roots.buildings,
+      buildingId,
+      "neighbourhood",
+      radiusM,
+      fetchRadiusM,
+    ),
   },
   mapSearch: {
-    buildings: ["building-search"] as const,
+    buildings: roots.buildingSearch,
     buildingResults: <TBounds, TFilters>({
       bounds,
       filters,
@@ -91,15 +149,14 @@ export const queryKeys = {
       filters: TFilters
       limit: number
       includeBuildingsWithoutMatchingListings?: boolean
-    }) =>
-      [
-        "building-search",
+    }) => childKey(
+        roots.buildingSearch,
         "area",
         bounds,
         filters,
         limit,
         includeBuildingsWithoutMatchingListings,
-      ] as const,
+      ),
     nearbyBuildingResults: <TPosition, TFilters>({
       position,
       radiusMeters,
@@ -112,16 +169,15 @@ export const queryKeys = {
       filters: TFilters
       limit: number
       includeBuildingsWithoutMatchingListings?: boolean
-    }) =>
-      [
-        "building-search",
+    }) => childKey(
+        roots.buildingSearch,
         "nearby",
         position,
         radiusMeters,
         filters,
         limit,
         includeBuildingsWithoutMatchingListings,
-      ] as const,
+      ),
     nearLinesBuildingResults: <TGeometry, TFilters>({
       geometry,
       distanceMeters,
@@ -134,17 +190,16 @@ export const queryKeys = {
       filters: TFilters
       limit: number
       includeBuildingsWithoutMatchingListings?: boolean
-    }) =>
-      [
-        "building-search",
+    }) => childKey(
+        roots.buildingSearch,
         "near-lines",
         geometry,
         distanceMeters,
         filters,
         limit,
         includeBuildingsWithoutMatchingListings,
-      ] as const,
-    listingsInBuilding: ["search-listings-in-building"] as const,
+      ),
+    listingsInBuilding: roots.listingsInBuilding,
     listingsInBuildingResults: <TFilters>({
       buildingId,
       filters,
@@ -153,68 +208,76 @@ export const queryKeys = {
       buildingId: string | undefined
       filters: TFilters
       limit: number
-    }) =>
-      ["search-listings-in-building", buildingId, filters, limit] as const,
+    }) => childKey(roots.listingsInBuilding, buildingId, filters, limit),
   },
   listings: {
-    ownerLists: ["owner-listings"] as const,
+    ownerLists: roots.ownerListings,
     ownerList: ({ visibility, sort, limit }: OwnerListingKeyInput) =>
-      ["owner-listings", visibility, sort, limit] as const,
-    ownerDetails: ["owner-listing"] as const,
+      childKey(roots.ownerListings, visibility, sort, limit),
+    ownerDetails: roots.ownerListingDetails,
     ownerDetail: (listingId: string | undefined) =>
-      ["owner-listing", listingId] as const,
-    publicDetails: ["public-listing"] as const,
+      childKey(roots.ownerListingDetails, listingId),
+    publicDetails: roots.publicListingDetails,
     publicListingDetails: (listingId: string | undefined) =>
-      ["public-listing", listingId] as const,
+      childKey(roots.publicListingDetails, listingId),
     publicDetail: (
       listingId: string | undefined,
       viewerKey?: string | null,
-    ) => ["public-listing", listingId, viewerKey ?? "anonymous"] as const,
+    ) => childKey(
+      roots.publicListingDetails,
+      listingId,
+      viewerKey ?? "anonymous",
+    ),
   },
   admin: {
     pendingPosts: {
-      lists: ["admin-pending-posts"] as const,
+      all: roots.adminPendingPosts,
+      lists: roots.adminPendingPosts,
       list: (status: string | undefined) =>
-        ["admin-pending-posts", status] as const,
+        childKey(roots.adminPendingPosts, status),
     },
     buildingEditRequests: {
-      lists: ["admin-building-edit-requests"] as const,
+      lists: roots.adminBuildingEditRequests,
       list: (status: string | undefined) =>
-        ["admin-building-edit-requests", status] as const,
-      details: ["admin-building-edit-request"] as const,
+        childKey(roots.adminBuildingEditRequests, status),
+      details: roots.adminBuildingEditRequestDetails,
       detail: (requestId: string | undefined) =>
-        ["admin-building-edit-request", requestId] as const,
+        childKey(roots.adminBuildingEditRequestDetails, requestId),
     },
     reports: {
-      lists: ["admin-reports"] as const,
+      lists: roots.adminReports,
       list: (status: string | undefined) =>
-        ["admin-reports", status] as const,
-      details: ["admin-report"] as const,
+        childKey(roots.adminReports, status),
+      details: roots.adminReportDetails,
       detail: (reportId: string | undefined) =>
-        ["admin-report", reportId] as const,
+        childKey(roots.adminReportDetails, reportId),
     },
     reviewReports: {
-      lists: ["admin-review-reports"] as const,
+      lists: roots.adminReviewReports,
       list: (status: string | undefined) =>
-        ["admin-review-reports", status] as const,
-      details: ["admin-review-report"] as const,
+        childKey(roots.adminReviewReports, status),
+      details: roots.adminReviewReportDetails,
       detail: (reviewReportId: string | undefined) =>
-        ["admin-review-report", reviewReportId] as const,
+        childKey(roots.adminReviewReportDetails, reviewReportId),
     },
     suspensions: {
-      lists: ["admin-suspensions"] as const,
+      lists: roots.adminSuspensions,
       list: (status: string | undefined) =>
-        ["admin-suspensions", status] as const,
-      details: ["admin-suspension"] as const,
+        childKey(roots.adminSuspensions, status),
+      details: roots.adminSuspensionDetails,
       detail: (suspensionId: string | undefined) =>
-        ["admin-suspension", suspensionId] as const,
+        childKey(roots.adminSuspensionDetails, suspensionId),
     },
     platformAdmins: {
-      list: ["admin-platform-admins"] as const,
+      all: roots.adminPlatformAdmins,
+      lists: roots.adminPlatformAdmins,
+      list: roots.adminPlatformAdmins,
     },
     users: {
-      details: ["admin-user"] as const,
-      detail: (userId: string | undefined) => ["admin-user", userId] as const,
+      all: roots.adminUserDetails,
+      details: roots.adminUserDetails,
+      detail: (userId: string | undefined) =>
+        childKey(roots.adminUserDetails, userId),
     },
   },
 } as const

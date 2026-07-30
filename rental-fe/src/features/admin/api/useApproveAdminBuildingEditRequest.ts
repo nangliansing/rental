@@ -6,81 +6,40 @@ import {
   patchBuildingInRelatedQueries,
 } from "@/features/buildings/api/buildingMutationCache"
 
-import {
-  captureBuildingEditRequestCache,
-  createOptimisticBuildingEditTransition,
-  findBuildingEditRequest,
-  invalidateBuildingEditRequestCache,
-  restoreBuildingEditRequestCache,
-  updateBuildingEditRequestCache,
-} from "./adminBuildingEditRequestCache"
+import { ADMIN_BUILDING_EDIT_REQUEST_WRITE_SCOPE_ID } from "./adminBuildingEditRequestCache"
+import { createAdminBuildingEditRequestTransaction } from "./adminBuildingEditRequestTransaction"
 import {
   approveAdminBuildingEditRequest,
   type ApproveAdminBuildingEditRequestInput,
+  type ApproveAdminBuildingEditRequestResult,
 } from "./approveAdminBuildingEditRequest"
 
 export function useApproveAdminBuildingEditRequest() {
   const queryClient = useQueryClient()
+  const transaction = createAdminBuildingEditRequestTransaction<
+    ApproveAdminBuildingEditRequestResult,
+    ApproveAdminBuildingEditRequestInput
+  >({
+    queryClient,
+    status: "APPROVED",
+    getReviewReason: (input) => input.reviewReason ?? "",
+    getRequest: (result) => result.request,
+  })
 
   return useMutation({
-    scope: { id: "approve-admin-building-edit-request" },
+    scope: { id: ADMIN_BUILDING_EDIT_REQUEST_WRITE_SCOPE_ID },
     mutationFn: (input: ApproveAdminBuildingEditRequestInput) =>
       approveAdminBuildingEditRequest(input),
-    onMutate: async (input) => {
-      const requestId = input.buildingEditRequestId.trim()
-      const snapshot = await captureBuildingEditRequestCache(
-        queryClient,
-        requestId,
-      )
-      const currentRequest = findBuildingEditRequest(
-        snapshot.detailData,
-        snapshot.listData,
-        requestId,
-      )
-
-      if (currentRequest) {
-        updateBuildingEditRequestCache(
-          queryClient,
-          snapshot,
-          createOptimisticBuildingEditTransition(
-            currentRequest,
-            "APPROVED",
-            input.reviewReason ?? "",
-          ),
-        )
-      }
-
-      return { snapshot }
-    },
-    onError: (_error, _input, context) => {
-      if (context) {
-        restoreBuildingEditRequestCache(queryClient, context.snapshot)
-      }
-    },
-    onSuccess: async (result, _input, context) => {
-      updateBuildingEditRequestCache(
-        queryClient,
-        context?.snapshot ??
-          (await captureBuildingEditRequestCache(
-            queryClient,
-            result.request._id,
-          )),
-        result.request,
-      )
-
+    ...transaction,
+    onSuccess: async (result, input, context) => {
+      await transaction.onSuccess?.(result, input, context)
       await cancelRelatedBuildingQueries(queryClient, result.building._id)
       patchBuildingInRelatedQueries(queryClient, result.building)
     },
-    onSettled: async (result, error, input) => {
+    onSettled: async (result, error, input, context) => {
+      await transaction.onSettled(result, error, input, context)
       if (error || !result) return
-
-      await Promise.all([
-        invalidateBuildingEditRequestCache(
-          queryClient,
-          result.request._id || input.buildingEditRequestId.trim(),
-        ),
-        invalidateRelatedBuildingQueries(queryClient, result.building._id),
-      ])
+      await invalidateRelatedBuildingQueries(queryClient, result.building._id)
     },
   })
 }

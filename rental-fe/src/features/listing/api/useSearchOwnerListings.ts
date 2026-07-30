@@ -1,5 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+} from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
+import {
+  getNextPageParam,
+  readPageParam,
+} from "@/lib/query-pagination"
 import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 
 import {
@@ -25,13 +32,13 @@ type UseSearchOwnerListingsInput = {
   enabled?: boolean
 }
 
-export function useSearchOwnerListings({
+export const ownerListingsQueryOptions = ({
   visibility = "all",
   sort = "latest",
   limit = DEFAULT_LISTING_PAGE_SIZE,
   enabled = true,
-}: UseSearchOwnerListingsInput = {}) {
-  return useInfiniteQuery({
+}: UseSearchOwnerListingsInput = {}) =>
+  infiniteQueryOptions({
     queryKey: ownerListingsQueryKey({ visibility, sort, limit }),
     enabled,
     initialPageParam: 1,
@@ -39,15 +46,20 @@ export function useSearchOwnerListings({
       searchOwnerListings({
         visibility,
         sort,
-        page: Number(pageParam),
+        page: readPageParam(pageParam),
         limit,
         signal,
       }),
-    getNextPageParam: (lastPage) => {
-      const { page, limit, total } = lastPage.pagination
-      const loaded = page * limit
-
-      return loaded < total ? page + 1 : undefined
-    },
+    getNextPageParam,
   })
+
+export function useSearchOwnerListings({
+  visibility = "all",
+  sort = "latest",
+  limit = DEFAULT_LISTING_PAGE_SIZE,
+  enabled = true,
+}: UseSearchOwnerListingsInput = {}) {
+  return useInfiniteQuery(
+    ownerListingsQueryOptions({ visibility, sort, limit, enabled }),
+  )
 }

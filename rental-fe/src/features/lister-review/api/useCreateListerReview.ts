@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
 import { queryKeys } from "@/lib/query-keys"
 
 import {
@@ -10,13 +11,9 @@ import {
 } from "./createListerReview"
 import {
   addReviewToSummary,
-  cancelReviewQueries,
-  captureReviewQueries,
-  invalidateReviewQueries,
   listerReviewRefetchQueryKeys,
   patchReviewSummaryInQueries,
-  replaceReviewInListerReviewData,
-  restoreReviewQueries,
+  REVIEW_WRITE_SCOPE_ID,
   reviewProjectionQueryKeys,
   setMyReviewInListerReviewData,
   type ListerReviewsCacheData,
@@ -69,11 +66,79 @@ function createOptimisticReview(
   }
 }
 
+let nextOptimisticReviewId = 0
+
+function createOptimisticReviewId() {
+  nextOptimisticReviewId += 1
+  return `optimistic-review-${Date.now()}-${nextOptimisticReviewId}`
+}
+
 export function useCreateListerReview() {
   const queryClient = useQueryClient()
+  const transaction = createOptimisticTransaction<
+    Awaited<ReturnType<typeof createListerReview>>,
+    Error,
+    CreateListerReviewVariables,
+    { keys: ReturnType<typeof reviewProjectionQueryKeys>; listerProfileId: string }
+  >({
+    queryClient,
+    scopeKey: () => REVIEW_WRITE_SCOPE_ID,
+    getPlan: input => {
+      const listerProfileId = input.listerProfileId.trim()
+      const keys = reviewProjectionQueryKeys(listerProfileId, false)
+      return {
+        cancel: keys,
+        snapshot: keys,
+        invalidate: listerReviewRefetchQueryKeys(listerProfileId),
+      }
+    },
+    apply: ({ queryClient: client, variables: input }) => {
+      const listerProfileId = input.listerProfileId.trim()
+      const keys = reviewProjectionQueryKeys(listerProfileId, false)
+      const optimisticReview = createOptimisticReview(
+        { ...input, listerProfileId },
+        createOptimisticReviewId(),
+      )
+      const optimisticSummary = addReviewToSummary(
+        input.currentSummary,
+        input.rating,
+        input.tags ?? [],
+      )
+
+      client.setQueriesData<ListerReviewsCacheData>(
+        { queryKey: queryKeys.listerReviews.byLister(listerProfileId) },
+        current => setMyReviewInListerReviewData(current, optimisticReview),
+      )
+      patchReviewSummaryInQueries(
+        client,
+        keys,
+        listerProfileId,
+        optimisticSummary,
+      )
+
+      return { keys, listerProfileId }
+    },
+    reconcile: ({ queryClient: client, optimisticContext, data }) => {
+      client.setQueriesData<ListerReviewsCacheData>(
+        {
+          queryKey: queryKeys.listerReviews.byLister(
+            optimisticContext.listerProfileId,
+          ),
+        },
+        current => setMyReviewInListerReviewData(current, data.review),
+      )
+      patchReviewSummaryInQueries(
+        client,
+        optimisticContext.keys,
+        optimisticContext.listerProfileId,
+        data.reviewSummary,
+      )
+    },
+    shouldInvalidate: ({ error }) => error === null,
+  })
 
   return useMutation({
-    scope: { id: "create-lister-review" },
+    scope: { id: REVIEW_WRITE_SCOPE_ID },
     mutationFn: (input: CreateListerReviewVariables) =>
       createListerReview({
         listerProfileId: input.listerProfileId,
@@ -83,71 +148,6 @@ export function useCreateListerReview() {
         relatedListingId: input.relatedListingId,
         relatedBuildingId: input.relatedBuildingId,
       }),
-    onMutate: async (input) => {
-      const listerProfileId = input.listerProfileId.trim()
-      const keys = reviewProjectionQueryKeys(listerProfileId, false)
-      await cancelReviewQueries(queryClient, keys)
-      const snapshot = captureReviewQueries(queryClient, keys)
-      const optimisticReviewId = `optimistic-review-${Date.now()}`
-      const optimisticReview = createOptimisticReview(
-        { ...input, listerProfileId },
-        optimisticReviewId,
-      )
-      const optimisticSummary = addReviewToSummary(
-        input.currentSummary,
-        input.rating,
-        input.tags ?? [],
-      )
-
-      queryClient.setQueriesData<ListerReviewsCacheData>(
-        { queryKey: queryKeys.listerReviews.byLister(listerProfileId) },
-        (current) => setMyReviewInListerReviewData(current, optimisticReview),
-      )
-      patchReviewSummaryInQueries(
-        queryClient,
-        keys,
-        listerProfileId,
-        optimisticSummary,
-      )
-
-      return { keys, listerProfileId, optimisticReviewId, snapshot }
-    },
-    onError: (_error, _input, context) => {
-      if (context) restoreReviewQueries(queryClient, context.snapshot)
-    },
-    onSuccess: (result, _input, context) => {
-      queryClient.setQueriesData<ListerReviewsCacheData>(
-        {
-          queryKey: queryKeys.listerReviews.byLister(
-            context?.listerProfileId ?? result.review.listerProfileId,
-          ),
-        },
-        (current) =>
-          replaceReviewInListerReviewData(
-            current,
-            context?.optimisticReviewId ?? "",
-            result.review,
-          ),
-      )
-      const listerProfileId = context?.listerProfileId ?? result.review.listerProfileId
-      const keys = context?.keys ?? reviewProjectionQueryKeys(listerProfileId, false)
-      patchReviewSummaryInQueries(
-        queryClient,
-        keys,
-        listerProfileId,
-        result.reviewSummary,
-      )
-    },
-    onSettled: async (result, error, input, context) => {
-      if (error) return
-      const listerProfileId =
-        context?.listerProfileId ??
-        result?.review.listerProfileId ??
-        input.listerProfileId.trim()
-      await invalidateReviewQueries(
-        queryClient,
-        listerReviewRefetchQueryKeys(listerProfileId),
-      )
-    },
+    ...transaction,
   })
 }

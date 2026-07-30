@@ -28,6 +28,10 @@ import type {
 export type AdminBuildingEditRequestsInfiniteData =
   InfiniteData<SearchAdminBuildingEditRequestsResponse>
 
+/** Approve and reject are conflicting writes to the same request domain. */
+export const ADMIN_BUILDING_EDIT_REQUEST_WRITE_SCOPE_ID =
+  "admin-building-edit-request-write"
+
 export function getBuildingEditStatusFromQueryKey(
   queryKey: QueryKey,
 ): AdminBuildingEditRequestStatusFilter | undefined {
@@ -85,6 +89,27 @@ export async function captureBuildingEditRequestCache(
     queryKeys.admin.buildingEditRequests.lists,
     queryKeys.admin.buildingEditRequests.detail(requestId),
   )
+}
+
+/**
+ * Reads the concrete caches to patch after the transaction engine has already
+ * cancelled and snapshotted the query family.
+ */
+export function readBuildingEditRequestCache(
+  queryClient: QueryClient,
+  requestId: string,
+): BuildingEditRequestCacheSnapshot {
+  const detailKey = queryKeys.admin.buildingEditRequests.detail(requestId)
+
+  return {
+    detailKey,
+    detailData:
+      queryClient.getQueryData<AdminBuildingEditRequest>(detailKey),
+    listData:
+      queryClient.getQueriesData<AdminBuildingEditRequestsInfiniteData>({
+        queryKey: queryKeys.admin.buildingEditRequests.lists,
+      }),
+  }
 }
 
 export function updateBuildingEditRequestCache(

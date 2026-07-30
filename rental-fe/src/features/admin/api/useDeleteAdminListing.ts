@@ -15,6 +15,7 @@ import {
   deleteAdminListing,
   isAdminListingNotFoundError,
 } from "./deleteAdminListing"
+import { patchAdminReportListingInQueries } from "./adminReportListingCache"
 
 export type DeleteAdminListingVariables = {
   agentProfileId?: string
@@ -41,28 +42,6 @@ function captureKeys(queryClient: ReturnType<typeof useQueryClient>, keys: Query
       })
   })
   return [...captured.values()]
-}
-
-function patchAdminReportListing<T>(value: T, listingId: string, changes: object): T {
-  if (Array.isArray(value)) {
-    return value.map((item) =>
-      patchAdminReportListing(item, listingId, changes),
-    ) as T
-  }
-  if (!value || typeof value !== "object") return value
-
-  const record = value as Record<string, unknown>
-  let next: Record<string, unknown> = record
-  if (record._id === listingId && "visibility" in record) {
-    next = { ...record, ...changes, isDeleted: true, visibility: "PRIVATE" }
-  }
-  for (const [key, child] of Object.entries(next)) {
-    const patched = patchAdminReportListing(child, listingId, changes)
-    if (patched === child) continue
-    if (next === record) next = { ...record }
-    next[key] = patched
-  }
-  return next as T
 }
 
 export function useDeleteAdminListing(currentUserId?: string) {
@@ -107,15 +86,13 @@ export function useDeleteAdminListing(currentUserId?: string) {
       const extraSnapshot = captureKeys(queryClient, extraKeys)
 
       optimisticallyDeleteListing(queryClient, listingId)
-      queryClient.setQueriesData(
-        { queryKey: queryKeys.admin.reports.lists },
-        (current: unknown) =>
-          patchAdminReportListing(current, listingId, {}),
-      )
-      queryClient.setQueryData(
-        queryKeys.admin.reports.detail(variables.reportId),
-        (current: unknown) =>
-          patchAdminReportListing(current, listingId, {}),
+      patchAdminReportListingInQueries(
+        queryClient,
+        [
+          queryKeys.admin.reports.lists,
+          queryKeys.admin.reports.detail(variables.reportId),
+        ],
+        listingId,
       )
 
       return { extraSnapshot, isOwnListing, listingSnapshot }
@@ -130,15 +107,14 @@ export function useDeleteAdminListing(currentUserId?: string) {
     onSuccess: (listing, variables) => {
       if (listing) {
         patchListingInRelatedQueries(queryClient, variables.listingId, listing)
-        queryClient.setQueriesData(
-          { queryKey: queryKeys.admin.reports.lists },
-          (current: unknown) =>
-            patchAdminReportListing(current, variables.listingId, listing),
-        )
-        queryClient.setQueryData(
-          queryKeys.admin.reports.detail(variables.reportId),
-          (current: unknown) =>
-            patchAdminReportListing(current, variables.listingId, listing),
+        patchAdminReportListingInQueries(
+          queryClient,
+          [
+            queryKeys.admin.reports.lists,
+            queryKeys.admin.reports.detail(variables.reportId),
+          ],
+          variables.listingId,
+          listing,
         )
       }
       removeDeletedListingDetails(queryClient, variables.listingId)

@@ -1,11 +1,8 @@
 import { useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
-import { queryKeys } from "@/lib/query-keys"
-
 import {
-  getAdminSuspensionById,
-  searchAdminSuspensions,
+  adminQueries,
   useLiftAdminSuspension,
   type AdminSuspensionListItem,
   type AdminSuspensionStatusFilter,
@@ -19,7 +16,6 @@ import {
   AdminEmptyState,
   AdminListState,
 } from "../../components/AdminListState"
-import { getNextAdminPageParam } from "../../shared/adminPagination"
 import { SuspensionDetail } from "./SuspensionDetail"
 import { SuspensionLiftDialog } from "./SuspensionLiftDialog"
 import { SuspensionListItem } from "./SuspensionListItem"
@@ -44,18 +40,9 @@ export function SuspensionsTab({ enabled }: SuspensionsTabProps) {
   const [liftNote, setLiftNote] = useState("")
   const [liftError, setLiftError] = useState<string | null>(null)
 
-  const suspensionsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.suspensions.list(status),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminSuspensions({
-        status,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled,
-  })
+  const suspensionsQuery = useInfiniteQuery(
+    adminQueries.suspensions(status, enabled),
+  )
 
   const liftSuspensionMutation = useLiftAdminSuspension()
 
@@ -69,11 +56,9 @@ export function SuspensionsTab({ enabled }: SuspensionsTabProps) {
   const effectiveSuspensionId =
     selectedSuspensionId ?? selectedSuspensionListItem?._id
 
-  const suspensionDetailQuery = useQuery({
-    queryKey: queryKeys.admin.suspensions.detail(effectiveSuspensionId),
-    queryFn: () => getAdminSuspensionById(effectiveSuspensionId!),
-    enabled: enabled && Boolean(effectiveSuspensionId),
-  })
+  const suspensionDetailQuery = useQuery(
+    adminQueries.suspensionDetail(effectiveSuspensionId, enabled),
+  )
 
   const selectedSuspension =
     suspensionDetailQuery.data ?? selectedSuspensionListItem ?? null

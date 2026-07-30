@@ -117,7 +117,7 @@ describe("useCreatePendingPost", () => {
       }>(queryKeys.profiles.me)?.listingSummary.pendingCount,
     ).toBe(2)
     expect(ids(queryClient, allKey)).toEqual(["pending-1"])
-    expect(cancel).toHaveBeenCalledTimes(4)
+    expect(cancel).toHaveBeenCalledTimes(3)
 
     await act(async () => resolve(pendingPost))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -163,5 +163,134 @@ describe("useCreatePendingPost", () => {
     await waitFor(() => expect(mocks.createPendingPost).toHaveBeenCalledTimes(1))
     await act(async () => resolveFirst(pendingPost))
     await waitFor(() => expect(mocks.createPendingPost).toHaveBeenCalledTimes(2))
+  })
+
+  it("does not call the endpoint or increment counters when cancellation fails", async () => {
+    const { result, queryClient, profile, profileKey } = setup()
+    vi.spyOn(queryClient, "cancelQueries").mockRejectedValueOnce(
+      new Error("Cancellation failed"),
+    )
+
+    act(() => result.current.mutate(input))
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(mocks.createPendingPost).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(queryKeys.profiles.me)).toEqual(profile)
+    expect(queryClient.getQueryData(profileKey)).toEqual(profile)
+  })
+
+  it("increments a profile that enters the cache while creation is pending", async () => {
+    let resolve!: (post: PendingPost) => void
+    mocks.createPendingPost.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const { result, queryClient, profile, profileKey } = setup()
+    queryClient.removeQueries({ queryKey: queryKeys.profiles.all })
+
+    act(() => result.current.mutate(input))
+    await waitFor(() =>
+      expect(mocks.createPendingPost).toHaveBeenCalledTimes(1),
+    )
+    queryClient.setQueryData(queryKeys.profiles.me, profile)
+    queryClient.setQueryData(profileKey, profile)
+
+    await act(async () => resolve(pendingPost))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(queryClient.getQueryData(profileKey)).toMatchObject({
+      listingSummary: { pendingCount: 2 },
+    })
+  })
+
+  it("reconciles a list refetched while creation is pending without duplicates", async () => {
+    let resolve!: (post: PendingPost) => void
+    mocks.createPendingPost.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const { result, queryClient, allKey, pendingKey } = setup()
+
+    act(() => result.current.mutate(input))
+    await waitFor(() =>
+      expect(mocks.createPendingPost).toHaveBeenCalledTimes(1),
+    )
+    queryClient.setQueryData(
+      allKey,
+      pendingData([pendingPost, existingPost]),
+    )
+    queryClient.setQueryData(
+      pendingKey,
+      pendingData([pendingPost, existingPost]),
+    )
+
+    await act(async () => resolve(pendingPost))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(ids(queryClient, allKey)).toEqual(["pending-2", "pending-1"])
+    expect(ids(queryClient, pendingKey)).toEqual([
+      "pending-2",
+      "pending-1",
+    ])
+    expect(
+      queryClient.getQueryData<OwnerPendingPostsInfiniteData>(allKey)
+        ?.pages[0].pagination.total,
+    ).toBe(2)
+  })
+
+  it("succeeds safely with malformed and fully evicted caches", async () => {
+    mocks.createPendingPost.mockResolvedValue(pendingPost)
+    const { result, queryClient, allKey, profileKey } = setup()
+    const malformed = {
+      pageParams: [1],
+      pages: [{ data: null }],
+    }
+    queryClient.setQueryData(allKey, malformed)
+    queryClient.removeQueries({ queryKey: queryKeys.profiles.all })
+
+    act(() => result.current.mutate(input))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.getQueryData(allKey)).toEqual(malformed)
+    expect(
+      queryClient.getQueryCache().find({
+        queryKey: profileKey,
+        exact: true,
+      }),
+    ).toBeUndefined()
+  })
+
+  it("normalizes a non-finite pending counter before incrementing", async () => {
+    let resolve!: (post: PendingPost) => void
+    mocks.createPendingPost.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const { result, queryClient, profileKey } = setup()
+    const malformedProfile = {
+      _id: "profile-1",
+      listingSummary: {
+        activeCount: 1,
+        pendingCount: Number.NaN,
+        rejectedCount: 0,
+      },
+    }
+    queryClient.setQueryData(queryKeys.profiles.me, malformedProfile)
+    queryClient.setQueryData(profileKey, malformedProfile)
+
+    act(() => result.current.mutate(input))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(profileKey)).toMatchObject({
+        listingSummary: { pendingCount: 1 },
+      }),
+    )
+
+    await act(async () => resolve(pendingPost))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })

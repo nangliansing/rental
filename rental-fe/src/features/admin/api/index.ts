@@ -187,3 +187,5 @@ export type {
   AdminBuildingEditRequestStatus,
   AdminBuildingEditRequestUser,
 } from "./buildingEditRequestTypes";
+
+export { adminQueries } from "./adminQueryOptions"

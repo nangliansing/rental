@@ -121,9 +121,13 @@ function parseGetBuildingByIdResponse(value: unknown) {
   return parseBuildingDetails(response.data)
 }
 
-export async function getBuildingById(buildingId: string) {
+export async function getBuildingById(
+  buildingId: string,
+  signal?: AbortSignal,
+) {
   const response = await apiClient.get<GetBuildingByIdResponse>(
     `/buildings/${buildingId}`,
+    { signal },
   )
 
   return parseGetBuildingByIdResponse(response.data)

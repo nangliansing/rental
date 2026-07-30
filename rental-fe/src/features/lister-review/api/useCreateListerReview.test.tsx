@@ -157,4 +157,155 @@ describe("useCreateListerReview", () => {
       refetchType: "active",
     })
   })
+
+  it("does not call the endpoint or mutate caches when cancellation fails", async () => {
+    const { result, queryClient, reviewsKey, profileKey } = setup()
+    const reviewsBefore = queryClient.getQueryData(reviewsKey)
+    const profileBefore = queryClient.getQueryData(profileKey)
+    vi.spyOn(queryClient, "cancelQueries").mockRejectedValueOnce(
+      new Error("Cancellation failed"),
+    )
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(mocks.createListerReview).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(reviewsKey)).toBe(reviewsBefore)
+    expect(queryClient.getQueryData(profileKey)).toBe(profileBefore)
+  })
+
+  it("reconciles canonical state after a refetch overwrites optimism", async () => {
+    let resolve!: (value: {
+      review: typeof serverReview
+      reviewSummary: typeof newSummary
+    }) => void
+    mocks.createListerReview.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const { result, queryClient, reviewsKey, profileKey } = setup()
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() =>
+      expect(mocks.createListerReview).toHaveBeenCalledTimes(1),
+    )
+    queryClient.setQueryData(reviewsKey, {
+      pageParams: [1],
+      pages: [{
+        success: true,
+        data: { myReview: null, reviews: [] },
+        pagination: { page: 1, limit: 10, total: 0 },
+      }],
+    })
+    queryClient.setQueryData(profileKey, {
+      _id: "profile-1",
+      reviewSummary: oldSummary,
+    })
+
+    await act(async () =>
+      resolve({ review: serverReview, reviewSummary: newSummary }),
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [{ data: { myReview: serverReview } }],
+    })
+    expect(queryClient.getQueryData(profileKey)).toMatchObject({
+      reviewSummary: newSummary,
+    })
+  })
+
+  it("does not invalidate or retain optimism after a genuine failure", async () => {
+    mocks.createListerReview.mockRejectedValue(new Error("Network error"))
+    const { result, queryClient, reviewsKey } = setup()
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [{ data: { myReview: null } }],
+    })
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+
+  it("succeeds after complete cache eviction without creating phantom entries", async () => {
+    mocks.createListerReview.mockResolvedValue({
+      review: serverReview,
+      reviewSummary: newSummary,
+    })
+    const { result, queryClient, reviewsKey, profileKey } = setup()
+    queryClient.clear()
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(
+      queryClient.getQueryCache().find({ queryKey: reviewsKey, exact: true }),
+    ).toBeUndefined()
+    expect(
+      queryClient.getQueryCache().find({ queryKey: profileKey, exact: true }),
+    ).toBeUndefined()
+  })
+
+  it("keeps a newer optimistic generation when the older request settles", async () => {
+    let resolveFirst!: (value: {
+      review: typeof serverReview
+      reviewSummary: typeof newSummary
+    }) => void
+    let resolveSecond!: (value: {
+      review: typeof serverReview
+      reviewSummary: typeof newSummary
+    }) => void
+    mocks.createListerReview
+      .mockImplementationOnce(
+        () =>
+          new Promise((done) => {
+            resolveFirst = done
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((done) => {
+            resolveSecond = done
+          }),
+      )
+    const { result, queryClient, reviewsKey } = setup()
+
+    act(() => {
+      result.current.mutate(variables)
+      result.current.mutate(variables)
+    })
+    await waitFor(() =>
+      expect(mocks.createListerReview).toHaveBeenCalledTimes(1),
+    )
+    const latestOptimisticId = queryClient
+      .getQueryData<{
+        pages: Array<{ data: { myReview: { _id: string } | null } }>
+      }>(reviewsKey)?.pages[0].data.myReview?._id
+
+    await act(async () =>
+      resolveFirst({ review: serverReview, reviewSummary: newSummary }),
+    )
+    await waitFor(() =>
+      expect(mocks.createListerReview).toHaveBeenCalledTimes(2),
+    )
+    const reviewIdAfterFirstSuccess = queryClient
+      .getQueryData<{
+        pages: Array<{ data: { myReview: { _id: string } | null } }>
+      }>(reviewsKey)?.pages[0].data.myReview?._id
+
+    expect(latestOptimisticId).toMatch(/^optimistic-review-/)
+    expect(reviewIdAfterFirstSuccess).toBe(latestOptimisticId)
+
+    await act(async () =>
+      resolveSecond({ review: serverReview, reviewSummary: newSummary }),
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [{ data: { myReview: { _id: "review-1" } } }],
+    })
+  })
 })

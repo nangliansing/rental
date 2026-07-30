@@ -11,8 +11,10 @@ type GetCurrentUserResponse = {
   }
 }
 
-export async function getCurrentUser() {
-  const response = await apiClient.get<GetCurrentUserResponse>("/users/me")
+export async function getCurrentUser(signal?: AbortSignal) {
+  const response = await apiClient.get<GetCurrentUserResponse>("/users/me", {
+    signal,
+  })
 
   return parseGetCurrentUserResponse(response.data)
 }

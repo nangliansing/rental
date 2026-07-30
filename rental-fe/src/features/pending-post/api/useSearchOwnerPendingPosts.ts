@@ -1,5 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  getNextPageParam,
+  readPageParam,
+} from "@/lib/query-pagination";
 import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination";
 
 import {
@@ -21,27 +28,31 @@ type UseSearchOwnerPendingPostsInput = {
   enabled?: boolean;
 };
 
-export function useSearchOwnerPendingPosts({
+export const ownerPendingPostsQueryOptions = ({
   status = "all",
   limit = DEFAULT_LISTING_PAGE_SIZE,
   enabled = true,
-}: UseSearchOwnerPendingPostsInput = {}) {
-  return useInfiniteQuery({
+}: UseSearchOwnerPendingPostsInput = {}) =>
+  infiniteQueryOptions({
     queryKey: ownerPendingPostsQueryKey({ status, limit }),
     enabled,
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
       searchOwnerPendingPosts({
         status,
-        page: Number(pageParam),
+        page: readPageParam(pageParam),
         limit,
         signal,
       }),
-    getNextPageParam: (lastPage) => {
-      const { page, limit, total } = lastPage.pagination;
-      const loaded = page * limit;
-
-      return loaded < total ? page + 1 : undefined;
-    },
+    getNextPageParam,
   });
+
+export function useSearchOwnerPendingPosts({
+  status = "all",
+  limit = DEFAULT_LISTING_PAGE_SIZE,
+  enabled = true,
+}: UseSearchOwnerPendingPostsInput = {}) {
+  return useInfiniteQuery(
+    ownerPendingPostsQueryOptions({ status, limit, enabled }),
+  );
 }

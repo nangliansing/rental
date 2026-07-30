@@ -23,6 +23,12 @@ const HEADER_GUTTER_CLASS = "px-4"
 /** Ignore small pointer jitter so taps still activate after a light touch. */
 const TAP_SLOP_PX = 10
 const TAP_SLOP_SQ = TAP_SLOP_PX * TAP_SLOP_PX
+/**
+ * Horizontal snap track: allow vertical page scroll when the finger starts here.
+ * `touch-pan-x` blocks parent scrolling; native overflow-x still handles sideways swipes.
+ */
+const SCROLLER_CLASS =
+  "mt-2 flex touch-pan-y snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 
 type SwipeableActionCardContextValue = {
   isInView: boolean
@@ -328,7 +334,8 @@ function SwipeableActionCardRoot({
 
         <div
           ref={scrollerRef}
-          className="mt-2 flex touch-pan-x snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className={SCROLLER_CLASS}
+          data-testid="swipeable-action-card-scroller"
           onScroll={showDots ? handleScroll : undefined}
           aria-roledescription={showDots ? "carousel" : undefined}
           aria-label={showDots ? "Card pages" : undefined}

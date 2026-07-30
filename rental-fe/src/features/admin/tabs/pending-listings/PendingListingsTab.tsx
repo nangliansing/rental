@@ -1,10 +1,8 @@
 import { useState } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 
-import { queryKeys } from "@/lib/query-keys"
-
 import {
-  searchAdminPendingPosts,
+  adminQueries,
   useApproveAdminPendingPost,
   useRejectAdminPendingPost,
   type AdminPendingPost,
@@ -15,7 +13,6 @@ import {
   AdminEmptyState,
   AdminListState,
 } from "../../components/AdminListState"
-import { getNextAdminPageParam } from "../../shared/adminPagination"
 import { PendingPostDetail } from "./PendingPostDetail"
 import { PendingPostListItem } from "./PendingPostListItem"
 import { PendingReviewActionDialog } from "./PendingReviewActionDialog"
@@ -46,18 +43,9 @@ export function PendingListingsTab({
   const [reviewNote, setReviewNote] = useState("")
   const [reviewError, setReviewError] = useState<string | null>(null)
 
-  const pendingPostsQuery = useInfiniteQuery({
-    queryKey: queryKeys.admin.pendingPosts.list(status),
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) =>
-      searchAdminPendingPosts({
-        status,
-        page: Number(pageParam),
-        limit: 20,
-      }),
-    getNextPageParam: getNextAdminPageParam,
-    enabled,
-  })
+  const pendingPostsQuery = useInfiniteQuery(
+    adminQueries.pendingPosts(status, enabled),
+  )
 
   const approveMutation = useApproveAdminPendingPost(currentUserId)
   const rejectMutation = useRejectAdminPendingPost()

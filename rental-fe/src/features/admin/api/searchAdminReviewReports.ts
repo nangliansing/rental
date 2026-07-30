@@ -50,6 +50,7 @@ export type SearchAdminReviewReportsInput = {
   status?: AdminReviewReportStatusFilter
   page?: number
   limit?: number
+  signal?: AbortSignal
 }
 
 export type SearchAdminReviewReportsResponse = {
@@ -62,6 +63,7 @@ export async function searchAdminReviewReports({
   status,
   page = 1,
   limit = 20,
+  signal,
 }: SearchAdminReviewReportsInput = {}) {
   const searchParams = new URLSearchParams({
     page: String(page),
@@ -74,6 +76,7 @@ export async function searchAdminReviewReports({
 
   const response = await apiClient.get<SearchAdminReviewReportsResponse>(
     `/admin/review-reports?${searchParams.toString()}`,
+    { signal },
   )
 
   return response.data

@@ -108,6 +108,90 @@ describe("useDeleteListerReview", () => {
     expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: { isDeleted: false } })
   })
 
+  it("does not invalidate or modify unrelated caches when deletion fails", async () => {
+    mocks.deleteListerReview.mockRejectedValue(new Error("Network error"))
+    const { result, queryClient } = setup()
+    const unrelatedKey = queryKeys.notifications.me
+    const unrelatedData = { unreadCount: 3 }
+    queryClient.setQueryData(unrelatedKey, unrelatedData)
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(invalidate).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(unrelatedKey)).toBe(unrelatedData)
+  })
+
+  it("waits for the server summary when no current summary is available", async () => {
+    let resolve!: (value: {
+      review: typeof deletedReview
+      reviewSummary: typeof emptySummary
+    }) => void
+    mocks.deleteListerReview.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const { result, queryClient, profileKey, reportKey } = setup()
+
+    act(() => result.current.mutate({ review }))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(reportKey)).toMatchObject({
+        review: { isDeleted: true },
+      }),
+    )
+    expect(queryClient.getQueryData(profileKey)).toMatchObject({
+      reviewSummary: summary,
+    })
+
+    await act(async () =>
+      resolve({
+        review: deletedReview,
+        reviewSummary: emptySummary,
+      }),
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(queryClient.getQueryData(profileKey)).toMatchObject({
+      reviewSummary: emptySummary,
+    })
+    expect(queryClient.getQueryData(reportKey)).toMatchObject({
+      review: deletedReview,
+      listerProfile: { reviewSummary: emptySummary },
+    })
+  })
+
+  it("succeeds safely when every related cache has been evicted", async () => {
+    mocks.deleteListerReview.mockResolvedValue({
+      review: deletedReview,
+      reviewSummary: emptySummary,
+    })
+    const {
+      result,
+      queryClient,
+      reviewsKey,
+      teaserKey,
+      profileKey,
+      reportKey,
+    } = setup()
+    queryClient.clear()
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    for (const queryKey of [
+      reviewsKey,
+      teaserKey,
+      profileKey,
+      reportKey,
+    ]) {
+      expect(
+        queryClient.getQueryCache().find({ queryKey, exact: true }),
+      ).toBeUndefined()
+    }
+  })
+
   it("reconciles server state and invalidates only review-backed collections", async () => {
     mocks.deleteListerReview.mockResolvedValue({ review: deletedReview, reviewSummary: emptySummary })
     const { result, queryClient, reportKey } = setup()
@@ -121,5 +205,67 @@ describe("useDeleteListerReview", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"), refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.admin.reviewReports.lists, refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.admin.reviewReports.details, refetchType: "active" })
+  })
+
+  it("does not call the delete endpoint or mutate caches when cancellation fails", async () => {
+    const { result, queryClient, reviewsKey, profileKey } = setup()
+    vi.spyOn(queryClient, "cancelQueries").mockRejectedValueOnce(
+      new Error("Cancellation failed"),
+    )
+
+    act(() => result.current.mutate(variables))
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(mocks.deleteListerReview).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(reviewsKey)).toMatchObject({
+      pages: [{
+        data: {
+          myReview: { _id: "review-1" },
+          reviews: [{ _id: "review-1" }],
+        },
+        pagination: { total: 1 },
+      }],
+    })
+    expect(queryClient.getQueryData(profileKey)).toMatchObject({
+      reviewSummary: summary,
+    })
+  })
+
+  it("serializes repeated deletes to protect shared review summaries", async () => {
+    let resolveFirst!: (value: {
+      review: typeof deletedReview
+      reviewSummary: typeof emptySummary
+    }) => void
+    mocks.deleteListerReview
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve
+          }),
+      )
+      .mockResolvedValueOnce({
+        review: deletedReview,
+        reviewSummary: emptySummary,
+      })
+    const { result } = setup()
+
+    act(() => {
+      result.current.mutate(variables)
+      result.current.mutate(variables)
+    })
+    await waitFor(() =>
+      expect(mocks.deleteListerReview).toHaveBeenCalledTimes(1),
+    )
+
+    await act(async () =>
+      resolveFirst({
+        review: deletedReview,
+        reviewSummary: emptySummary,
+      }),
+    )
+    await waitFor(() =>
+      expect(mocks.deleteListerReview).toHaveBeenCalledTimes(2),
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })

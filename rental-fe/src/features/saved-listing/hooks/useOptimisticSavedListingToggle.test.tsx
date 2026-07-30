@@ -19,6 +19,7 @@ vi.mock("../api", () => ({
 
 vi.mock("../utils/savedListingCache", () => ({
   patchListingSavedStateInCache: mocks.patchListingSavedStateInCache,
+  SAVED_LISTING_WRITE_SCOPE_ID: "saved-listing-write",
   syncListingSavedState: mocks.syncListingSavedState,
 }))
 

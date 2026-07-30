@@ -37,9 +37,13 @@ function parseGetAdminSuspensionByIdResponse(
   }
 }
 
-export async function getAdminSuspensionById(suspensionId: string) {
+export async function getAdminSuspensionById(
+  suspensionId: string,
+  signal?: AbortSignal,
+) {
   const response = await apiClient.get<unknown>(
     `/admin/suspensions/${encodeURIComponent(suspensionId)}`,
+    { signal },
   )
 
   return parseGetAdminSuspensionByIdResponse(response.data).data

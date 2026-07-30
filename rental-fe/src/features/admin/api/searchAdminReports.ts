@@ -104,6 +104,7 @@ export type SearchAdminReportsInput = {
   status?: AdminReportStatusFilter
   page?: number
   limit?: number
+  signal?: AbortSignal
 }
 
 export type SearchAdminReportsResponse = {
@@ -362,6 +363,7 @@ export async function searchAdminReports({
   status,
   page = 1,
   limit = 20,
+  signal,
 }: SearchAdminReportsInput = {}) {
   const normalizedPage = normalizePositiveInteger(page, 1)
   const normalizedLimit = normalizePositiveInteger(limit, 20)
@@ -376,6 +378,7 @@ export async function searchAdminReports({
 
   const response = await apiClient.get<SearchAdminReportsResponse>(
     `/admin/reports?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseSearchAdminReportsResponse(response.data, {

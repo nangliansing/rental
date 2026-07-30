@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import type { QueryKey } from "@tanstack/react-query"
 
+import { createOptimisticTransaction } from "@/lib/optimistic-transaction"
 import { queryKeys } from "@/lib/query-keys"
 
 import type {
@@ -7,14 +9,11 @@ import type {
   ListerReviewSummary,
 } from "./createListerReview"
 import {
-  cancelReviewQueries,
-  captureReviewQueries,
-  invalidateReviewQueries,
   listerReviewRefetchQueryKeys,
   patchReviewInQueries,
   patchReviewSummaryInQueries,
   replaceReviewInSummary,
-  restoreReviewQueries,
+  REVIEW_WRITE_SCOPE_ID,
   reviewProjectionQueryKeys,
 } from "./reviewMutationCache"
 import {
@@ -50,43 +49,55 @@ function optimisticReviewFromInput(
   }
 }
 
+function updateReviewProjectionKeys(
+  variables: UpdateListerReviewVariables,
+): QueryKey[] {
+  return [
+    ...reviewProjectionQueryKeys(
+      variables.review.listerProfileId,
+      false,
+    ),
+    queryKeys.admin.reviewReports.lists,
+    queryKeys.admin.reviewReports.details,
+  ]
+}
+
 export function useUpdateListerReview() {
   const queryClient = useQueryClient()
-
-  return useMutation({
-    scope: { id: "update-lister-review" },
-    mutationFn: (variables: UpdateListerReviewVariables) =>
-      updateListerReview({
-        reviewId: variables.reviewId,
-        rating: variables.rating,
-        tags: variables.tags,
-        comment: variables.comment,
-        relatedListingId: variables.relatedListingId,
-        relatedBuildingId: variables.relatedBuildingId,
-      }),
-    onMutate: async (variables) => {
+  const transaction = createOptimisticTransaction<
+    Awaited<ReturnType<typeof updateListerReview>>,
+    Error,
+    UpdateListerReviewVariables,
+    { keys: QueryKey[]; listerProfileId: string }
+  >({
+    queryClient,
+    scopeKey: () => REVIEW_WRITE_SCOPE_ID,
+    getPlan: variables => {
       const listerProfileId = variables.review.listerProfileId
-      const keys = [
-        ...reviewProjectionQueryKeys(listerProfileId, false),
-        queryKeys.admin.reviewReports.lists,
-        queryKeys.admin.reviewReports.details,
-      ]
-      await cancelReviewQueries(queryClient, keys)
-      const snapshot = captureReviewQueries(queryClient, keys)
+      const keys = updateReviewProjectionKeys(variables)
+      return {
+        cancel: keys,
+        snapshot: keys,
+        invalidate: listerReviewRefetchQueryKeys(listerProfileId),
+      }
+    },
+    apply: ({ queryClient: client, variables }) => {
+      const listerProfileId = variables.review.listerProfileId
+      const keys = updateReviewProjectionKeys(variables)
       const optimisticReview = optimisticReviewFromInput(
         variables.review,
         variables,
       )
 
       patchReviewInQueries(
-        queryClient,
+        client,
         keys,
         variables.review._id,
         optimisticReview,
       )
       if (variables.currentSummary) {
         patchReviewSummaryInQueries(
-          queryClient,
+          client,
           keys,
           listerProfileId,
           replaceReviewInSummary(
@@ -97,42 +108,41 @@ export function useUpdateListerReview() {
         )
       }
 
-      return { keys, listerProfileId, snapshot }
+      return { keys, listerProfileId }
     },
-    onError: (_error, _variables, context) => {
-      if (context) restoreReviewQueries(queryClient, context.snapshot)
-    },
-    onSuccess: (result, variables, context) => {
-      const listerProfileId =
-        context?.listerProfileId ?? result.review.listerProfileId
-      const keys = context?.keys ?? [
-        ...reviewProjectionQueryKeys(listerProfileId, false),
-        queryKeys.admin.reviewReports.lists,
-        queryKeys.admin.reviewReports.details,
-      ]
+    reconcile: ({
+      queryClient: client,
+      variables,
+      optimisticContext,
+      data,
+    }) => {
       patchReviewInQueries(
-        queryClient,
-        keys,
+        client,
+        optimisticContext.keys,
         variables.review._id,
-        result.review,
+        data.review,
       )
       patchReviewSummaryInQueries(
-        queryClient,
-        keys,
-        listerProfileId,
-        result.reviewSummary,
+        client,
+        optimisticContext.keys,
+        optimisticContext.listerProfileId,
+        data.reviewSummary,
       )
     },
-    onSettled: async (result, error, variables, context) => {
-      if (error) return
-      const listerProfileId =
-        context?.listerProfileId ??
-        result?.review.listerProfileId ??
-        variables.review.listerProfileId
-      await invalidateReviewQueries(
-        queryClient,
-        listerReviewRefetchQueryKeys(listerProfileId),
-      )
-    },
+    shouldInvalidate: ({ error }) => error === null,
+  })
+
+  return useMutation({
+    scope: { id: REVIEW_WRITE_SCOPE_ID },
+    mutationFn: (variables: UpdateListerReviewVariables) =>
+      updateListerReview({
+        reviewId: variables.reviewId,
+        rating: variables.rating,
+        tags: variables.tags,
+        comment: variables.comment,
+        relatedListingId: variables.relatedListingId,
+        relatedBuildingId: variables.relatedBuildingId,
+      }),
+    ...transaction,
   })
 }

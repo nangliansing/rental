@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 
 import { searchListerReviews } from "@/features/lister-review/api"
 import { queryKeys } from "@/lib/query-keys"
@@ -14,6 +14,31 @@ export type UseListerReviewTeasersInput = {
   enabled?: boolean
 }
 
+export const listerReviewTeasersQueryOptions = ({
+  listerProfileId,
+  enabled = true,
+}: UseListerReviewTeasersInput = {}) => {
+  const profileId = listerProfileId?.trim() || ""
+
+  return queryOptions({
+    queryKey: queryKeys.listerReviewTeasers.list({
+      listerProfileId: profileId,
+      sort: LISTER_REVIEW_TEASER_SORT,
+      limit: LISTER_REVIEW_TEASER_LIMIT,
+    }),
+    queryFn: ({ signal }) =>
+      searchListerReviews({
+        listerProfileId: profileId,
+        page: 1,
+        limit: LISTER_REVIEW_TEASER_LIMIT,
+        sort: LISTER_REVIEW_TEASER_SORT,
+        signal,
+      }),
+    enabled: enabled && Boolean(profileId),
+    staleTime: TEASER_STALE_TIME_MS,
+  })
+}
+
 /**
  * Fetches a small latest page of lister reviews for card teasers.
  * Uses a dedicated limit so it does not collide with the full reviews dialog cache.
@@ -22,22 +47,7 @@ export function useListerReviewTeasers({
   listerProfileId,
   enabled = true,
 }: UseListerReviewTeasersInput = {}) {
-  const profileId = listerProfileId?.trim() || ""
-
-  return useQuery({
-    queryKey: queryKeys.listerReviewTeasers.list({
-      listerProfileId: profileId,
-      sort: LISTER_REVIEW_TEASER_SORT,
-      limit: LISTER_REVIEW_TEASER_LIMIT,
-    }),
-    queryFn: () =>
-      searchListerReviews({
-        listerProfileId: profileId,
-        page: 1,
-        limit: LISTER_REVIEW_TEASER_LIMIT,
-        sort: LISTER_REVIEW_TEASER_SORT,
-      }),
-    enabled: enabled && Boolean(profileId),
-    staleTime: TEASER_STALE_TIME_MS,
-  })
+  return useQuery(
+    listerReviewTeasersQueryOptions({ listerProfileId, enabled }),
+  )
 }

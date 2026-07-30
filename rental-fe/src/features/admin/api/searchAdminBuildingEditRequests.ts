@@ -16,6 +16,7 @@ export type SearchAdminBuildingEditRequestsInput = {
   status?: AdminBuildingEditRequestStatusFilter
   page?: number
   limit?: number
+  signal?: AbortSignal
 }
 
 export type SearchAdminBuildingEditRequestsResponse = {
@@ -265,6 +266,7 @@ export async function searchAdminBuildingEditRequests({
   status,
   page = 1,
   limit = 20,
+  signal,
 }: SearchAdminBuildingEditRequestsInput = {}) {
   const searchParams = new URLSearchParams({
     page: String(page),
@@ -277,6 +279,7 @@ export async function searchAdminBuildingEditRequests({
 
   const response = await apiClient.get<unknown>(
     `/admin/building-edit-requests?${searchParams.toString()}`,
+    { signal },
   )
 
   return parseSearchAdminBuildingEditRequestsResponse(response.data)

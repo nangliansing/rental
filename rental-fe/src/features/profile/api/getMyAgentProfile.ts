@@ -10,9 +10,11 @@ type GetMyAgentProfileResponse = {
     data: AgentProfile
 }
 
-export async function getMyAgentProfile() {
+export async function getMyAgentProfile(signal?: AbortSignal) {
     const response =
-        await apiClient.get<GetMyAgentProfileResponse>("/agent-profiles/me")
+        await apiClient.get<GetMyAgentProfileResponse>("/agent-profiles/me", {
+            signal,
+        })
 
     return parseAgentProfileResponse(response.data)
 }
