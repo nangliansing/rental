@@ -10,6 +10,7 @@ import type {
 } from "./createListerReview"
 import {
   listerReviewRefetchQueryKeys,
+  patchReviewFromServerInQueries,
   patchReviewInQueries,
   patchReviewSummaryInQueries,
   replaceReviewInSummary,
@@ -116,7 +117,7 @@ export function useUpdateListerReview() {
       optimisticContext,
       data,
     }) => {
-      patchReviewInQueries(
+      patchReviewFromServerInQueries(
         client,
         optimisticContext.keys,
         variables.review._id,

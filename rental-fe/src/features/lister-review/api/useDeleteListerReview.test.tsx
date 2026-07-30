@@ -29,6 +29,13 @@ const review = {
   deletedAt: null,
   createdAt: "2026-07-01T00:00:00.000Z",
   updatedAt: "2026-07-01T00:00:00.000Z",
+  reviewer: {
+    userId: "user-1",
+    name: "Jane Doe",
+    displayName: "Jane",
+    profilePhoto: null,
+    isVerified: true,
+  },
 }
 const summary = {
   averageRating: 4,
@@ -193,13 +200,21 @@ describe("useDeleteListerReview", () => {
   })
 
   it("reconciles server state and invalidates only review-backed collections", async () => {
-    mocks.deleteListerReview.mockResolvedValue({ review: deletedReview, reviewSummary: emptySummary })
+    mocks.deleteListerReview.mockResolvedValue({
+      review: { ...deletedReview, reviewer: undefined },
+      reviewSummary: emptySummary,
+    })
     const { result, queryClient, reportKey } = setup()
     const invalidate = vi.spyOn(queryClient, "invalidateQueries")
 
     act(() => result.current.mutate(variables))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(queryClient.getQueryData(reportKey)).toMatchObject({ review: deletedReview })
+    expect(queryClient.getQueryData(reportKey)).toMatchObject({
+      review: {
+        isDeleted: true,
+        reviewer: review.reviewer,
+      },
+    })
     expect(invalidate).toHaveBeenCalledTimes(4)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviews.byLister("profile-1"), refetchType: "active" })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.listerReviewTeasers.byLister("profile-1"), refetchType: "active" })

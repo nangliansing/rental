@@ -7,6 +7,7 @@ import { queryKeys } from "@/lib/query-keys"
 import type { ListerReview } from "./createListerReview"
 import {
   listerReviewRefetchQueryKeys,
+  patchReviewFromServerInQueries,
   patchReviewInQueries,
   REVIEW_WRITE_SCOPE_ID,
 } from "./reviewMutationCache"
@@ -81,7 +82,7 @@ export function useToggleListerReviewCollapse() {
       optimisticContext,
       data,
     }) => {
-      patchReviewInQueries(
+      patchReviewFromServerInQueries(
         client,
         optimisticContext.keys,
         variables.review._id,

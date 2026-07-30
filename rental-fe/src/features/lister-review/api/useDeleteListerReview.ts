@@ -8,6 +8,7 @@ import type { ListerReview, ListerReviewSummary } from "./createListerReview"
 import { deleteListerReview } from "./deleteListerReview"
 import {
   listerReviewRefetchQueryKeys,
+  patchReviewFromServerInQueries,
   patchReviewInQueries,
   patchReviewSummaryInQueries,
   removeReviewFromListerReviewData,
@@ -109,7 +110,7 @@ export function useDeleteListerReview() {
       optimisticContext,
       data,
     }) => {
-      patchReviewInQueries(
+      patchReviewFromServerInQueries(
         client,
         adminReviewReportKeys,
         variables.review._id,
