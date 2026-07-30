@@ -309,6 +309,61 @@ export type ListingAvailabilityBadgePresentation = {
   isAvailableNow: boolean
 }
 
+export type ListingAvailabilityDisplay = ListingAvailabilityBadgePresentation & {
+  kind: ListingAvailabilityResolvedState["kind"]
+  /** Short date without year, e.g. "Aug 15". Null for flexible and available-now. */
+  shortDateLabel: string | null
+  /** Full date with year, e.g. "Aug 15, 2026". Null for flexible and available-now. */
+  fullDateLabel: string | null
+  /** Accessible label; future dates include the "Available from" prefix. */
+  ariaLabel: string
+}
+
+/** Defensive input normalization for UI components. */
+export function normalizeListingAvailableAt(
+  availableAt: unknown,
+): string | null {
+  if (availableAt === null || availableAt === undefined) {
+    return null
+  }
+
+  if (typeof availableAt !== "string") {
+    return null
+  }
+
+  if (!availableAt.trim()) {
+    return null
+  }
+
+  return availableAt
+}
+
+export function getListingAvailabilityDisplay(
+  availableAt: unknown,
+  referenceDate = new Date(),
+): ListingAvailabilityDisplay {
+  const safeAvailableAt = normalizeListingAvailableAt(availableAt)
+  const state = resolveListingAvailabilityState(safeAvailableAt, referenceDate)
+  const presentation = getListingAvailabilityBadgePresentationFromState(state)
+
+  const shortDateLabel =
+    state.kind === "from_date"
+      ? formatDateOnlyLabel(state.dateKey, { year: undefined })
+      : null
+  const fullDateLabel =
+    state.kind === "from_date"
+      ? formatDateOnlyLabel(state.dateKey) ?? state.dateKey
+      : null
+
+  return {
+    kind: state.kind,
+    shortDateLabel,
+    fullDateLabel,
+    ariaLabel: getListingAvailabilityLabelFromState(state),
+    ...presentation,
+  }
+}
+
 export function isListingAvailableNow(
   availableAt: string | null,
   referenceDate = new Date(),
@@ -317,12 +372,9 @@ export function isListingAvailableNow(
     .isAvailableNow
 }
 
-export function getListingAvailabilityBadgePresentation(
-  availableAt: string | null,
-  referenceDate = new Date(),
+function getListingAvailabilityBadgePresentationFromState(
+  state: ListingAvailabilityResolvedState,
 ): ListingAvailabilityBadgePresentation {
-  const state = resolveListingAvailabilityState(availableAt, referenceDate)
-
   if (state.kind === "flexible") {
     return {
       label: "Flexible",
@@ -346,12 +398,9 @@ export function getListingAvailabilityBadgePresentation(
   }
 }
 
-export function getListingAvailabilityLabel(
-  availableAt: string | null,
-  referenceDate = new Date(),
+function getListingAvailabilityLabelFromState(
+  state: ListingAvailabilityResolvedState,
 ) {
-  const state = resolveListingAvailabilityState(availableAt, referenceDate)
-
   if (state.kind === "flexible") {
     return "Flexible"
   }
@@ -363,6 +412,30 @@ export function getListingAvailabilityLabel(
   const formattedDate = formatDateOnlyLabel(state.dateKey) ?? state.dateKey
 
   return `Available from ${formattedDate}`
+}
+
+export function getListingAvailabilityBadgePresentation(
+  availableAt: string | null | undefined,
+  referenceDate = new Date(),
+): ListingAvailabilityBadgePresentation {
+  const state = resolveListingAvailabilityState(
+    normalizeListingAvailableAt(availableAt),
+    referenceDate,
+  )
+
+  return getListingAvailabilityBadgePresentationFromState(state)
+}
+
+export function getListingAvailabilityLabel(
+  availableAt: string | null | undefined,
+  referenceDate = new Date(),
+) {
+  const state = resolveListingAvailabilityState(
+    normalizeListingAvailableAt(availableAt),
+    referenceDate,
+  )
+
+  return getListingAvailabilityLabelFromState(state)
 }
 
 export function isListingAvailabilityFormValid(

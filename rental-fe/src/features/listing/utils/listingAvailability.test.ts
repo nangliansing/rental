@@ -4,10 +4,12 @@ import {
   areAvailableAtValuesEqual,
   dateKeyToListingAvailabilityFields,
   getListingAvailabilityBadgePresentation,
+  getListingAvailabilityDisplay,
   getListingAvailabilityLabel,
   getTodayDateKeyInBangkok,
   isListingAvailableNow,
   listingAvailabilityFieldsToDateKey,
+  normalizeListingAvailableAt,
   parseAvailableAtFromApi,
   parseAvailableAtToFormFields,
   parseListingAvailabilityFromApi,
@@ -276,5 +278,72 @@ describe("listingAvailability", () => {
     vi.setSystemTime(new Date("2026-07-28T18:00:00.000Z"))
 
     expect(getTodayDateKeyInBangkok()).toBe("2026-07-29")
+  })
+
+  it("builds structured display data for UI variants", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    expect(normalizeListingAvailableAt(undefined)).toBeNull()
+    expect(normalizeListingAvailableAt(42)).toBeNull()
+    expect(normalizeListingAvailableAt("")).toBeNull()
+    expect(normalizeListingAvailableAt("   ")).toBeNull()
+
+    expect(getListingAvailabilityDisplay(null)).toEqual({
+      kind: "flexible",
+      label: "Flexible",
+      tone: "secondary",
+      isAvailableNow: false,
+      shortDateLabel: null,
+      fullDateLabel: null,
+      ariaLabel: "Flexible",
+    })
+
+    expect(
+      getListingAvailabilityDisplay("2026-07-29T00:00:00+07:00"),
+    ).toEqual({
+      kind: "now",
+      label: "Available now",
+      tone: "active",
+      isAvailableNow: true,
+      shortDateLabel: null,
+      fullDateLabel: null,
+      ariaLabel: "Available now",
+    })
+
+    expect(
+      getListingAvailabilityDisplay("2026-08-15T00:00:00+07:00"),
+    ).toEqual({
+      kind: "from_date",
+      label: "Aug 15, 2026",
+      tone: "secondary",
+      isAvailableNow: false,
+      shortDateLabel: "Aug 15",
+      fullDateLabel: "Aug 15, 2026",
+      ariaLabel: "Available from Aug 15, 2026",
+    })
+  })
+
+  it("keeps badge, label, and display helpers aligned for the same input", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    const inputs = [
+      null,
+      "2026-07-29T00:00:00+07:00",
+      "2026-08-15T00:00:00+07:00",
+      "garbage",
+    ] as const
+
+    for (const availableAt of inputs) {
+      const display = getListingAvailabilityDisplay(availableAt)
+      const badge = getListingAvailabilityBadgePresentation(availableAt)
+      const label = getListingAvailabilityLabel(availableAt)
+
+      expect(display.label).toBe(badge.label)
+      expect(display.tone).toBe(badge.tone)
+      expect(display.isAvailableNow).toBe(badge.isAvailableNow)
+      expect(display.ariaLabel).toBe(label)
+    }
   })
 })

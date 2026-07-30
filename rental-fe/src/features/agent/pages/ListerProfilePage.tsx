@@ -91,6 +91,7 @@ export function ListerProfilePage() {
           {activeTab === "listings" ? (
             <ListerProfileListings
               listings={listings}
+              listingFilter={listingFilter}
               isLoading={listingsQuery.isLoading}
               isError={listingsQuery.isError}
               hasNextPage={Boolean(listingsQuery.hasNextPage)}

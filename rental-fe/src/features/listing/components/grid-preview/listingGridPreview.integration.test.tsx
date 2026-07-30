@@ -72,9 +72,9 @@ describe("listing grid preview integration", () => {
 
       const dialog = screen.getByRole("dialog", { name: "Preview listing ฿14k" })
       expect(dialog).toBeInTheDocument()
-      expect(within(dialog).getByText("Available now")).toBeInTheDocument()
+      expect(within(dialog).getByLabelText("Available now")).toBeInTheDocument()
       expect(within(dialog).getByText(/^Dep /)).toBeInTheDocument()
-      expect(within(dialog).queryAllByText("Available now")).toHaveLength(1)
+      expect(within(dialog).queryByText("Available now")).not.toBeInTheDocument()
 
       await user.click(
         screen.getByRole("button", {
@@ -191,7 +191,7 @@ describe("listing grid preview integration", () => {
   })
 
   describe("availability presentation", () => {
-    it("shows the dot on the tile and the full badge in preview for available now", async () => {
+    it("shows the dot on the tile and compact availability in preview for available now", async () => {
       const user = userEvent.setup()
       const listing = createSearchListing({
         availableAt: "2026-07-29T00:00:00+07:00",
@@ -205,27 +205,28 @@ describe("listing grid preview integration", () => {
       await user.click(screen.getByRole("button", { name: "Open listing ฿14k" }))
 
       expect(
-        within(screen.getByRole("dialog")).getByText("Available now"),
+        within(screen.getByRole("dialog")).getByLabelText("Available now"),
       ).toBeInTheDocument()
-      expect(screen.getAllByText("Available now")).toHaveLength(1)
+      expect(screen.getAllByLabelText("Available now")).toHaveLength(2)
     })
 
-    it("shows flexible badge in preview and no dot on the tile", async () => {
+    it("shows no availability chip in preview for flexible listings", async () => {
       const user = userEvent.setup()
       const listing = createSearchListing({ availableAt: null })
 
       render(<GridPreviewHarness listing={listing} showBuildingName={false} />)
 
       expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
+      expect(screen.queryByLabelText("Flexible")).not.toBeInTheDocument()
 
       await user.click(screen.getByRole("button", { name: "Open listing ฿14k" }))
 
       const dialog = screen.getByRole("dialog")
-      expect(within(dialog).getByText("Flexible")).toBeInTheDocument()
-      expect(within(dialog).queryAllByText("Flexible")).toHaveLength(1)
+      expect(within(dialog).queryByText("Flexible")).not.toBeInTheDocument()
+      expect(within(dialog).queryByLabelText("Flexible")).not.toBeInTheDocument()
     })
 
-    it("shows a future date badge in preview and no dot on the tile", async () => {
+    it("shows a compact future date in preview and no dot on the tile", async () => {
       const user = userEvent.setup()
       const listing = createSearchListing({
         availableAt: "2026-08-15T00:00:00+07:00",
@@ -234,10 +235,16 @@ describe("listing grid preview integration", () => {
       render(<GridPreviewHarness listing={listing} showBuildingName={false} />)
 
       expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
+      expect(screen.queryByText("Aug 15")).not.toBeInTheDocument()
 
       await user.click(screen.getByRole("button", { name: "Open listing ฿14k" }))
 
-      expect(within(screen.getByRole("dialog")).getByText("Aug 15, 2026")).toBeInTheDocument()
+      expect(within(screen.getByRole("dialog")).getByText("Aug 15")).toBeInTheDocument()
+      expect(
+        within(screen.getByRole("dialog")).getByLabelText(
+          "Available from Aug 15, 2026",
+        ),
+      ).toBeInTheDocument()
     })
 
     it("shows the dot for past availability that counts as available now", () => {

@@ -35,7 +35,7 @@ describe("ListingGridPreviewModal", () => {
     expect(
       screen.getByRole("dialog", { name: "Preview listing ฿14k" }),
     ).toBeInTheDocument()
-    expect(screen.getByText("Flexible")).toBeInTheDocument()
+    expect(screen.queryByText("Flexible")).not.toBeInTheDocument()
     expect(screen.getByText(/^Dep /)).toBeInTheDocument()
 
     await user.click(
@@ -84,6 +84,24 @@ describe("ListingGridPreviewModal", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  it("uses compact availability in the preview header", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    render(
+      <ListingGridPreviewModal
+        listing={createSearchListing({
+          availableAt: "2026-08-15T00:00:00+07:00",
+        })}
+        onClose={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("Aug 15")).toBeInTheDocument()
+    expect(screen.queryByText("Aug 15, 2026")).not.toBeInTheDocument()
+  })
+
   it("does not duplicate availability inside fine print", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
@@ -98,8 +116,9 @@ describe("ListingGridPreviewModal", () => {
       />,
     )
 
-    expect(screen.getAllByText("Available now")).toHaveLength(1)
+    expect(screen.getByLabelText("Available now")).toBeInTheDocument()
     expect(screen.getByText(/^Dep /)).toBeInTheDocument()
+    expect(screen.queryByText("Available from")).not.toBeInTheDocument()
   })
 
   it("does not call onOpenDetail when listing id is blank", async () => {

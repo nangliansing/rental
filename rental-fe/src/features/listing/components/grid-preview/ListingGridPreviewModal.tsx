@@ -4,10 +4,11 @@ import type { RefObject } from "react"
 
 import type { ListingGridCardListing } from "../listingGridCardTypes"
 import { ListingCoverImage } from "../ListingPresentationPrimitives"
+import { ListingAvailabilityDisplay } from "../ListingAvailabilityDisplay"
 import { formatCompactMoney, getSortedListingPhotos } from "../../utils/listingDisplay"
+import { LISTING_GRID_AVAILABILITY_VARIANT } from "../../utils/listingGridAvailabilityVariant"
 import { ListingGridCardOverlayContent } from "./ListingGridCardOverlayContent"
 import {
-  ListingGridCardAvailabilityBadge,
   ListingGridCardBadge,
 } from "./listingGridCardChrome"
 
@@ -71,7 +72,10 @@ export function ListingGridPreviewModal({
               loading="eager"
               fetchPriority="high"
             />
-            <ListingGridCardAvailabilityBadge listing={listing} />
+            <ListingAvailabilityDisplay
+              availableAt={listing.availableAt}
+              variant={LISTING_GRID_AVAILABILITY_VARIANT.timing}
+            />
             <ListingGridCardBadge listing={listing} />
             <ListingGridCardOverlayContent
               listing={listing}

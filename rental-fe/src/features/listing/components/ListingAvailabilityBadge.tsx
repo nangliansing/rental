@@ -1,17 +1,18 @@
-import { AlertCircle, CalendarDays, Loader2 } from "lucide-react"
 import { useId } from "react"
 
 import { cn } from "@/lib/utils"
 
 import {
-  getListingAvailabilityBadgePresentation,
+  getListingAvailabilityDisplay,
+  normalizeListingAvailableAt,
   parseAvailableAtToFormFields,
   serializeListingAvailabilityForApi,
   toListingAvailabilityDateKey,
-  type ListingAvailabilityBadgePresentation,
+  type ListingAvailabilityDisplay as ListingAvailabilityDisplayData,
   type ListingAvailabilityFormFields,
 } from "../utils/listingAvailability"
 import { normalizeDialogErrorMessage } from "../utils/normalizeDialogErrorMessage"
+import { ListingAvailabilityDisplay } from "./ListingAvailabilityDisplay"
 import { ListingAvailabilityField } from "./ListingAvailabilityField"
 
 export type ListingAvailabilityBadgeProps = {
@@ -24,23 +25,17 @@ export type ListingAvailabilityBadgeProps = {
   className?: string
 }
 
-/** Same type scale/padding as ListingPhotoCarousel count chip (`text-xs px-2.5 py-1`). */
-const PHOTO_OVERLAY_BADGE_CLASS_NAME =
-  "inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-xs font-semibold leading-none text-white shadow-sm backdrop-blur-md"
-
-const BADGE_ICON_CLASS_NAME = "h-3.5 w-3.5 shrink-0"
-
 type BadgeVisualStatus = "idle" | "loading" | "error"
 
 function getBadgeToneClassName(
-  presentation: ListingAvailabilityBadgePresentation,
+  display: ListingAvailabilityDisplayData,
   status: BadgeVisualStatus,
 ) {
   if (status === "error") {
     return "border-rose-200/25 bg-rose-600/90 text-white"
   }
 
-  if (presentation.tone === "active") {
+  if (display.tone === "active") {
     return "border-emerald-300/30 bg-emerald-600/90 text-white"
   }
 
@@ -48,7 +43,7 @@ function getBadgeToneClassName(
 }
 
 function getBadgeHoverClassName(
-  presentation: ListingAvailabilityBadgePresentation,
+  display: ListingAvailabilityDisplayData,
   status: BadgeVisualStatus,
   isInteractive: boolean,
 ) {
@@ -60,7 +55,7 @@ function getBadgeHoverClassName(
     return "transition-colors hover:bg-rose-600"
   }
 
-  if (presentation.tone === "active") {
+  if (display.tone === "active") {
     return "transition-colors hover:bg-emerald-600"
   }
 
@@ -68,7 +63,7 @@ function getBadgeHoverClassName(
 }
 
 function getBadgeTriggerAriaLabel(
-  presentation: ListingAvailabilityBadgePresentation,
+  display: ListingAvailabilityDisplayData,
   status: BadgeVisualStatus,
 ) {
   if (status === "loading") {
@@ -76,52 +71,40 @@ function getBadgeTriggerAriaLabel(
   }
 
   if (status === "error") {
-    return `Availability update failed. ${presentation.label}. Tap to retry.`
+    return `Availability update failed. ${display.label}. Tap to retry.`
   }
 
-  return `Edit availability: ${presentation.label}`
+  return `Edit availability: ${display.label}`
 }
 
 /** Pure visual face — no picker/API knowledge. */
 function ListingAvailabilityBadgeFace({
-  presentation,
+  display,
   status = "idle",
   className,
   ariaLabel,
 }: {
-  presentation: ListingAvailabilityBadgePresentation
+  display: ListingAvailabilityDisplayData
   status?: BadgeVisualStatus
   className?: string
   ariaLabel?: string
 }) {
-  const Icon =
-    status === "loading"
-      ? Loader2
-      : status === "error"
-        ? AlertCircle
-        : CalendarDays
-
   return (
-    <span
-      className={cn(PHOTO_OVERLAY_BADGE_CLASS_NAME, className)}
-      aria-label={ariaLabel}
-    >
-      <Icon
-        aria-hidden="true"
-        className={cn(BADGE_ICON_CLASS_NAME, status === "loading" && "animate-spin")}
-        strokeWidth={2.25}
-      />
-      <span className="truncate">
-        {status === "loading" ? "Saving..." : presentation.label}
-      </span>
-    </span>
+    <ListingAvailabilityDisplay
+      display={display}
+      variant="full"
+      showIcon
+      status={status}
+      className={className}
+      ariaLabel={ariaLabel ?? display.label}
+    />
   )
 }
 
 /** Owner path — reuses ListingAvailabilityField / DateDayPicker. */
 function EditableListingAvailabilityBadge({
   availableAt,
-  presentation,
+  display,
   isSubmitting,
   errorMessage,
   referenceDate,
@@ -129,7 +112,7 @@ function EditableListingAvailabilityBadge({
   onAvailableAtChange,
 }: {
   availableAt: string | null
-  presentation: ListingAvailabilityBadgePresentation
+  display: ListingAvailabilityDisplayData
   isSubmitting: boolean
   errorMessage: string
   referenceDate?: Date
@@ -157,8 +140,8 @@ function EditableListingAvailabilityBadge({
   }
 
   const faceClassName = cn(
-    getBadgeToneClassName(presentation, status),
-    getBadgeHoverClassName(presentation, status, true),
+    getBadgeToneClassName(display, status),
+    getBadgeHoverClassName(display, status, true),
     isSubmitting && "opacity-90",
     className,
   )
@@ -192,7 +175,7 @@ function EditableListingAvailabilityBadge({
             aria-busy={isLoading || undefined}
             aria-describedby={ariaDescribedBy}
             aria-invalid={ariaInvalid}
-            aria-label={getBadgeTriggerAriaLabel(presentation, status)}
+            aria-label={getBadgeTriggerAriaLabel(display, status)}
             className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:cursor-not-allowed"
             onClick={(event) => {
               event.preventDefault()
@@ -201,7 +184,7 @@ function EditableListingAvailabilityBadge({
             }}
           >
             <ListingAvailabilityBadgeFace
-              presentation={presentation}
+              display={display}
               status={status}
               className={faceClassName}
             />
@@ -231,25 +214,21 @@ export function ListingAvailabilityBadge({
   referenceDate,
   className,
 }: ListingAvailabilityBadgeProps) {
-  const safeAvailableAt =
-    typeof availableAt === "string" || availableAt === null ? availableAt : null
-  const presentation = getListingAvailabilityBadgePresentation(
-    safeAvailableAt,
-    referenceDate,
-  )
+  const safeAvailableAt = normalizeListingAvailableAt(availableAt)
+  const display = getListingAvailabilityDisplay(safeAvailableAt, referenceDate)
   const normalizedErrorMessage = normalizeDialogErrorMessage(errorMessage)
   const canEdit = isEditable && typeof onAvailableAtChange === "function"
 
   if (!canEdit) {
     return (
       <ListingAvailabilityBadgeFace
-        presentation={presentation}
+        display={display}
         className={cn(
-          getBadgeToneClassName(presentation, "idle"),
+          getBadgeToneClassName(display, "idle"),
           "pointer-events-none",
           className,
         )}
-        ariaLabel={presentation.label}
+        ariaLabel={display.label}
       />
     )
   }
@@ -257,7 +236,7 @@ export function ListingAvailabilityBadge({
   return (
     <EditableListingAvailabilityBadge
       availableAt={safeAvailableAt}
-      presentation={presentation}
+      display={display}
       isSubmitting={isSubmitting}
       errorMessage={normalizedErrorMessage}
       referenceDate={referenceDate}

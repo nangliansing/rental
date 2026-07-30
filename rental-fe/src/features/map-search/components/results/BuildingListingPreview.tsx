@@ -12,6 +12,8 @@ import {
   ListingCoverImage,
   ListingPrice,
 } from "@/features/listing/components/ListingPresentationPrimitives"
+import { ListingAvailabilityDisplay } from "@/features/listing/components/ListingAvailabilityDisplay"
+import { LISTING_GRID_AVAILABILITY_VARIANT } from "@/features/listing/utils/listingGridAvailabilityVariant"
 import { formatBedroom } from "@/features/listing/utils/listingDisplay"
 import type { BuildingListing } from "../../types"
 import {
@@ -40,6 +42,11 @@ export function BuildingListingPreview({ listing }: BuildingListingPreviewProps)
         altFallback="Room preview"
         fallbackLabel="No photo"
         fallbackClassName="bg-slate-800 text-white/60"
+      />
+
+      <ListingAvailabilityDisplay
+        availableAt={listing.availableAt}
+        variant={LISTING_GRID_AVAILABILITY_VARIANT.timing}
       />
 
       <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-slate-950 shadow-sm backdrop-blur-sm">
