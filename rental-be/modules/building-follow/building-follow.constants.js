@@ -1,0 +1,7 @@
+export const BUILDING_FOLLOW_ERROR_CODES = Object.freeze({
+  ALREADY_FOLLOWED: "BUILDING_ALREADY_FOLLOWED",
+  NOT_FOLLOWED: "BUILDING_FOLLOW_NOT_FOUND",
+});
+
+export const BUILDING_FOLLOW_RECORD_SELECT =
+  "_id userId buildingId createdAt updatedAt";
