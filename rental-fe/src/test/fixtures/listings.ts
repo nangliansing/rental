@@ -85,6 +85,7 @@ export function createSearchBuilding(
     address: "Bang Kapi, Bangkok",
     minRent: 14000,
     maxRent: 16000,
+    isFollowing: false,
     ...overrides,
   }
 }

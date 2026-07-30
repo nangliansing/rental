@@ -143,6 +143,7 @@ export const parseSearchListingsBuilding = (
     address: readString(building.address),
     minRent: readNumber(building.minRent),
     maxRent: readNumber(building.maxRent),
+    isFollowing: readBoolean(building.isFollowing),
   }
 }
 

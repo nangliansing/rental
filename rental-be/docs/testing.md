@@ -99,6 +99,7 @@ Building follow and viewer follow-state coverage lives in:
 test/building-follow.write.integration.test.js   # follow / unfollow mutations
 test/building-follow.fetch.integration.test.js   # followers / followings lists
 test/building-is-following.integration.test.js   # isFollowing on building reads
+test/enrich-listing-building-with-viewer-state.test.js
 test/resolve-is-following.test.js                # imperative viewer helper
 test/build-is-following-field-stages.test.js     # aggregation helper contract
 test/search-buildings-near-lines.integration.test.js
@@ -116,6 +117,8 @@ docs/search/search-buildings-in-map.md
 docs/search/search-buildings-nearby.md
 docs/search/search-buildings-near-lines.md
 docs/search/search-listings-in-building.md
+docs/search/search-listing-by-id.md
+docs/listing/owner-search-listing-by-id.md
 ```
 
 The security and observability suites additionally cover security headers,

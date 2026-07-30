@@ -84,6 +84,7 @@ export type SearchBuilding = {
   address: string
   minRent: number | null
   maxRent: number | null
+  isFollowing: boolean
   listings: BuildingListing[]
 }
 

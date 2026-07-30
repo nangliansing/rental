@@ -65,6 +65,8 @@ const friendlyErrorMessages: Record<string, string> = {
   LISTER_REVIEW_OWNER_REQUIRED: 'You can only moderate reviews on your own profile.',
   SAVED_LISTING_ALREADY_EXISTS: 'This listing is already saved.',
   SAVED_LISTING_NOT_FOUND: 'This listing is not saved.',
+  BUILDING_ALREADY_FOLLOWED: 'You are already following this building.',
+  BUILDING_FOLLOW_NOT_FOUND: 'You are not following this building.',
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {

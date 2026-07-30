@@ -7,6 +7,7 @@ import {
 } from "../../../shared/validators/index.js";
 
 import Listing from "../listing.model.js";
+import { enrichListingWithBuildingFollowState } from "../../building-follow/utils/index.js";
 import { serializeListingPayloadForApi } from "../utils/index.js";
 import { buildOwnerSearchListingByIdPipeline } from "../pipelines/index.js";
 import { buildOwnerListingAgentProfileQuery } from "./build-owner-listing-agent-profile-query.js";
@@ -56,8 +57,15 @@ export const ownerSearchListingByIdService = async ({
         throw new AppError("Listing not found", 404, "LISTING_NOT_FOUND");
     }
 
+    const listingWithBuildingFollowState =
+        await enrichListingWithBuildingFollowState({
+            listing,
+            viewerUserId: listedBy,
+            session,
+        });
+
     return serializeListingPayloadForApi({
         agentProfile,
-        listing,
+        listing: listingWithBuildingFollowState,
     });
 };

@@ -32,11 +32,13 @@ let AgentProfile;
 let Building;
 let BuildingFollow;
 let Listing;
+let SavedListing;
 let User;
 let baseUrl;
 let httpServer;
 let replSet;
 let signAccessToken;
+let signRefreshToken;
 
 const buildingPath = (buildingId) =>
   `/api/v1/buildings/${buildingId.toString()}`;
@@ -96,7 +98,7 @@ const createBuilding = async (overrides = {}) =>
     ...overrides,
   });
 
-const createPublicListing = async (building, lister) => {
+const createPublicListing = async (building, lister, overrides = {}) => {
   await AgentProfile.create({
     userId: lister._id,
     displayName: "Listing Agent",
@@ -120,7 +122,30 @@ const createPublicListing = async (building, lister) => {
     facilities: ["Air Conditioner"],
     listedBy: lister._id,
     buildingId: building._id,
+    ...overrides,
   });
+};
+
+const createPrivateListing = async (building, lister, overrides = {}) =>
+  createPublicListing(building, lister, {
+    visibility: LISTING_VISIBILITIES.PRIVATE,
+    ...overrides,
+  });
+
+const createListingDetailFixture = async () => {
+  const lister = await createUser();
+  const viewer = await createUser();
+  const building = await createBuilding();
+  const listing = await createPublicListing(building, lister.user);
+
+  return { lister, viewer, building, listing };
+};
+
+const assertNestedBuildingIsFollowing = (body, expected) => {
+  assert.equal(body.success, true);
+  assert.ok(body.data.listing.building);
+  assertIsFollowing(body.data.listing.building.isFollowing, expected);
+  assert.equal(Object.hasOwn(body.data.listing, "isFollowing"), false);
 };
 
 const followBuilding = async ({ userId, buildingId }) =>
@@ -215,6 +240,7 @@ before(async () => {
     buildingModule,
     listingModule,
     userModule,
+    savedListingModule,
   ] = await Promise.all([
     import("../app.js"),
     import("../shared/auth/index.js"),
@@ -223,14 +249,17 @@ before(async () => {
     import("../modules/building/building.model.js"),
     import("../modules/listing/listing.model.js"),
     import("../modules/user/user.model.js"),
+    import("../modules/saved-listing/saved-listing.model.js"),
   ]);
 
   signAccessToken = authModule.signAccessToken;
+  signRefreshToken = authModule.signRefreshToken;
   AgentProfile = agentProfileModule.default;
   BuildingFollow = buildingFollowModule.default;
   Building = buildingModule.default;
   Listing = listingModule.default;
   User = userModule.default;
+  SavedListing = savedListingModule.default;
 
   httpServer = createServer(appModule.createApp({ config }));
   await new Promise((resolve, reject) => {
@@ -736,6 +765,487 @@ describe("POST /api/v1/search/buildings/:buildingId/listings", () => {
       body: JSON.stringify({ page: 1, limit: 20 }),
     });
     assertIsFollowing(afterUnfollow.body.data.building.isFollowing, false);
+  });
+});
+
+const publicListingPath = (listingId) =>
+  `/api/v1/search/listings/${listingId.toString()}`;
+
+const ownerListingPath = (listingId) =>
+  `/api/v1/listings/${listingId.toString()}`;
+
+describe("GET /api/v1/search/listings/:listingId", () => {
+  test("includes isFollowing on nested building only", async () => {
+    const { viewer, building, listing } = await createListingDetailFixture();
+
+    await followBuilding({
+      userId: viewer.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, true);
+  });
+
+  test("returns isFollowing false when the viewer has not followed the building", async () => {
+    const { viewer, listing } = await createListingDetailFixture();
+
+    const response = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("returns isFollowing false for anonymous viewers", async () => {
+    const { viewer, building, listing } = await createListingDetailFixture();
+
+    await followBuilding({
+      userId: viewer.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(publicListingPath(listing._id));
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("returns false for invalid, suspended, and inactive viewer tokens", async () => {
+    const { building, listing } = await createListingDetailFixture();
+    const [suspended, inactive] = await Promise.all([
+      createUser({ status: USER_STATUSES.SUSPENDED }),
+      createUser({ status: USER_STATUSES.INACTIVE }),
+    ]);
+
+    await followBuilding({
+      userId: suspended.user._id,
+      buildingId: building._id,
+    });
+
+    const [invalidToken, suspendedViewer, inactiveViewer] = await Promise.all([
+      request(publicListingPath(listing._id), {
+        headers: bearerHeaders("not-a-valid-token"),
+      }),
+      request(publicListingPath(listing._id), {
+        headers: bearerHeaders(suspended.token),
+      }),
+      request(publicListingPath(listing._id), {
+        headers: bearerHeaders(inactive.token),
+      }),
+    ]);
+
+    assert.equal(invalidToken.status, 200);
+    assert.equal(suspendedViewer.status, 200);
+    assert.equal(inactiveViewer.status, 200);
+    assertNestedBuildingIsFollowing(invalidToken.body, false);
+    assertNestedBuildingIsFollowing(suspendedViewer.body, false);
+    assertNestedBuildingIsFollowing(inactiveViewer.body, false);
+  });
+
+  test("returns false when the token belongs to a deleted user", async () => {
+    const { building, listing } = await createListingDetailFixture();
+    const deletedViewer = await createUser();
+
+    await followBuilding({
+      userId: deletedViewer.user._id,
+      buildingId: building._id,
+    });
+    await User.deleteOne({ _id: deletedViewer.user._id });
+
+    const response = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(deletedViewer.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("treats a refresh token as anonymous for isFollowing", async () => {
+    const { viewer, building, listing } = await createListingDetailFixture();
+
+    await followBuilding({
+      userId: viewer.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(signRefreshToken(viewer.user)),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("does not treat another user's follow as the viewer's follow", async () => {
+    const { viewer, building, listing } = await createListingDetailFixture();
+    const follower = await createUser();
+
+    await followBuilding({
+      userId: follower.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("returns the lister's own follow state when they view their listing", async () => {
+    const { lister, building, listing } = await createListingDetailFixture();
+
+    await followBuilding({
+      userId: lister.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(lister.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, true);
+  });
+
+  test("keeps isSavedByMe independent from building isFollowing", async () => {
+    const { viewer, building, listing } = await createListingDetailFixture();
+
+    await SavedListing.create({
+      userId: viewer.user._id,
+      listingId: listing._id,
+      buildingId: building._id,
+      listedBy: listing.listedBy,
+      snapshot: {
+        rent: listing.rent,
+        visibility: listing.visibility,
+        buildingName: building.name,
+        coverPhoto: null,
+      },
+    });
+
+    const savedNotFollowing = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+
+    assert.equal(savedNotFollowing.status, 200);
+    assert.equal(savedNotFollowing.body.data.listing.isSavedByMe, true);
+    assertNestedBuildingIsFollowing(savedNotFollowing.body, false);
+
+    await followBuilding({
+      userId: viewer.user._id,
+      buildingId: building._id,
+    });
+
+    const savedAndFollowing = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+
+    assert.equal(savedAndFollowing.status, 200);
+    assert.equal(savedAndFollowing.body.data.listing.isSavedByMe, true);
+    assertNestedBuildingIsFollowing(savedAndFollowing.body, true);
+  });
+
+  test("returns 422 for an invalid listing id", async () => {
+    const response = await request(publicListingPath("not-a-valid-id"));
+
+    assert.equal(response.status, 422);
+    assert.equal(response.body.code, "VALIDATION_ERROR");
+  });
+
+  test("returns 404 for missing, private, deleted, and inactive-building listings", async () => {
+    const privateOwner = await createUser();
+    const deletedOwner = await createUser();
+    const inactiveOwner = await createUser();
+    const building = await createBuilding();
+    const privateBuilding = await createBuilding();
+    const inactiveBuilding = await createBuilding({ isActive: false });
+
+    const privateListing = await createPrivateListing(
+      privateBuilding,
+      privateOwner.user,
+    );
+    const deletedListing = await createPublicListing(building, deletedOwner.user, {
+      isDeleted: true,
+    });
+    const inactiveBuildingListing = await createPublicListing(
+      inactiveBuilding,
+      inactiveOwner.user,
+    );
+    const missingListingId = new mongoose.Types.ObjectId();
+
+    const responses = await Promise.all([
+      request(publicListingPath(missingListingId)),
+      request(publicListingPath(privateListing._id)),
+      request(publicListingPath(deletedListing._id)),
+      request(publicListingPath(inactiveBuildingListing._id)),
+    ]);
+
+    for (const response of responses) {
+      assert.equal(response.status, 404);
+      assert.equal(response.body.code, "LISTING_NOT_FOUND");
+    }
+  });
+
+  test("updates isFollowing after follow and unfollow via the follow API", async () => {
+    const { viewer, building, listing } = await createListingDetailFixture();
+
+    const beforeFollow = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+    assertNestedBuildingIsFollowing(beforeFollow.body, false);
+
+    assert.equal(
+      (await followBuildingViaApi({ token: viewer.token, buildingId: building._id }))
+        .status,
+      201,
+    );
+
+    const afterFollow = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+    assertNestedBuildingIsFollowing(afterFollow.body, true);
+
+    assert.equal(
+      (await unfollowBuildingViaApi({ token: viewer.token, buildingId: building._id }))
+        .status,
+      200,
+    );
+
+    const afterUnfollow = await request(publicListingPath(listing._id), {
+      headers: bearerHeaders(viewer.token),
+    });
+    assertNestedBuildingIsFollowing(afterUnfollow.body, false);
+  });
+});
+
+describe("GET /api/v1/listings/:listingId", () => {
+  test("includes isFollowing on nested building for the owner viewer", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    await followBuilding({
+      userId: owner.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, true);
+  });
+
+  test("returns isFollowing false when the owner has not followed the building", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("includes isFollowing on private listings for the owner", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPrivateListing(building, owner.user);
+
+    await followBuilding({
+      userId: owner.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.listing.visibility, LISTING_VISIBILITIES.PRIVATE);
+    assertNestedBuildingIsFollowing(response.body, true);
+  });
+
+  test("includes isFollowing when the linked building is inactive", async () => {
+    const owner = await createUser();
+    const building = await createBuilding({ isActive: false });
+    const listing = await createPublicListing(building, owner.user);
+
+    await followBuilding({
+      userId: owner.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.listing.building.isActive, false);
+    assertNestedBuildingIsFollowing(response.body, true);
+  });
+
+  test("does not expose isFollowing when building lookup is null", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    await Building.deleteOne({ _id: building._id });
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.listing.building, null);
+    assert.equal(Object.hasOwn(response.body.data.listing, "isFollowing"), false);
+  });
+
+  test("does not treat another user's follow as the owner's follow", async () => {
+    const owner = await createUser();
+    const follower = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    await followBuilding({
+      userId: follower.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 200);
+    assertNestedBuildingIsFollowing(response.body, false);
+  });
+
+  test("requires authentication", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    const response = await request(ownerListingPath(listing._id));
+
+    assert.equal(response.status, 401);
+  });
+
+  test("rejects suspended and inactive owners before listing lookup", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+    const [suspended, inactive] = await Promise.all([
+      createUser({ status: USER_STATUSES.SUSPENDED }),
+      createUser({ status: USER_STATUSES.INACTIVE }),
+    ]);
+
+    const [suspendedResponse, inactiveResponse] = await Promise.all([
+      request(ownerListingPath(listing._id), {
+        headers: bearerHeaders(suspended.token),
+      }),
+      request(ownerListingPath(listing._id), {
+        headers: bearerHeaders(inactive.token),
+      }),
+    ]);
+
+    assert.equal(suspendedResponse.status, 403);
+    assert.equal(inactiveResponse.status, 403);
+  });
+
+  test("returns 404 for another user's listing without leaking ownership", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    await followBuilding({
+      userId: other.user._id,
+      buildingId: building._id,
+    });
+
+    const response = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(other.token),
+    });
+
+    assert.equal(response.status, 404);
+    assert.equal(response.body.code, "LISTING_NOT_FOUND");
+  });
+
+  test("returns 422 for an invalid listing id", async () => {
+    const owner = await createUser();
+    const response = await request(ownerListingPath("not-a-valid-id"), {
+      headers: bearerHeaders(owner.token),
+    });
+
+    assert.equal(response.status, 422);
+    assert.equal(response.body.code, "VALIDATION_ERROR");
+  });
+
+  test("returns 404 for missing and soft-deleted listings", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const deletedListing = await createPublicListing(building, owner.user, {
+      isDeleted: true,
+    });
+    const missingListingId = new mongoose.Types.ObjectId();
+
+    const [missingResponse, deletedResponse] = await Promise.all([
+      request(ownerListingPath(missingListingId), {
+        headers: bearerHeaders(owner.token),
+      }),
+      request(ownerListingPath(deletedListing._id), {
+        headers: bearerHeaders(owner.token),
+      }),
+    ]);
+
+    assert.equal(missingResponse.status, 404);
+    assert.equal(missingResponse.body.code, "LISTING_NOT_FOUND");
+    assert.equal(deletedResponse.status, 404);
+    assert.equal(deletedResponse.body.code, "LISTING_NOT_FOUND");
+  });
+
+  test("updates isFollowing after follow and unfollow via the follow API", async () => {
+    const owner = await createUser();
+    const building = await createBuilding();
+    const listing = await createPublicListing(building, owner.user);
+
+    const beforeFollow = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+    assertNestedBuildingIsFollowing(beforeFollow.body, false);
+
+    assert.equal(
+      (await followBuildingViaApi({ token: owner.token, buildingId: building._id }))
+        .status,
+      201,
+    );
+
+    const afterFollow = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+    assertNestedBuildingIsFollowing(afterFollow.body, true);
+
+    assert.equal(
+      (await unfollowBuildingViaApi({ token: owner.token, buildingId: building._id }))
+        .status,
+      200,
+    );
+
+    const afterUnfollow = await request(ownerListingPath(listing._id), {
+      headers: bearerHeaders(owner.token),
+    });
+    assertNestedBuildingIsFollowing(afterUnfollow.body, false);
   });
 });
 

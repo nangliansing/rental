@@ -1,5 +1,6 @@
 import { Building2, MapPin } from "lucide-react"
 
+import { BuildingFollowControl } from "@/features/building-follow/components/BuildingFollowControl"
 import { cn } from "@/lib/utils"
 
 import { BuildingAmenityRail } from "./BuildingAmenityRail"
@@ -28,6 +29,7 @@ type BuildingSummaryCardProps = {
   onRequestEdit?: () => void
   onExploreNeighbourhood?: (trigger: HTMLButtonElement) => void
   isExploreOpen?: boolean
+  showFollowAction?: boolean
 }
 
 const VARIANT_CLASS_NAME = {
@@ -51,6 +53,7 @@ export function BuildingSummaryCard({
   onRequestEdit,
   onExploreNeighbourhood,
   isExploreOpen = false,
+  showFollowAction = true,
 }: BuildingSummaryCardProps) {
   const summary = normalizeBuildingSummary(building, { showCoordinates })
   const {
@@ -86,6 +89,12 @@ export function BuildingSummaryCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {showFollowAction && summary.id && (
+            <BuildingFollowControl
+              buildingId={summary.id}
+              initialIsFollowing={Boolean(building.isFollowing)}
+            />
+          )}
           {shouldShowRent && (
             <div className="text-right">
               <p

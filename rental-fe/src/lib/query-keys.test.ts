@@ -36,6 +36,10 @@ describe("queryKeys", () => {
     expect(
       queryKeys.savedListings.list({ limit: 20 }),
     ).toEqual(["saved-listings", 20])
+
+    expect(
+      queryKeys.buildingFollows.list({ limit: 20 }),
+    ).toEqual(["building-follows", 20])
   })
 
   it("provides prefixes for all viewer-specific listing details", () => {
@@ -82,6 +86,7 @@ describe("queryKeys", () => {
 
   it("exposes explicit all/list/detail family keys", () => {
     expect(queryKeys.savedListings.all).toBe(queryKeys.savedListings.lists)
+    expect(queryKeys.buildingFollows.all).toBe(queryKeys.buildingFollows.lists)
     expect(queryKeys.listerReviews.all).toBe(queryKeys.listerReviews.lists)
     expect(queryKeys.agentListings.all).toBe(queryKeys.agentListings.lists)
     expect(queryKeys.buildings.all).toBe(queryKeys.buildings.details)
@@ -157,6 +162,10 @@ describe("queryKeys", () => {
       {
         actual: queryKeys.savedListings.list({ limit: 10 }),
         expected: ["saved-listings", 10],
+      },
+      {
+        actual: queryKeys.buildingFollows.list({ limit: 10 }),
+        expected: ["building-follows", 10],
       },
       {
         actual: queryKeys.listerReviews.list({
@@ -317,6 +326,10 @@ describe("queryKeys", () => {
       {
         family: queryKeys.savedListings.lists,
         member: queryKeys.savedListings.list({ limit: 10 }),
+      },
+      {
+        family: queryKeys.buildingFollows.lists,
+        member: queryKeys.buildingFollows.list({ limit: 10 }),
       },
       {
         family: queryKeys.listerReviews.byLister("profile-1"),

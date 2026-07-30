@@ -10,6 +10,7 @@ export type BuildingSummaryData = {
   security?: readonly string[] | null
   minRent?: number | null
   maxRent?: number | null
+  isFollowing?: boolean
   location?: {
     coordinates?: readonly number[] | null
   } | null

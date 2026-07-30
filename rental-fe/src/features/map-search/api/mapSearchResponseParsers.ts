@@ -93,6 +93,7 @@ export const parseSearchBuilding = (value: unknown): SearchBuilding => {
     address: readNullableString(building.address) ?? "",
     minRent: readNumber(building.minRent),
     maxRent: readNumber(building.maxRent),
+    isFollowing: readBoolean(building.isFollowing),
     listings: Array.isArray(building.listings)
       ? building.listings.map(parseBuildingListing)
       : [],

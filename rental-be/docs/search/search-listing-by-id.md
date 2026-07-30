@@ -118,7 +118,8 @@ Body:
         "address": "Lat Phrao Road, Khlong Chan, Bang Kapi, Bangkok 10240, Thailand",
         "isActive": true,
         "minRent": 13000,
-        "maxRent": 15000
+        "maxRent": 15000,
+        "isFollowing": false
       },
       "agentProfile": {
         "_id": "6a5669f81a9630e315e059a7",
@@ -187,6 +188,22 @@ So unverified or offline agents can still have public listings.
 - active viewer who did not save the listing: `false`
 
 Saving your own listing is allowed, so `isSavedByMe` can be `true` for the lister too.
+
+## isFollowing
+
+The nested `building` object always includes `isFollowing`.
+
+Listings do not include `isFollowing`.
+
+`isFollowing` uses the same optional viewer token rules as other public building reads:
+
+- anonymous viewer: `false`
+- invalid token: `false`
+- suspended/inactive/missing viewer user: `false`
+- active viewer who follows the building: `true`
+- active viewer who does not follow the building: `false`
+
+A lister may follow a building they also list in, so `isFollowing` can be `true` on the caller's own listing detail.
 
 ## Errors
 
@@ -260,3 +277,10 @@ Examples:
 - offline agent still returns `200`
 - suspended viewer still returns `200` as anonymous
 - inactive viewer still returns `200` as anonymous
+- nested building includes `isFollowing: true` for active followers
+- nested building includes `isFollowing: false` for non-followers and anonymous viewers
+- deleted viewer token returns `isFollowing: false`
+- another user's follow does not affect the viewer
+- lister sees their own follow state on their public listing
+- `isSavedByMe` and `building.isFollowing` are independent
+- follow and unfollow via building-follow API updates nested `isFollowing`
