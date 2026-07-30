@@ -1,5 +1,10 @@
 import type { Page, Route } from "@playwright/test"
 
+import {
+  buildSmokeOwnerListings,
+  searchSmokeOwnerListings,
+  toSmokeOwnerListingAgentProfile,
+} from "./owner-listings-session"
 import { smokeListingBuilding } from "./lister-onboarding"
 
 export const smokeAccessToken = "smoke-access-token"
@@ -36,7 +41,7 @@ export const smokeAgentProfile = {
   verifiedBy: null,
   verifiedAt: null,
   listingSummary: {
-    activeCount: 1,
+    activeCount: 5,
     pendingCount: 0,
     rejectedCount: 0,
   },
@@ -106,6 +111,7 @@ export const smokeSavedListing = {
     ],
     isSavedByMe: true,
     description: "A bright room.",
+    availableAt: null,
     listedBy: smokeAuthUser._id,
     buildingId: "building-smoke-1",
     createdAt: "2026-07-20T00:00:00.000Z",
@@ -329,6 +335,15 @@ export async function installAuthenticatedSessionMocks(
   let nextPendingPostId = ownerPendingPosts.length + 1
   let isSessionActive = true
 
+  const getSmokeOwnerListings = () =>
+    buildSmokeOwnerListings({
+      listedBy: smokeAuthUser._id,
+      agentProfile: toSmokeOwnerListingAgentProfile(createdAgentProfile),
+    })
+
+  const getSmokeOwnerListingById = (listingId: string) =>
+    getSmokeOwnerListings().find((listing) => listing._id === listingId) ?? null
+
   if (options.withPendingPost) {
     createdAgentProfile = {
       ...createdAgentProfile,
@@ -505,20 +520,22 @@ export async function installAuthenticatedSessionMocks(
     }
 
     const url = new URL(route.request().url())
-    const page = Number(url.searchParams.get("page") ?? "1")
-    const limit = Number(url.searchParams.get("limit") ?? "20")
+    const result = searchSmokeOwnerListings(
+      getSmokeOwnerListings(),
+      url.searchParams,
+    )
 
     await route.fulfill(
       jsonRoute({
         success: true,
         data: {
           agentProfile: createdAgentProfile,
-          listings: [smokeSavedListing.listing],
+          listings: result.items,
         },
         pagination: {
-          page,
-          limit,
-          total: 1,
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
         },
       }),
     )
@@ -548,12 +565,28 @@ export async function installAuthenticatedSessionMocks(
       return
     }
 
+    const listing = getSmokeOwnerListingById("listing-smoke-1")
+
+    if (!listing) {
+      await route.fulfill(
+        jsonRoute(
+          {
+            success: false,
+            code: "LISTING_NOT_FOUND",
+            message: "Listing not found",
+          },
+          404,
+        ),
+      )
+      return
+    }
+
     await route.fulfill(
       jsonRoute({
         success: true,
         data: {
           agentProfile: createdAgentProfile,
-          listing: smokeSavedListing.listing,
+          listing,
         },
       }),
     )

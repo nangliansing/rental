@@ -40,4 +40,19 @@ describe("MyProfileListingsEmpty", () => {
       screen.getByRole("link", { name: "Start listing" }),
     ).toHaveAttribute("href", "/?purpose=list")
   })
+
+  it.each([
+    ["now", "No listings available now"],
+    ["soon", "No upcoming listings"],
+    ["private", "No private listings"],
+  ] as const)("renders empty copy for the %s filter without a CTA", (filter, title) => {
+    render(
+      <MemoryRouter>
+        <MyProfileListingsEmpty filter={filter} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument()
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+  })
 })

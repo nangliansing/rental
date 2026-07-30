@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
 import {
   installAuthenticatedSessionMocks,
@@ -6,6 +6,24 @@ import {
   waitForAuthenticatedProfile,
 } from "./fixtures/authenticated-session"
 import { smokeListingBuilding } from "./fixtures/lister-onboarding"
+
+const HEADER_STAT_TIMEOUT = 15_000
+
+async function expectStableProfileHeaderStats(page: Page) {
+  const displayName = page.getByRole("heading", { level: 1 })
+
+  await expect(displayName).toHaveText(smokeAgentProfile.displayName, {
+    timeout: HEADER_STAT_TIMEOUT,
+  })
+  await expect(page.getByTestId("profile-stat-listings")).toHaveText(
+    `${smokeAgentProfile.listingSummary.activeCount} Listings`,
+    { timeout: HEADER_STAT_TIMEOUT },
+  )
+  await expect(page.getByTestId("profile-stat-reviews")).toHaveText(
+    `${smokeAgentProfile.reviewSummary.reviewCount} Reviews`,
+    { timeout: HEADER_STAT_TIMEOUT },
+  )
+}
 
 test.describe("Profile dashboard smoke", () => {
   test.beforeEach(async ({ page }) => {
@@ -113,19 +131,11 @@ test.describe("Profile dashboard smoke", () => {
     await page.goto("/profile")
 
     await waitForAuthenticatedProfile(page)
-
-    const displayName = page.getByRole("heading", { level: 1 })
-    await expect(displayName).toHaveText(smokeAgentProfile.displayName)
-    await expect(page.getByText("1", { exact: true }).first()).toBeVisible()
-    await expect(page.getByText("Listings", { exact: true }).first()).toBeVisible()
-    await expect(page.getByText("2", { exact: true }).first()).toBeVisible()
-    await expect(page.getByText("Reviews", { exact: true }).first()).toBeVisible()
+    await expectStableProfileHeaderStats(page)
 
     for (const tabName of ["Pending", "Saved", "Reviews", "Listings"] as const) {
       await page.getByRole("tab", { name: tabName }).click()
-      await expect(displayName).toHaveText(smokeAgentProfile.displayName)
-      await expect(page.getByText("1", { exact: true }).first()).toBeVisible()
-      await expect(page.getByText("2", { exact: true }).first()).toBeVisible()
+      await expectStableProfileHeaderStats(page)
     }
   })
 

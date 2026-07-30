@@ -8,6 +8,10 @@ import {
     Star,
 } from "lucide-react"
 
+import type {
+    OwnerListingFilter,
+    OwnerListingSort,
+} from "@/features/listing/api"
 import { SegmentedTabs } from "@/shared/components/inputs/SegmentedTabs"
 
 import { ProfileSectionTab } from "./ProfileSectionTab"
@@ -18,8 +22,6 @@ import {
 } from "../utils/profileLayoutStyles"
 
 export type MyProfileMainTab = "listings" | "pending" | "saved" | "reviews"
-export type MyProfileListingFilter = "all" | "now" | "soon" | "private"
-export type MyProfileListingSort = "latest" | "oldest"
 export type MyProfilePendingFilter =
     | "all"
     | "pending"
@@ -56,7 +58,7 @@ const PROFILE_TABS: ProfileTabConfig[] = [
 ]
 
 const LISTING_FILTERS: {
-    id: MyProfileListingFilter
+    id: OwnerListingFilter
     label: string
 }[] = [
     {
@@ -78,7 +80,7 @@ const LISTING_FILTERS: {
 ]
 
 const LISTING_SORT_OPTIONS: {
-    id: MyProfileListingSort
+    id: OwnerListingSort
     label: string
 }[] = [
     {
@@ -115,12 +117,12 @@ const PENDING_FILTERS: {
 
 type MyProfileListingTabsProps = {
     activeTab: MyProfileMainTab
-    activeListingFilter: MyProfileListingFilter
-    activeListingSort: MyProfileListingSort
+    activeListingFilter: OwnerListingFilter
+    activeListingSort: OwnerListingSort
     activePendingFilter: MyProfilePendingFilter
     onTabChange: (tab: MyProfileMainTab) => void
-    onListingFilterChange: (filter: MyProfileListingFilter) => void
-    onListingSortChange: (sort: MyProfileListingSort) => void
+    onListingFilterChange: (filter: OwnerListingFilter) => void
+    onListingSortChange: (sort: OwnerListingSort) => void
     onPendingFilterChange: (filter: MyProfilePendingFilter) => void
 }
 
@@ -177,14 +179,15 @@ function ListingTabControls({
     onFilterChange,
     onSortChange,
 }: {
-    activeFilter: MyProfileListingFilter
-    activeSort: MyProfileListingSort
-    onFilterChange: (filter: MyProfileListingFilter) => void
-    onSortChange: (sort: MyProfileListingSort) => void
+    activeFilter: OwnerListingFilter
+    activeSort: OwnerListingSort
+    onFilterChange: (filter: OwnerListingFilter) => void
+    onSortChange: (sort: OwnerListingSort) => void
 }) {
     const activeSortLabel =
         LISTING_SORT_OPTIONS.find((option) => option.id === activeSort)?.label ??
         "Latest"
+    const showsAvailabilitySortHint = activeFilter === "soon"
 
     return (
         <div className={PROFILE_TAB_CONTROLS_CLASS}>
@@ -195,32 +198,48 @@ function ListingTabControls({
                 onChange={onFilterChange}
             />
 
-            <label
-                htmlFor="my-profile-listing-sort"
-                className="relative inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-950"
-            >
-                <ArrowDownUp className="h-4 w-4" />
-                <span>{activeSortLabel}</span>
-                <ChevronDown className="h-4 w-4 text-slate-400" />
+            {showsAvailabilitySortHint ? (
+                <p
+                    className="inline-flex h-9 items-center gap-2 px-2 text-sm font-semibold text-slate-500"
+                    aria-label="Sorted by soonest availability"
+                >
+                    <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
+                    <span>Soonest first</span>
+                </p>
+            ) : (
+                <label
+                    htmlFor="my-profile-listing-sort"
+                    className="relative inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-950"
+                >
+                    <ArrowDownUp className="h-4 w-4" />
+                    <span>{activeSortLabel}</span>
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
 
-                <span className="sr-only">Sort listings</span>
-                <span className="absolute inset-0">
-                    <select
-                        id="my-profile-listing-sort"
-                        value={activeSort}
-                        className="h-full w-full cursor-pointer appearance-none opacity-0"
-                        onChange={(event) => {
-                            onSortChange(event.target.value as MyProfileListingSort)
-                        }}
-                    >
-                        {LISTING_SORT_OPTIONS.map((option) => (
-                            <option key={option.id} value={option.id}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                </span>
-            </label>
+                    <span className="sr-only">Sort listings</span>
+                    <span className="absolute inset-0">
+                        <select
+                            id="my-profile-listing-sort"
+                            value={activeSort}
+                            className="h-full w-full cursor-pointer appearance-none opacity-0"
+                            onChange={(event) => {
+                                const nextSort = event.target.value
+                                if (
+                                    nextSort === "latest" ||
+                                    nextSort === "oldest"
+                                ) {
+                                    onSortChange(nextSort)
+                                }
+                            }}
+                        >
+                            {LISTING_SORT_OPTIONS.map((option) => (
+                                <option key={option.id} value={option.id}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </span>
+                </label>
+            )}
         </div>
     )
 }
