@@ -262,6 +262,7 @@ export function ProfileStatList({
         {visibleItems.map((item) => (
           <p
             key={item.id}
+            data-testid={`profile-stat-${item.id}`}
             className={cn(
               "text-sm text-slate-950 sm:text-base",
               variant === "centered" ? "px-4 first:pl-0 last:pr-0 sm:px-5" : "",
@@ -285,6 +286,7 @@ export function ProfileStatList({
       {visibleItems.map((item) => (
         <p
           key={item.id}
+          data-testid={`profile-stat-${item.id}`}
           className="px-4 text-sm text-slate-950 first:pl-0 last:pr-0 sm:px-5 sm:text-base"
         >
           <span className="font-bold">{item.value}</span>
