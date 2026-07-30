@@ -1,5 +1,7 @@
+import type { ReactElement } from "react"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -97,6 +99,29 @@ function setGate(overrides: Record<string, unknown> = {}) {
   })
 }
 
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+}
+
+function renderWithClient(
+  ui: ReactElement,
+  { route = "/listings/new?buildingId=building-1" } = {},
+) {
+  const client = createTestQueryClient()
+
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
 describe("ListingCreatePage", () => {
   beforeEach(() => {
     setGate()
@@ -127,11 +152,7 @@ describe("ListingCreatePage", () => {
       showLogin: true,
     })
 
-    render(
-      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
-        <ListingCreatePage />
-      </MemoryRouter>,
-    )
+    renderWithClient(<ListingCreatePage />)
 
     expect(screen.getByRole("heading", { name: "Log in to list a room" })).toBeInTheDocument()
     expect(screen.queryByText("Submit listing form")).not.toBeInTheDocument()
@@ -147,11 +168,7 @@ describe("ListingCreatePage", () => {
       profile: undefined,
     })
 
-    render(
-      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
-        <ListingCreatePage />
-      </MemoryRouter>,
-    )
+    renderWithClient(<ListingCreatePage />)
 
     expect(
       screen.getByRole("heading", { name: "Create your contact profile first" }),
@@ -171,11 +188,7 @@ describe("ListingCreatePage", () => {
       mutateAsync,
     } as never)
 
-    render(
-      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
-        <ListingCreatePage />
-      </MemoryRouter>,
-    )
+    renderWithClient(<ListingCreatePage />)
 
     await user.click(screen.getByRole("button", { name: "Submit listing form" }))
 
@@ -197,11 +210,7 @@ describe("ListingCreatePage", () => {
   })
 
   it("loads and displays the selected existing building instead of its raw id", () => {
-    render(
-      <MemoryRouter initialEntries={["/listings/new?buildingId=building-1"]}>
-        <ListingCreatePage />
-      </MemoryRouter>,
-    )
+    renderWithClient(<ListingCreatePage />)
 
     expect(
       screen.getByRole("heading", { name: "Selected Residence" }),
@@ -216,11 +225,9 @@ describe("ListingCreatePage", () => {
 
   it("reuses the summary for a new-building draft and returns to editing", async () => {
     const user = userEvent.setup()
-    render(
-      <MemoryRouter initialEntries={["/listings/new?lat=13.7&lng=100.5"]}>
-        <ListingCreatePage />
-      </MemoryRouter>,
-    )
+    renderWithClient(<ListingCreatePage />, {
+      route: "/listings/new?lat=13.7&lng=100.5",
+    })
 
     await user.click(screen.getByRole("button", { name: "Complete building" }))
 
