@@ -1,6 +1,10 @@
 import { useState } from "react"
 
 import type { AuthUser } from "@/features/auth/api"
+import type {
+  OwnerListingFilter,
+  OwnerListingSort,
+} from "@/features/listing/api"
 import { ListerReviewsSection } from "@/features/lister-review/components"
 
 import type { AgentProfile } from "../api"
@@ -26,8 +30,6 @@ import { MyProfilePendingPanel } from "./MyProfilePendingPanel"
 import { MyProfileSavedPanel } from "./MyProfileSavedPanel"
 import {
   MyProfileListingTabs,
-  type MyProfileListingFilter,
-  type MyProfileListingSort,
   type MyProfileMainTab,
   type MyProfilePendingFilter,
 } from "./MyProfileListingTabs"
@@ -86,9 +88,9 @@ function MyProfileTabsSection() {
   const { profile, onProfileChange } = useMyProfile()
   const [activeTab, setActiveTab] = useState<MyProfileMainTab>("listings")
   const [activeListingFilter, setActiveListingFilter] =
-    useState<MyProfileListingFilter>("all")
+    useState<OwnerListingFilter>("all")
   const [activeListingSort, setActiveListingSort] =
-    useState<MyProfileListingSort>("latest")
+    useState<OwnerListingSort>("latest")
   const [activePendingFilter, setActivePendingFilter] =
     useState<MyProfilePendingFilter>("all")
 

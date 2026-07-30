@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 
 import {
     useSearchOwnerListings,
+    type OwnerListingFilter,
     type OwnerListingSort,
 } from "@/features/listing/api"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
@@ -19,23 +20,11 @@ import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 
 import { PROFILE_TAB_CONTENT_TOP_CLASS } from "../utils/profileLayoutStyles"
 import { MyProfileListingsEmpty } from "./MyProfileListingsEmpty"
-import type {
-    MyProfileListingFilter,
-    MyProfileListingSort,
-} from "./MyProfileListingTabs"
 import { ProfileTabPanel } from "./ProfileTabPanel"
 
 type MyProfileListingsPanelProps = {
-    filter: MyProfileListingFilter
-    sort: MyProfileListingSort
-}
-
-const OWNER_SORT_BY_PROFILE_SORT: Record<
-    MyProfileListingSort,
-    OwnerListingSort
-> = {
-    latest: "latest",
-    oldest: "oldest",
+    filter: OwnerListingFilter
+    sort: OwnerListingSort
 }
 
 export function MyProfileListingsPanel({
@@ -46,7 +35,7 @@ export function MyProfileListingsPanel({
     const preview = useListingGridPreview()
     const listingsQuery = useSearchOwnerListings({
         filter,
-        sort: OWNER_SORT_BY_PROFILE_SORT[sort],
+        sort,
     })
 
     const listings = useMemo(() => {

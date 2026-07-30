@@ -1,12 +1,12 @@
 import { Grid3X3 } from "lucide-react"
 
+import type { OwnerListingFilter } from "@/features/listing/api"
 import { MAP_SEARCH_LIST_ROOM_PATH } from "@/features/map-search/constants"
 
 import { MyProfileEmptyState } from "./MyProfileEmptyState"
-import type { MyProfileListingFilter } from "./MyProfileListingTabs"
 
 const LISTING_EMPTY_COPY: Record<
-    MyProfileListingFilter,
+    OwnerListingFilter,
     {
         title: string
         description: string
@@ -44,7 +44,7 @@ const LISTING_EMPTY_COPY: Record<
 export function MyProfileListingsEmpty({
     filter,
 }: {
-    filter: MyProfileListingFilter
+    filter: OwnerListingFilter
 }) {
     const copy = LISTING_EMPTY_COPY[filter]
 
