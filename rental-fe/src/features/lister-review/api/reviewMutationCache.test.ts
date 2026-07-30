@@ -675,6 +675,7 @@ describe("patchReviewSummaryInQueries", () => {
     const profileKey = queryKeys.profiles.detail("profile-1")
     const agentKey = queryKeys.agentListings.list({
       agentProfileId: "profile-1",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

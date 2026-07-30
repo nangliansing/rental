@@ -19,12 +19,14 @@ import type {
 
 export type SearchListingsByAgentInput = {
   agentProfileId: string
+  filter?: ListingAvailabilityFilter
   page?: number
   limit?: number
   sort?: SearchListingsByAgentSort
   signal?: AbortSignal
 }
 
+export type ListingAvailabilityFilter = "all" | "now" | "soon"
 export type SearchListingsByAgentSort = "latest" | "oldest"
 
 export type SearchListingsByAgentProfile = Omit<
@@ -47,6 +49,13 @@ export type SearchListingsByAgentResponse = {
 
 const INVALID_SEARCH_LISTINGS_BY_AGENT_RESPONSE =
   "INVALID_SEARCH_LISTINGS_BY_AGENT_RESPONSE"
+
+const LISTING_AVAILABILITY_FILTERS: ListingAvailabilityFilter[] = [
+  "all",
+  "now",
+  "soon",
+]
+const SORT_OPTIONS: SearchListingsByAgentSort[] = ["latest", "oldest"]
 
 const parseSearchListingsByAgentProfile = (
   value: unknown,
@@ -112,14 +121,32 @@ export const parseSearchListingsByAgentResponse = (
 
 export async function searchListingsByAgent({
   agentProfileId,
+  filter = "all",
   page = 1,
   limit = DEFAULT_LISTING_PAGE_SIZE,
   sort = "latest",
   signal,
 }: SearchListingsByAgentInput) {
+  if (!LISTING_AVAILABILITY_FILTERS.includes(filter)) {
+    throw new ApiError(
+      `Invalid filter: ${String(filter)}`,
+      422,
+      "VALIDATION_ERROR",
+    )
+  }
+
+  if (!SORT_OPTIONS.includes(sort)) {
+    throw new ApiError(
+      `Invalid sort: ${String(sort)}`,
+      422,
+      "VALIDATION_ERROR",
+    )
+  }
+
   const searchParams = new URLSearchParams({
     page: String(page),
     limit: String(limit),
+    filter,
     sort,
   })
 

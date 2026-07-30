@@ -143,6 +143,7 @@ describe("profile mutations", () => {
     })
     const agentListKey = queryKeys.agentListings.list({
       agentProfileId: profile._id,
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

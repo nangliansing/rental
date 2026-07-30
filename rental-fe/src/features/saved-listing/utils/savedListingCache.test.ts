@@ -48,6 +48,7 @@ describe("patchListingSavedStateInCache", () => {
     const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
     const agentKey = queryKeys.agentListings.list({
       agentProfileId: "agent-1",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })
@@ -505,6 +506,7 @@ describe("syncListingSavedState", () => {
     const savedKey = queryKeys.savedListings.list({ limit: 20 })
     const agentKey = queryKeys.agentListings.list({
       agentProfileId: "agent-1",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

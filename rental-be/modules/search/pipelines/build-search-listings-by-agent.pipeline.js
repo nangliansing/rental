@@ -2,19 +2,23 @@
 import { buildBuildingFromListingLookupStages } from "../../listing/pipelines/helpers/index.js";
 import {
     LISTING_VISIBILITIES,
-    OWNER_LISTING_SORTS,
 } from "../../listing/listing.constants.js";
+import {
+    buildListingAvailabilityFilterMatch,
+    buildOwnerListingSort,
+} from "../../listing/utils/index.js";
 import { buildSavedListingLookupStages } from "./helpers/build-saved-listing-lookup-stages.js";
 
 export const buildSearchListingsByAgentPipeline = ({
     agentUserId,
     page = 1,
     limit = 20,
-    sort = OWNER_LISTING_SORTS.LATEST,
+    filter,
+    sort,
+    referenceDate = new Date(),
     viewerUserId = null,
 }) => {
     const skip = (page - 1) * limit;
-    const sortDirection = sort === OWNER_LISTING_SORTS.OLDEST ? 1 : -1;
 
     return [
         {
@@ -22,6 +26,7 @@ export const buildSearchListingsByAgentPipeline = ({
                 listedBy: agentUserId,
                 isDeleted: false,
                 visibility: LISTING_VISIBILITIES.PUBLIC,
+                ...buildListingAvailabilityFilterMatch(filter, referenceDate),
             },
         },
         ...buildBuildingFromListingLookupStages({
@@ -30,10 +35,7 @@ export const buildSearchListingsByAgentPipeline = ({
         }),
         ...buildSavedListingLookupStages(viewerUserId),
         {
-            $sort: {
-                updatedAt: sortDirection,
-                _id: 1,
-            },
+            $sort: buildOwnerListingSort({ filter, sort }),
         },
         {
             $facet: {

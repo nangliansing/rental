@@ -68,6 +68,7 @@ export const searchListingsByAgentService = async ({
         agentUserId: agentProfile.userId,
         page: params.page,
         limit: params.limit,
+        filter: params.filter,
         sort: params.sort,
         viewerUserId: normalizeOptionalViewerId(viewerUserId),
     });

@@ -20,6 +20,7 @@ import {
   type ListerProfileMainTab,
 } from "../components"
 import {
+  type ListingAvailabilityFilter,
   type SearchListingsByAgentSort,
   useListerProfileById,
   useSearchListingsByAgent,
@@ -27,6 +28,8 @@ import {
 
 export function ListerProfilePage() {
   const { agentProfileId } = useParams()
+  const [listingFilter, setListingFilter] =
+    useState<ListingAvailabilityFilter>("all")
   const [listingSort, setListingSort] =
     useState<SearchListingsByAgentSort>("latest")
   const [activeTab, setActiveTab] = useState<ListerProfileMainTab>("listings")
@@ -34,6 +37,7 @@ export function ListerProfilePage() {
   const profile = profileQuery.data
   const listingsQuery = useSearchListingsByAgent({
     agentProfileId,
+    filter: listingFilter,
     sort: listingSort,
     enabled: activeTab === "listings" && Boolean(profile),
   })
@@ -77,8 +81,10 @@ export function ListerProfilePage() {
         <section className={PROFILE_TABS_SECTION_CLASS}>
           <ListerProfileTabs
             activeTab={activeTab}
+            activeFilter={listingFilter}
             activeSort={listingSort}
             onTabChange={setActiveTab}
+            onFilterChange={setListingFilter}
             onSortChange={setListingSort}
           />
 

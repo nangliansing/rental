@@ -125,6 +125,48 @@ describe("ListerProfilePage", () => {
     expect(await screen.findByText("Nang Lian Sing")).toBeInTheDocument()
   })
 
+  it("switches listing filter tabs and refetches with the selected filter", async () => {
+    const requestedUrls: string[] = []
+
+    server.use(
+      listerProfileHandler(),
+      http.get("/api/v1/search/agents/:agentProfileId/listings", ({ request }) => {
+        requestedUrls.push(new URL(request.url).search)
+
+        return HttpResponse.json({
+          success: true,
+          data: {
+            agentProfile: { _id: "agent-1", displayName: "Nang Lian Sing" },
+            listings: [],
+          },
+          pagination: { page: 1, limit: 12, total: 0, totalPages: 0 },
+        })
+      }),
+    )
+
+    const { user } = renderListerProfilePage()
+
+    await screen.findByText("Nang Lian Sing")
+    await waitFor(() => {
+      expect(requestedUrls.some((query) => query.includes("filter=all"))).toBe(true)
+    })
+
+    requestedUrls.length = 0
+    await user.click(screen.getByRole("tab", { name: "Now" }))
+
+    await waitFor(() => {
+      expect(requestedUrls.some((query) => query.includes("filter=now"))).toBe(true)
+    })
+
+    await user.click(screen.getByRole("tab", { name: "Soon" }))
+
+    await waitFor(() => {
+      expect(requestedUrls.some((query) => query.includes("filter=soon"))).toBe(true)
+    })
+    expect(screen.getByText("Soonest first")).toBeInTheDocument()
+    expect(document.getElementById("lister-profile-listing-sort")).toBeNull()
+  })
+
   it("switches to reviews without requiring listings on that tab", async () => {
     const listingsSpy = vi.fn()
 

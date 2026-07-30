@@ -35,10 +35,14 @@ export const OWNER_LISTING_VISIBILITY_FILTERS = Object.freeze({
     PRIVATE: LISTING_VISIBILITIES.PRIVATE,
 });
 
-export const OWNER_LISTING_FILTERS = Object.freeze({
+export const LISTING_AVAILABILITY_FILTERS = Object.freeze({
     ALL: "all",
     NOW: "now",
     SOON: "soon",
+});
+
+export const OWNER_LISTING_FILTERS = Object.freeze({
+    ...LISTING_AVAILABILITY_FILTERS,
     PRIVATE: "private",
 });
 

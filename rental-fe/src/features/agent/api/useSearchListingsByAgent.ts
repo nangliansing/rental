@@ -11,21 +11,25 @@ import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 
 import {
   searchListingsByAgent,
+  type ListingAvailabilityFilter,
   type SearchListingsByAgentSort,
 } from "./searchListingsByAgent"
 
 export const agentListingsQueryKey = ({
   agentProfileId,
+  filter,
   sort,
   limit,
 }: {
   agentProfileId: string
+  filter: ListingAvailabilityFilter
   sort: SearchListingsByAgentSort
   limit: number
-}) => queryKeys.agentListings.list({ agentProfileId, sort, limit })
+}) => queryKeys.agentListings.list({ agentProfileId, filter, sort, limit })
 
 type UseSearchListingsByAgentInput = {
   agentProfileId?: string
+  filter?: ListingAvailabilityFilter
   sort?: SearchListingsByAgentSort
   limit?: number
   enabled?: boolean
@@ -33,6 +37,7 @@ type UseSearchListingsByAgentInput = {
 
 export const agentListingsQueryOptions = ({
   agentProfileId,
+  filter = "all",
   sort = "latest",
   limit = 20,
   enabled = true,
@@ -40,6 +45,7 @@ export const agentListingsQueryOptions = ({
   infiniteQueryOptions({
     queryKey: agentListingsQueryKey({
       agentProfileId: agentProfileId ?? "",
+      filter,
       sort,
       limit,
     }),
@@ -48,6 +54,7 @@ export const agentListingsQueryOptions = ({
     queryFn: ({ pageParam, signal }) =>
       searchListingsByAgent({
         agentProfileId: agentProfileId ?? "",
+        filter,
         sort,
         page: readPageParam(pageParam),
         limit,
@@ -58,6 +65,7 @@ export const agentListingsQueryOptions = ({
 
 export function useSearchListingsByAgent({
   agentProfileId,
+  filter = "all",
   sort = "latest",
   limit = DEFAULT_LISTING_PAGE_SIZE,
   enabled = true,
@@ -65,6 +73,7 @@ export function useSearchListingsByAgent({
   return useInfiniteQuery(
     agentListingsQueryOptions({
       agentProfileId,
+      filter,
       sort,
       limit,
       enabled,

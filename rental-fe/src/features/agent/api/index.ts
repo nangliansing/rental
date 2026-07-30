@@ -14,6 +14,7 @@ export {
 } from "./useListerProfileById"
 export {
   searchListingsByAgent,
+  type ListingAvailabilityFilter,
   type SearchListingsByAgentInput,
   type SearchListingsByAgentSort,
 } from "./searchListingsByAgent"

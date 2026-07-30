@@ -9,8 +9,10 @@ describe("ListerProfileTabs", () => {
     render(
       <ListerProfileTabs
         activeTab="listings"
+        activeFilter="all"
         activeSort="latest"
         onTabChange={vi.fn()}
+        onFilterChange={vi.fn()}
         onSortChange={vi.fn()}
       />,
     )
@@ -20,16 +22,19 @@ describe("ListerProfileTabs", () => {
     expect(screen.queryByRole("tab", { name: "Recommend" })).not.toBeInTheDocument()
   })
 
-  it("shows listing sort controls only on the listings tab", async () => {
+  it("shows listing filter and sort controls only on the listings tab", async () => {
     const user = userEvent.setup()
     const onTabChange = vi.fn()
+    const onFilterChange = vi.fn()
     const onSortChange = vi.fn()
 
     render(
       <ListerProfileTabs
         activeTab="listings"
+        activeFilter="all"
         activeSort="latest"
         onTabChange={onTabChange}
+        onFilterChange={onFilterChange}
         onSortChange={onSortChange}
       />,
     )
@@ -38,41 +43,70 @@ describe("ListerProfileTabs", () => {
       "aria-selected",
       "true",
     )
-    expect(screen.getByRole("tablist", { name: "Listing sort" })).toBeInTheDocument()
+    expect(screen.getByRole("tablist", { name: "Listing filters" })).toBeInTheDocument()
+    expect(document.getElementById("lister-profile-listing-sort")).toBeInTheDocument()
 
     await user.click(screen.getByRole("tab", { name: "Reviews" }))
     expect(onTabChange).toHaveBeenCalledWith("reviews")
   })
 
-  it("hides listing sort controls on the reviews tab", () => {
+  it("hides listing controls on the reviews tab", () => {
     render(
       <ListerProfileTabs
         activeTab="reviews"
+        activeFilter="all"
         activeSort="latest"
         onTabChange={vi.fn()}
+        onFilterChange={vi.fn()}
         onSortChange={vi.fn()}
       />,
     )
 
     expect(
-      screen.queryByRole("tablist", { name: "Listing sort" }),
+      screen.queryByRole("tablist", { name: "Listing filters" }),
     ).not.toBeInTheDocument()
+    expect(document.getElementById("lister-profile-listing-sort")).toBeNull()
   })
 
-  it("changes listing sort when a sort option is selected", async () => {
+  it("changes listing filter and sort when options are selected", async () => {
     const user = userEvent.setup()
+    const onFilterChange = vi.fn()
     const onSortChange = vi.fn()
 
     render(
       <ListerProfileTabs
         activeTab="listings"
+        activeFilter="all"
         activeSort="latest"
         onTabChange={vi.fn()}
+        onFilterChange={onFilterChange}
         onSortChange={onSortChange}
       />,
     )
 
-    await user.click(screen.getByRole("tab", { name: "Oldest" }))
+    await user.click(screen.getByRole("tab", { name: "Now" }))
+    expect(onFilterChange).toHaveBeenCalledWith("now")
+
+    await user.selectOptions(
+      document.getElementById("lister-profile-listing-sort") as HTMLSelectElement,
+      "oldest",
+    )
     expect(onSortChange).toHaveBeenCalledWith("oldest")
+  })
+
+  it("shows soonest-first hint and hides sort dropdown on the soon filter", () => {
+    render(
+      <ListerProfileTabs
+        activeTab="listings"
+        activeFilter="soon"
+        activeSort="latest"
+        onTabChange={vi.fn()}
+        onFilterChange={vi.fn()}
+        onSortChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("Soonest first")).toBeInTheDocument()
+    expect(document.getElementById("lister-profile-listing-sort")).toBeNull()
   })
 })

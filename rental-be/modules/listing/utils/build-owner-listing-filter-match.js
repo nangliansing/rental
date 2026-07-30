@@ -3,20 +3,7 @@ import {
   LISTING_VISIBILITIES,
   OWNER_LISTING_FILTERS,
 } from "../listing.constants.js";
-import {
-  getCalendarDateKeyInTimeZone,
-  startOfCalendarDayInTimeZone,
-} from "../../../shared/validators/date.validators.js";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function getStartOfTomorrowBangkok(referenceDate = new Date()) {
-  const todayKey = getCalendarDateKeyInTimeZone(referenceDate);
-  const todayStart = startOfCalendarDayInTimeZone(todayKey);
-
-  // Bangkok has no DST, so +1 calendar day is stable for listing availability.
-  return new Date(todayStart.getTime() + MS_PER_DAY);
-}
+import { buildListingAvailabilityFilterMatch } from "./build-listing-availability-filter-match.js";
 
 /**
  * Returns Mongo match fields for GET /api/v1/listings?filter=...
@@ -33,23 +20,12 @@ export const buildOwnerListingFilterMatch = (
     case OWNER_LISTING_FILTERS.PRIVATE:
       return { visibility: LISTING_VISIBILITIES.PRIVATE };
 
-    case OWNER_LISTING_FILTERS.NOW: {
-      const tomorrowStart = getStartOfTomorrowBangkok(referenceDate);
-
+    case OWNER_LISTING_FILTERS.NOW:
+    case OWNER_LISTING_FILTERS.SOON:
       return {
         visibility: LISTING_VISIBILITIES.PUBLIC,
-        availableAt: { $ne: null, $lt: tomorrowStart },
+        ...buildListingAvailabilityFilterMatch(filter, referenceDate),
       };
-    }
-
-    case OWNER_LISTING_FILTERS.SOON: {
-      const tomorrowStart = getStartOfTomorrowBangkok(referenceDate);
-
-      return {
-        visibility: LISTING_VISIBILITIES.PUBLIC,
-        availableAt: { $gte: tomorrowStart },
-      };
-    }
 
     default:
       return {};
