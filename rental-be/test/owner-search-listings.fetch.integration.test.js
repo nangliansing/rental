@@ -149,7 +149,7 @@ const createListing = async ({
   rent = 14000,
   description = "Owner search test room",
   isDeleted = false,
-  updatedAt,
+  createdAt,
 }) => {
   const listing = await Listing.create(
     listingFields({
@@ -163,10 +163,10 @@ const createListing = async ({
     }),
   );
 
-  if (updatedAt) {
+  if (createdAt) {
     await Listing.collection.updateOne(
       { _id: listing._id },
-      { $set: { updatedAt } },
+      { $set: { createdAt } },
     );
   }
 
@@ -183,7 +183,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: null,
     rent: 14000,
     description: "Flexible public",
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
   });
   const availableYesterday = await createListing({
     userId: owner.user._id,
@@ -191,7 +191,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: yesterday,
     rent: 15000,
     description: "Available yesterday",
-    updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    createdAt: new Date("2026-01-02T00:00:00.000Z"),
   });
   const availableToday = await createListing({
     userId: owner.user._id,
@@ -199,7 +199,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: today,
     rent: 15500,
     description: "Available today",
-    updatedAt: new Date("2026-01-03T00:00:00.000Z"),
+    createdAt: new Date("2026-01-03T00:00:00.000Z"),
   });
   const availableTomorrow = await createListing({
     userId: owner.user._id,
@@ -207,7 +207,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: tomorrow,
     rent: 16000,
     description: "Available tomorrow",
-    updatedAt: new Date("2026-01-07T00:00:00.000Z"),
+    createdAt: new Date("2026-01-07T00:00:00.000Z"),
   });
   const availableLater = await createListing({
     userId: owner.user._id,
@@ -215,7 +215,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: dayAfterTomorrow,
     rent: 16500,
     description: "Available later",
-    updatedAt: new Date("2026-01-04T00:00:00.000Z"),
+    createdAt: new Date("2026-01-04T00:00:00.000Z"),
   });
   const availableEvenLater = await createListing({
     userId: owner.user._id,
@@ -223,7 +223,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: inThreeDays,
     rent: 17000,
     description: "Available even later",
-    updatedAt: new Date("2026-01-05T00:00:00.000Z"),
+    createdAt: new Date("2026-01-05T00:00:00.000Z"),
   });
   const privateListing = await createListing({
     userId: owner.user._id,
@@ -232,7 +232,7 @@ const createOwnerSearchFixture = async () => {
     availableAt: tomorrow,
     rent: 17500,
     description: "Private listing",
-    updatedAt: new Date("2026-01-06T00:00:00.000Z"),
+    createdAt: new Date("2026-01-06T00:00:00.000Z"),
   });
   const deletedListing = await createListing({
     userId: owner.user._id,
@@ -559,7 +559,7 @@ describe("GET /api/v1/listings legacy visibility", () => {
 });
 
 describe("GET /api/v1/listings sorting", () => {
-  test("sort=latest orders by updatedAt descending for non-soon filters", async () => {
+  test("sort=latest orders by createdAt descending for non-soon filters", async () => {
     const fixture = await createOwnerSearchFixture();
     const response = await ownerListings("?filter=all&sort=latest", fixture.token);
 
@@ -570,7 +570,7 @@ describe("GET /api/v1/listings sorting", () => {
     assert.equal(ids.at(-1), fixture.listings.flexiblePublic._id.toString());
   });
 
-  test("sort=oldest orders by updatedAt ascending for non-soon filters", async () => {
+  test("sort=oldest orders by createdAt ascending for non-soon filters", async () => {
     const fixture = await createOwnerSearchFixture();
     const response = await ownerListings("?filter=all&sort=oldest", fixture.token);
 
@@ -581,7 +581,7 @@ describe("GET /api/v1/listings sorting", () => {
     assert.equal(ids.at(-1), fixture.listings.availableTomorrow._id.toString());
   });
 
-  test("filter=soon sorts by availableAt ascending regardless of updatedAt", async () => {
+  test("filter=soon sorts by availableAt ascending regardless of createdAt", async () => {
     const fixture = await createOwnerSearchFixture();
     const response = await ownerListings("?filter=soon&sort=latest", fixture.token);
 

@@ -100,8 +100,8 @@ When `filter` is **present**, `visibility` is ignored. For example, `?filter=pri
 
 | Filter | Primary sort | Tie-breakers |
 | --- | --- | --- |
-| `all`, `now`, `private` | `updatedAt` (`latest` → descending, `oldest` → ascending) | `_id` |
-| `soon` | `availableAt` ascending (soonest availability first) | `updatedAt`, then `_id` |
+| `all`, `now`, `private` | `createdAt` (`latest` → descending, `oldest` → ascending) | `_id` |
+| `soon` | `availableAt` ascending (soonest availability first) | `createdAt`, then `_id` |
 
 For `filter=soon`, the requested `sort` value applies only as a tie-breaker when multiple listings share the same availability date.
 
@@ -109,16 +109,16 @@ Mongo sort shapes:
 
 ```js
 // filter=all | now | private, sort=latest
-{ updatedAt: -1, _id: 1 }
+{ createdAt: -1, _id: 1 }
 
 // filter=all | now | private, sort=oldest
-{ updatedAt: 1, _id: -1 }
+{ createdAt: 1, _id: -1 }
 
 // filter=soon, sort=latest
-{ availableAt: 1, updatedAt: -1, _id: 1 }
+{ availableAt: 1, createdAt: -1, _id: 1 }
 
 // filter=soon, sort=oldest
-{ availableAt: 1, updatedAt: 1, _id: -1 }
+{ availableAt: 1, createdAt: 1, _id: -1 }
 ```
 
 ### Pagination
@@ -272,7 +272,7 @@ require a current active user
 validate query parameters (page, limit, filter, sort, legacy visibility)
 build owner-scoped match: { listedBy, isDeleted: false }
 apply listing filter (filter takes precedence over legacy visibility)
-build Mongo sort (availableAt-first when filter=soon, otherwise updatedAt-first)
+build Mongo sort (availableAt-first when filter=soon, otherwise createdAt-first)
 sort and paginate in MongoDB
 populate building and caller saved-state data
 load caller agent profile in parallel
@@ -291,7 +291,7 @@ The user id always comes from the authenticated request. The client cannot overr
 The unfiltered owner query uses:
 
 ```js
-{ listedBy: 1, isDeleted: 1, updatedAt: -1, _id: 1 }
+{ listedBy: 1, isDeleted: 1, createdAt: -1, _id: 1 }
 ```
 
 The visibility-filtered owner query uses:
@@ -301,7 +301,7 @@ The visibility-filtered owner query uses:
   listedBy: 1,
   isDeleted: 1,
   visibility: 1,
-  updatedAt: -1,
+  createdAt: -1,
   _id: 1
 }
 ```
@@ -314,12 +314,12 @@ The owner `soon` query uses:
   isDeleted: 1,
   visibility: 1,
   availableAt: 1,
-  updatedAt: -1,
+  createdAt: -1,
   _id: 1
 }
 ```
 
-These indexes support owner scoping, soft-delete exclusion, visibility filtering, availability sorting, and latest-first pagination. MongoDB can scan an index in reverse for oldest-first sorting.
+These indexes support owner scoping, soft-delete exclusion, visibility filtering, availability sorting, and latest-first pagination by listing creation time. MongoDB can scan an index in reverse for oldest-first sorting.
 
 ## Error Responses
 
@@ -466,7 +466,7 @@ filter=all, now, soon, private
 filter case normalization and precedence over legacy visibility
 legacy PUBLIC, PRIVATE, and ALL visibility filters
 sort=latest and sort=oldest for non-soon filters
-filter=soon sorts by availableAt ascending with updatedAt tie-breakers
+filter=soon sorts by availableAt ascending with createdAt tie-breakers
 valid pagination, second page, and page beyond total
 caller with no listings
 caller ownership enforcement

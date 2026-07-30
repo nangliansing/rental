@@ -66,7 +66,7 @@ listingSchema.index({
 listingSchema.index({
   listedBy: 1,
   isDeleted: 1,
-  updatedAt: -1,
+  createdAt: -1,
   _id: 1,
 });
 
@@ -75,7 +75,7 @@ listingSchema.index({
   listedBy: 1,
   isDeleted: 1,
   visibility: 1,
-  updatedAt: -1,
+  createdAt: -1,
   _id: 1,
 });
 
@@ -85,7 +85,7 @@ listingSchema.index({
   isDeleted: 1,
   visibility: 1,
   availableAt: 1,
-  updatedAt: -1,
+  createdAt: -1,
   _id: 1,
 });
 

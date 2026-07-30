@@ -115,7 +115,7 @@ function createSmokeOwnerListing({
   availableAt,
   rent,
   description,
-  updatedAt,
+  createdAt,
   listedBy,
   agentProfile,
 }: {
@@ -124,7 +124,7 @@ function createSmokeOwnerListing({
   availableAt: string | null
   rent: number
   description: string
-  updatedAt: string
+  createdAt: string
   listedBy: string
   agentProfile: SmokeOwnerListingAgentProfile
 }): SmokeOwnerListing {
@@ -163,8 +163,8 @@ function createSmokeOwnerListing({
     availableAt,
     listedBy,
     buildingId: smokeOwnerListingBuilding._id,
-    createdAt: "2026-07-20T00:00:00.000Z",
-    updatedAt,
+    createdAt,
+    updatedAt: createdAt,
     building: smokeOwnerListingBuilding,
     agentProfile,
   }
@@ -187,7 +187,7 @@ export function buildSmokeOwnerListings({
       availableAt: null,
       rent: 14000,
       description: "Flexible public room",
-      updatedAt: "2026-07-21T00:00:00.000Z",
+      createdAt: "2026-07-21T00:00:00.000Z",
       listedBy,
       agentProfile,
     }),
@@ -197,7 +197,7 @@ export function buildSmokeOwnerListings({
       availableAt: toBangkokAvailabilityIso(yesterday),
       rent: 15000,
       description: "Available now room",
-      updatedAt: "2026-07-22T00:00:00.000Z",
+      createdAt: "2026-07-22T00:00:00.000Z",
       listedBy,
       agentProfile,
     }),
@@ -207,7 +207,7 @@ export function buildSmokeOwnerListings({
       availableAt: toBangkokAvailabilityIso(tomorrow),
       rent: 16000,
       description: "Available soon room",
-      updatedAt: "2026-07-23T00:00:00.000Z",
+      createdAt: "2026-07-23T00:00:00.000Z",
       listedBy,
       agentProfile,
     }),
@@ -217,7 +217,7 @@ export function buildSmokeOwnerListings({
       availableAt: toBangkokAvailabilityIso(dayAfterTomorrow),
       rent: 16500,
       description: "Available later room",
-      updatedAt: "2026-07-24T00:00:00.000Z",
+      createdAt: "2026-07-24T00:00:00.000Z",
       listedBy,
       agentProfile,
     }),
@@ -227,7 +227,7 @@ export function buildSmokeOwnerListings({
       availableAt: toBangkokAvailabilityIso(tomorrow),
       rent: 17000,
       description: "Private room",
-      updatedAt: "2026-07-25T00:00:00.000Z",
+      createdAt: "2026-07-25T00:00:00.000Z",
       listedBy,
       agentProfile,
     }),
@@ -331,7 +331,7 @@ export function sortSmokeOwnerListings(
   filter: SmokeOwnerListingFilter | null,
   sort: SmokeOwnerListingSort,
 ) {
-  const updatedAtDirection = sort === "oldest" ? 1 : -1
+  const createdAtDirection = sort === "oldest" ? 1 : -1
   const idDirection = sort === "oldest" ? -1 : 1
   const sorted = [...listings]
 
@@ -346,12 +346,12 @@ export function sortSmokeOwnerListings(
       }
     }
 
-    const updatedAtCompare =
-      updatedAtDirection *
-      (new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime())
+    const createdAtCompare =
+      createdAtDirection *
+      (new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
 
-    if (updatedAtCompare !== 0) {
-      return updatedAtCompare
+    if (createdAtCompare !== 0) {
+      return createdAtCompare
     }
 
     return idDirection * left._id.localeCompare(right._id)

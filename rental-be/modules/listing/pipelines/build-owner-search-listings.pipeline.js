@@ -4,7 +4,7 @@ import { buildBuildingFromListingLookupStages } from "./helpers/index.js";
 
 export const buildOwnerSearchListingsPipeline = ({
     match = {},
-    sort = { updatedAt: -1, _id: 1 },
+    sort = { createdAt: -1, _id: 1 },
     page,
     skip,
     limit,
