@@ -7,7 +7,10 @@ import {
   type ListingAvailabilityBadgeTone,
   type ListingAvailabilityDisplay as ListingAvailabilityDisplayData,
 } from "../utils/listingAvailability"
-import { listingGridCardBadgeClassName } from "./ListingGridCardPrimitives"
+import {
+  ListingGridCardCornerBadge,
+  listingGridCardCornerBadgeClassName,
+} from "./ListingGridCardPrimitives"
 
 export const LISTING_AVAILABILITY_INDICATOR_CLASS_NAME =
   "absolute left-2 top-2 z-10 size-3 rounded-full bg-emerald-500 shadow-[0_0_0_1.5px_rgba(255,255,255,0.9),0_1px_3px_rgba(15,23,42,0.5)]"
@@ -23,9 +26,6 @@ const BADGE_ICON_CLASS_NAME = "h-3.5 w-3.5 shrink-0"
 
 const GRID_BADGE_POSITION_CLASS_NAME =
   "absolute left-2 top-2 z-10 max-w-[calc(100%-5rem)] truncate border px-2 text-white shadow-sm"
-
-const COMPACT_DATE_BADGE_CLASS_NAME =
-  "absolute left-2 top-2 z-10 max-w-[calc(100%-4rem)] truncate rounded-full border border-white/35 bg-slate-950/45 px-2 py-0.5 text-[11px] font-semibold leading-none text-white shadow-sm backdrop-blur-sm"
 
 export type ListingAvailabilityDisplayVariant =
   | "indicator"
@@ -134,13 +134,13 @@ export function ListingAvailabilityDisplay({
     }
 
     return (
-      <div
-        className={cn(COMPACT_DATE_BADGE_CLASS_NAME, className)}
-        aria-label={resolvedAriaLabel}
-        title={resolvedAriaLabel}
+      <ListingGridCardCornerBadge
+        position="left"
+        className={className}
+        ariaLabel={resolvedAriaLabel}
       >
-        <span className="truncate">{resolvedDisplay.shortDateLabel}</span>
-      </div>
+        {resolvedDisplay.shortDateLabel}
+      </ListingGridCardCornerBadge>
     )
   }
 
@@ -149,7 +149,7 @@ export function ListingAvailabilityDisplay({
       <div
         className={cn(
           GRID_BADGE_POSITION_CLASS_NAME,
-          listingGridCardBadgeClassName,
+          listingGridCardCornerBadgeClassName,
           getAvailabilityToneClassName(
             resolvedDisplay.tone,
             status,

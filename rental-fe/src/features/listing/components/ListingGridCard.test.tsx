@@ -116,7 +116,7 @@ describe("ListingGridCard", () => {
     expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
   })
 
-  it("omits the availability dot for a future availability date", () => {
+  it("shows compact future dates by default", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
 
@@ -131,12 +131,15 @@ describe("ListingGridCard", () => {
     )
 
     expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
-    expect(screen.queryByText("Aug 15")).not.toBeInTheDocument()
+    expect(screen.getByText("Aug 15")).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("Available from Aug 15, 2026"),
+    ).toBeInTheDocument()
 
     vi.useRealTimers()
   })
 
-  it("shows compact future dates when availabilityVariant is timing", () => {
+  it("uses matching corner badge height for availability and contract chips", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
 
@@ -145,16 +148,14 @@ describe("ListingGridCard", () => {
         <ListingGridCard
           listing={createSearchListing({
             availableAt: "2026-08-15T00:00:00+07:00",
+            contractMonths: 2,
           })}
-          availabilityVariant="compact"
         />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText("Aug 15")).toBeInTheDocument()
-    expect(
-      screen.getByLabelText("Available from Aug 15, 2026"),
-    ).toBeInTheDocument()
+    expect(screen.getByText("Aug 15").parentElement).toHaveClass("h-7")
+    expect(screen.getByText("2 mo").parentElement).toHaveClass("h-7")
 
     vi.useRealTimers()
   })

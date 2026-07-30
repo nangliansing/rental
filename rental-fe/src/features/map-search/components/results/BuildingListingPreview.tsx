@@ -13,8 +13,9 @@ import {
   ListingPrice,
 } from "@/features/listing/components/ListingPresentationPrimitives"
 import { ListingAvailabilityDisplay } from "@/features/listing/components/ListingAvailabilityDisplay"
-import { LISTING_GRID_AVAILABILITY_VARIANT } from "@/features/listing/utils/listingGridAvailabilityVariant"
+import { ListingGridCardCornerBadge } from "@/features/listing/components/ListingGridCardPrimitives"
 import { formatBedroom } from "@/features/listing/utils/listingDisplay"
+import { LISTING_GRID_CARD_AVAILABILITY_VARIANT } from "@/features/listing/utils/listingGridAvailabilityVariant"
 import type { BuildingListing } from "../../types"
 import {
   formatBedroomCount,
@@ -46,12 +47,12 @@ export function BuildingListingPreview({ listing }: BuildingListingPreviewProps)
 
       <ListingAvailabilityDisplay
         availableAt={listing.availableAt}
-        variant={LISTING_GRID_AVAILABILITY_VARIANT.timing}
+        variant={LISTING_GRID_CARD_AVAILABILITY_VARIANT}
       />
 
-      <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-slate-950 shadow-sm backdrop-blur-sm">
+      <ListingGridCardCornerBadge position="right">
         {formatContract(listing.contractMonths)}
-      </div>
+      </ListingGridCardCornerBadge>
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/92 via-slate-950/60 to-transparent px-2.5 pb-2 pt-11 text-white">
         <p className="text-lg font-semibold leading-none">
