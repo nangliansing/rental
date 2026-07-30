@@ -226,7 +226,7 @@ describe("listing grid preview integration", () => {
       expect(within(dialog).queryByLabelText("Flexible")).not.toBeInTheDocument()
     })
 
-    it("shows a compact future date in preview and no dot on the tile", async () => {
+    it("shows a compact future date in preview and on the tile", async () => {
       const user = userEvent.setup()
       const listing = createSearchListing({
         availableAt: "2026-08-15T00:00:00+07:00",
@@ -235,7 +235,7 @@ describe("listing grid preview integration", () => {
       render(<GridPreviewHarness listing={listing} showBuildingName={false} />)
 
       expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
-      expect(screen.queryByText("Aug 15")).not.toBeInTheDocument()
+      expect(screen.getByText("Aug 15")).toBeInTheDocument()
 
       await user.click(screen.getByRole("button", { name: "Open listing ฿14k" }))
 

@@ -89,6 +89,7 @@ describe("listingGridCardChrome", () => {
 
     expect(screen.getByLabelText("Private listing")).toBeInTheDocument()
     expect(screen.getByText("3 mo")).toBeInTheDocument()
+    expect(screen.getByText("3 mo").parentElement).toHaveClass("h-7")
   })
 
   it("renders a public contract badge without the lock", () => {

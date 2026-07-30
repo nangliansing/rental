@@ -19,7 +19,6 @@ import {
 import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 
 import { PROFILE_TAB_CONTENT_TOP_CLASS } from "../utils/profileLayoutStyles"
-import { getListingGridAvailabilityVariant } from "@/features/listing/utils/listingGridAvailabilityVariant"
 import { MyProfileListingsEmpty } from "./MyProfileListingsEmpty"
 import { ProfileTabPanel } from "./ProfileTabPanel"
 
@@ -87,7 +86,6 @@ export function MyProfileListingsPanel({
                     <ListingGridCard
                         key={listing._id}
                         listing={listing}
-                        availabilityVariant={getListingGridAvailabilityVariant(filter)}
                         onActivate={preview.openPreview}
                     />
                 ))}

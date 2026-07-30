@@ -7,7 +7,10 @@ import {
   LISTING_GRID_AVAILABLE_NOW_INDICATOR_CLASS_NAME,
   ListingAvailabilityDisplay,
 } from "../ListingAvailabilityDisplay"
-import { listingGridCardBadgeClassName } from "../ListingGridCardPrimitives"
+import {
+  listingGridCardCornerBadgeClassName,
+  listingGridCardCornerBadgeRightClassName,
+} from "../ListingGridCardPrimitives"
 import type { ListingGridCardListing } from "../listingGridCardTypes"
 import { formatContract } from "../../utils/listingDisplay"
 
@@ -52,14 +55,18 @@ export function ListingGridCardBadge({
 }: {
   listing: ListingGridCardListing
 }) {
+  const isPrivate = listing.visibility === "PRIVATE"
+
   return (
     <div
       className={cn(
-        "absolute right-2 top-2 overflow-hidden border border-white/35 bg-slate-950/45 text-white shadow-sm",
-        listingGridCardBadgeClassName,
+        listingGridCardCornerBadgeClassName,
+        listingGridCardCornerBadgeRightClassName,
+        "overflow-hidden",
+        isPrivate && "px-0",
       )}
     >
-      {listing.visibility === "PRIVATE" && (
+      {isPrivate && (
         <span
           className="flex h-full w-7 shrink-0 items-center justify-center border-r border-white/20"
           aria-label="Private listing"
@@ -68,7 +75,7 @@ export function ListingGridCardBadge({
           <Lock className="h-3.5 w-3.5" />
         </span>
       )}
-      <span className="px-2 text-[11px] font-semibold leading-none">
+      <span className={cn("truncate", isPrivate ? "px-2" : undefined)}>
         {formatContract(listing.contractMonths)}
       </span>
     </div>

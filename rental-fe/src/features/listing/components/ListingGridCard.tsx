@@ -10,20 +10,16 @@ import {
 import { ListingAvailabilityDisplay } from "./ListingAvailabilityDisplay"
 import { listingGridCardSurfaceClassName } from "./ListingGridCardPrimitives"
 import type { ListingGridCardListing } from "./listingGridCardTypes"
+import { LISTING_GRID_CARD_AVAILABILITY_VARIANT } from "../utils/listingGridAvailabilityVariant"
 import {
   formatCompactMoney,
   getSortedListingPhotos,
 } from "../utils/listingDisplay"
-import {
-  LISTING_GRID_AVAILABILITY_VARIANT,
-  type ListingGridAvailabilityVariant,
-} from "../utils/listingGridAvailabilityVariant"
 
 export type { ListingGridCardListing } from "./listingGridCardTypes"
 
 type ListingGridCardProps = {
   listing: ListingGridCardListing
-  availabilityVariant?: ListingGridAvailabilityVariant
   overlayDensity?: "compact" | "full"
   showBuildingName?: boolean
   onActivate?: (
@@ -34,7 +30,6 @@ type ListingGridCardProps = {
 
 export function ListingGridCard({
   listing,
-  availabilityVariant = LISTING_GRID_AVAILABILITY_VARIANT.browse,
   overlayDensity = "compact",
   showBuildingName = true,
   onActivate,
@@ -50,7 +45,7 @@ export function ListingGridCard({
 
       <ListingAvailabilityDisplay
         availableAt={listing.availableAt}
-        variant={availabilityVariant}
+        variant={LISTING_GRID_CARD_AVAILABILITY_VARIANT}
       />
       <ListingGridCardBadge listing={listing} />
 

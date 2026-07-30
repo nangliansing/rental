@@ -83,5 +83,43 @@ export function ListingGridCardFinePrint({
   )
 }
 
-export const listingGridCardBadgeClassName =
-  "inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold leading-none backdrop-blur-md"
+export const listingGridCardCornerBadgeClassName =
+  "inline-flex h-7 items-center truncate rounded-full border border-white/35 bg-slate-950/45 px-2 text-[11px] font-semibold leading-none text-white shadow-sm backdrop-blur-md"
+
+export const listingGridCardCornerBadgeLeftClassName =
+  "absolute left-2 top-2 z-10 max-w-[calc(100%-4rem)]"
+
+export const listingGridCardCornerBadgeRightClassName =
+  "absolute right-2 top-2 z-10"
+
+/** @deprecated Use listingGridCardCornerBadgeClassName */
+export const listingGridCardBadgeClassName = listingGridCardCornerBadgeClassName
+
+export function ListingGridCardCornerBadge({
+  children,
+  className,
+  position = "inline",
+  ariaLabel,
+  title,
+}: {
+  children: ReactNode
+  className?: string
+  position?: "left" | "right" | "inline"
+  ariaLabel?: string
+  title?: string
+}) {
+  return (
+    <div
+      className={cn(
+        listingGridCardCornerBadgeClassName,
+        position === "left" && listingGridCardCornerBadgeLeftClassName,
+        position === "right" && listingGridCardCornerBadgeRightClassName,
+        className,
+      )}
+      aria-label={ariaLabel}
+      title={title ?? ariaLabel}
+    >
+      <span className="truncate">{children}</span>
+    </div>
+  )
+}
