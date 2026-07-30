@@ -3,6 +3,7 @@ import { AppError } from "../../../shared/errors/app-error.js";
 import { validateNullableObject } from "../../../shared/validators/index.js";
 
 import Listing from "../../listing/listing.model.js";
+import { enrichListingWithBuildingFollowState } from "../../building-follow/utils/index.js";
 import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
 import { buildSearchListingByIdParams } from "../params/index.js";
 import { buildSearchListingByIdPipeline } from "../pipelines/index.js";
@@ -16,9 +17,10 @@ export const searchListingByIdService = async ({
     validateNullableObject(session, "session");
 
     const params = buildSearchListingByIdParams(paramsInput);
+    const normalizedViewerUserId = normalizeOptionalViewerId(viewerUserId);
     const pipeline = buildSearchListingByIdPipeline({
         ...params,
-        viewerUserId: normalizeOptionalViewerId(viewerUserId),
+        viewerUserId: normalizedViewerUserId,
     });
 
     let query = Listing.aggregate(pipeline);
@@ -33,5 +35,14 @@ export const searchListingByIdService = async ({
         throw new AppError("Listing not found", 404, "LISTING_NOT_FOUND");
     }
 
-    return serializeListingPayloadForApi({ listing });
+    const listingWithBuildingFollowState =
+        await enrichListingWithBuildingFollowState({
+            listing,
+            viewerUserId: normalizedViewerUserId,
+            session,
+        });
+
+    return serializeListingPayloadForApi({
+        listing: listingWithBuildingFollowState,
+    });
 };

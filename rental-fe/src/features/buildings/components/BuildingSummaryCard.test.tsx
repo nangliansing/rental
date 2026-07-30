@@ -4,8 +4,6 @@ import type { ComponentProps } from "react"
 import { MemoryRouter } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BuildingSummaryCard } from "./BuildingSummaryCard"
-
 const building = {
   _id: "building-1",
   name: "Bangkapi Residence",
@@ -39,8 +37,17 @@ vi.mock("@/features/profile/api/useMyAgentProfile", () => ({
   useMyAgentProfile: vi.fn(),
 }))
 
+vi.mock("@/features/building-follow/components/BuildingFollowControl", () => ({
+  BuildingFollowControl: () => (
+    <button type="button" aria-label="Follow building">
+      Follow
+    </button>
+  ),
+}))
+
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useMyAgentProfile } from "@/features/profile/api/useMyAgentProfile"
+import { BuildingSummaryCard } from "./BuildingSummaryCard"
 
 function renderCard(props: ComponentProps<typeof BuildingSummaryCard>) {
   return render(

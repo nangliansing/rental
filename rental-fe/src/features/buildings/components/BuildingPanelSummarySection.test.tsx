@@ -20,6 +20,10 @@ vi.mock("@/features/profile/api/useMyAgentProfile", () => ({
   })),
 }))
 
+vi.mock("@/features/building-follow/components/BuildingFollowControl", () => ({
+  BuildingFollowControl: () => null,
+}))
+
 const building: BuildingSummaryData = {
   _id: "building-1",
   name: "Harbour View",

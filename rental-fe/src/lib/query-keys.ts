@@ -39,6 +39,7 @@ const roots = {
   notifications: key("notifications"),
   ownerPendingPosts: key("owner-pending-posts"),
   savedListings: key("saved-listings"),
+  buildingFollows: key("building-follows"),
   listerReviews: key("lister-reviews"),
   listerReviewTeasers: key("lister-review-teasers"),
   agentListings: key("agent-listings"),
@@ -88,6 +89,12 @@ export const queryKeys = {
     lists: roots.savedListings,
     list: ({ limit }: { limit: number }) =>
       childKey(roots.savedListings, limit),
+  },
+  buildingFollows: {
+    all: roots.buildingFollows,
+    lists: roots.buildingFollows,
+    list: ({ limit }: { limit: number }) =>
+      childKey(roots.buildingFollows, limit),
   },
   listerReviews: {
     all: roots.listerReviews,

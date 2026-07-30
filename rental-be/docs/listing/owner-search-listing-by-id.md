@@ -125,7 +125,8 @@ Body:
           "coordinates": [100.6435, 13.7654]
         },
         "address": "Lat Phrao Road, Khlong Chan, Bang Kapi, Bangkok 10240, Thailand",
-        "isActive": true
+        "isActive": true,
+        "isFollowing": false
       },
       "isSavedByMe": true,
       "availableAt": null,
@@ -193,6 +194,23 @@ Inactive and missing buildings do not hide an owner-managed listing. Public sear
 
 It is `true` only when the caller saved this listing; otherwise it is `false`.
 
+### Building Follow State
+
+The populated `building` object always includes `isFollowing` when `building` is non-null.
+
+`isFollowing` is calculated for the authenticated caller by matching:
+
+```js
+{
+  userId: currentUserId,
+  buildingId: building._id
+}
+```
+
+It is `true` only when the caller follows the building; otherwise it is `false`.
+
+The owner may follow a building they also list in, so `isFollowing` can be `true` on the owner edit page.
+
 ### Availability Date
 
 `listing.availableAt` is always present as `null` or an ISO datetime. See [`available-at-response.md`](./available-at-response.md).
@@ -207,6 +225,7 @@ derive listedBy from the current user
 match owned, non-deleted listing
 preserve and populate the building when available
 calculate caller-specific isSavedByMe
+calculate caller-specific building isFollowing
 load the caller's non-deleted agent profile in parallel
 return the stable response envelope
 ```
@@ -328,6 +347,13 @@ inactive building preserved
 missing building normalized to null
 isSavedByMe true
 isSavedByMe false
+building isFollowing true
+building isFollowing false
+building isFollowing on private listings
+building isFollowing on inactive buildings
+building null skips isFollowing enrichment
+another user's follow does not affect owner isFollowing
+follow and unfollow via building-follow API updates nested isFollowing
 soft-deleted agent profile excluded
 owner listing collection also excludes deleted profile
 another owner's listing hidden

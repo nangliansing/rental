@@ -14,6 +14,7 @@ export type BuildingDetails = {
   maxRent: number | null
   createdAt: string
   updatedAt: string
+  isFollowing: boolean
 }
 
 export type GetBuildingByIdResponse = {
@@ -104,6 +105,7 @@ function parseBuildingDetails(value: unknown): BuildingDetails {
     maxRent: building.maxRent,
     createdAt: building.createdAt,
     updatedAt: building.updatedAt,
+    isFollowing: building.isFollowing === true,
   }
 }
 
