@@ -1,3 +1,4 @@
+import { attachIsFollowingToBuilding } from "../../building-follow/utils/index.js";
 import { getBuildingByIdService } from "../services/index.js";
 
 export const getBuildingByIdController = async (req, res, next) => {
@@ -6,10 +7,15 @@ export const getBuildingByIdController = async (req, res, next) => {
       req.params.buildingId,
       req.dbSession,
     );
+    const data = await attachIsFollowingToBuilding({
+      building,
+      viewerUserId: req.user?.id ?? null,
+      session: req.dbSession,
+    });
 
     return res.status(200).json({
       success: true,
-      data: building,
+      data,
     });
   } catch (error) {
     return next(error);

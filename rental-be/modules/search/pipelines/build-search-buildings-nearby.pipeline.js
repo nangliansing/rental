@@ -1,4 +1,5 @@
 // modules/search/pipelines/build-search-buildings-nearby.pipeline.js
+import { buildIsFollowingFieldStages } from "../../building-follow/pipelines/index.js";
 import { buildBuildingSearchMatch } from "./helpers/build-building-search-match.js";
 import { buildListingsFromBuildingLookupStages } from "./helpers/build-listings-from-building-lookup-stages.js";
 
@@ -55,6 +56,7 @@ export const buildSearchBuildingsNearbyPipeline = ({
             },
         },
         { $limit: limit },
+        ...buildIsFollowingFieldStages(viewerUserId),
         {
             $project: {
                 name: 1,
@@ -67,6 +69,7 @@ export const buildSearchBuildingsNearbyPipeline = ({
                 maxRent: 1,
                 listings: 1,
                 distanceMeters: { $round: ["$distanceMeters", 0] },
+                isFollowing: 1,
             },
         },
     ];

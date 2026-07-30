@@ -4,6 +4,7 @@ import { normalizePagination } from "../../../shared/utils/index.js";
 import { validateNullableObject } from "../../../shared/validators/index.js";
 
 import Building from "../../building/building.model.js";
+import { attachIsFollowingToBuilding } from "../../building-follow/utils/index.js";
 import Listing from "../../listing/listing.model.js";
 import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
 
@@ -39,6 +40,12 @@ export const searchListingsInBuildingService = async ({
         throw new AppError("Building not found", 404, "BUILDING_NOT_FOUND");
     }
 
+    const buildingWithFollowState = await attachIsFollowingToBuilding({
+        building: building.toObject(),
+        viewerUserId: normalizeOptionalViewerId(viewerUserId),
+        session,
+    });
+
     const searchParams = await applyAgentProfileListingFilter(params, session);
     const pipeline = buildSearchListingsInBuildingPipeline({
         ...searchParams,
@@ -54,7 +61,7 @@ export const searchListingsInBuildingService = async ({
     const [result] = await aggregateQuery;
 
     return serializeListingPayloadForApi({
-        building,
+        building: buildingWithFollowState,
         listings: result?.data ?? [],
         pagination: normalizePagination(
             result?.pagination,

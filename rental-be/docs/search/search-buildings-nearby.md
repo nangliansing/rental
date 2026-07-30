@@ -2,7 +2,10 @@
 
 Search active buildings near a map position.
 
-Authentication is optional and is only used to calculate listing `isSavedByMe`.
+Authentication is optional and is used to calculate:
+
+- building `isFollowing`
+- listing `isSavedByMe`
 
 Nested listings include `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
 
@@ -50,6 +53,7 @@ Anonymous viewers always get:
 
 ```json
 {
+  "isFollowing": false,
   "isSavedByMe": false
 }
 ```
@@ -146,6 +150,8 @@ Body:
       },
       "minRent": 14500,
       "maxRent": 22000,
+      "distanceMeters": 120,
+      "isFollowing": false,
       "listings": [
         {
           "_id": "6a596137e24814847ca9713c",
@@ -192,8 +198,7 @@ Body:
           "createdAt": "2026-07-16T22:54:47.799Z",
           "updatedAt": "2026-07-16T22:54:47.799Z"
         }
-      ],
-      "distanceMeters": 164
+      ]
     }
   ]
 }
@@ -229,6 +234,19 @@ These agent profile fields are display-only and do not hide listings:
 - `agentProfile.isOnline`
 
 So unverified or offline agents can still have public listings.
+
+## isFollowing
+
+Each returned building includes `isFollowing`.
+
+- anonymous viewer: `false`
+- invalid token: `false`
+- refresh token sent as bearer token: `false`
+- suspended/inactive/missing viewer user: `false`
+- active viewer who follows the building: `true`
+- active viewer who does not follow the building: `false`
+
+The follow lookup runs after the result limit so only returned buildings are enriched.
 
 ## isSavedByMe
 
@@ -373,8 +391,15 @@ Invalid rent range:
 - invalid access token returns `200` as anonymous
 - refresh token sent as bearer token returns `200` as anonymous
 - active authenticated viewer can get `isSavedByMe: true`
+- active authenticated viewer can get `isFollowing: true`
 - suspended viewer returns `200` as anonymous
 - inactive viewer returns `200` as anonymous
 - missing viewer user returns `200` as anonymous
 - suspended lister hides their listings
 - deleted agent profile hides the lister's listings
+
+Automated coverage:
+
+```txt
+test/building-is-following.integration.test.js
+```

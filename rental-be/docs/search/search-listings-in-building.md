@@ -2,7 +2,10 @@
 
 Search public listings inside one active building.
 
-Authentication is optional and is only used to calculate listing `isSavedByMe`.
+Authentication is optional and is used to calculate:
+
+- building `isFollowing` on the building header
+- listing `isSavedByMe` on each returned listing
 
 Each returned listing includes `availableAt`. See [`../listing/available-at-response.md`](../listing/available-at-response.md).
 
@@ -56,6 +59,7 @@ Anonymous viewers always get:
 
 ```json
 {
+  "isFollowing": false,
   "isSavedByMe": false
 }
 ```
@@ -145,7 +149,8 @@ Body:
       },
       "address": "Lat Phrao Road, Khlong Chan, Bang Kapi, Bangkok 10240, Thailand",
       "minRent": 13000,
-      "maxRent": 15000
+      "maxRent": 15000,
+      "isFollowing": false
     },
     "listings": [
       {
@@ -271,6 +276,21 @@ These agent profile fields are display-only and do not hide listings:
 - `agentProfile.isOnline`
 
 So unverified or offline agents can still have public listings.
+
+## isFollowing
+
+The building header always includes `isFollowing`.
+
+Listings do not include `isFollowing`.
+
+- anonymous viewer: `false`
+- invalid token: `false`
+- refresh token sent as bearer token: `false`
+- suspended/inactive/missing viewer user: `false`
+- active viewer who follows the building: `true`
+- active viewer who does not follow the building: `false`
+
+Follow/unfollow mutations are handled by the building-follow endpoints.
 
 ## isSavedByMe
 
@@ -418,6 +438,9 @@ Conflicting lister filters:
 - kitchen type `"Kitchen"` works
 - boolean filters work
 - authenticated viewer can get `isSavedByMe: true`
+- authenticated viewer can get `isFollowing: true` on the building header
+- listings do not include `isFollowing`
+- follow and unfollow update building header `isFollowing`
 - invalid access token returns `200` as anonymous
 - suspended viewer returns `200` as anonymous
 - inactive viewer returns `200` as anonymous
@@ -434,3 +457,9 @@ Conflicting lister filters:
 - deleted agent profile hides the lister's listings
 - deleted listing is excluded
 - private listing is excluded
+
+Automated coverage:
+
+```txt
+test/building-is-following.integration.test.js
+```

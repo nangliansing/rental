@@ -9,6 +9,7 @@ import Building from "../modules/building/building.model.js";
 import Listing from "../modules/listing/listing.model.js";
 import { LISTING_VISIBILITIES } from "../modules/listing/listing.constants.js";
 import SavedListing from "../modules/saved-listing/saved-listing.model.js";
+import BuildingFollow from "../modules/building-follow/building-follow.model.js";
 import { searchBuildingsNearLinesService } from "../modules/search/services/index.js";
 import User from "../modules/user/user.model.js";
 import { USER_STATUSES } from "../modules/user/user.constants.js";
@@ -33,6 +34,7 @@ beforeEach(async () => {
     Building.createIndexes(),
     Listing.createIndexes(),
     SavedListing.createIndexes(),
+    BuildingFollow.createIndexes(),
     User.createIndexes(),
   ]);
 });
@@ -319,6 +321,31 @@ describe("search buildings near lines service", () => {
     assert.equal(viewerResult.data[0].listings.length, 1);
     assert.equal(viewerResult.data[0].listings[0].rent, 15_000);
     assert.equal(viewerResult.data[0].listings[0].isSavedByMe, true);
+  });
+
+  test("calculates isFollowing for the viewer on each returned building", async () => {
+    const building = await createBuilding({ minRent: 10_000, maxRent: 20_000 });
+    await createEligibleListing({ building });
+    const viewer = await createUser();
+    await BuildingFollow.create({
+      userId: viewer._id,
+      buildingId: building._id,
+    });
+
+    const [anonymousResult, viewerResult] = await Promise.all([
+      searchBuildingsNearLinesService({
+        bodyInput: baseBody,
+      }),
+      searchBuildingsNearLinesService({
+        bodyInput: baseBody,
+        viewerUserId: viewer._id.toString(),
+      }),
+    ]);
+
+    assert.equal(anonymousResult.data.length, 1);
+    assert.equal(anonymousResult.data[0].isFollowing, false);
+    assert.equal(viewerResult.data.length, 1);
+    assert.equal(viewerResult.data[0].isFollowing, true);
   });
 
   test("excludes private, deleted, and ineligible-lister listings", async () => {
