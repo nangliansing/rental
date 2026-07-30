@@ -5,6 +5,7 @@ import {
   isTopStackEntry,
   registerStackEntry,
   requestStackClose,
+  unregisterStackEntry,
 } from "@/shared/utils/modalHistoryStack"
 import {
   ensureFocusTracking,
@@ -54,6 +55,7 @@ type UseAccessibleModalOptions = {
   lockScroll?: boolean
   trackBrowserHistory?: boolean
   initialFocusRef?: RefObject<HTMLElement | null>
+  skipHistorySyncRef?: RefObject<boolean>
 }
 
 export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
@@ -63,6 +65,7 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
   lockScroll = true,
   trackBrowserHistory = true,
   initialFocusRef,
+  skipHistorySyncRef,
 }: UseAccessibleModalOptions) {
   ensureFocusTracking()
   const containerElementRef = useRef<T | null>(null)
@@ -92,7 +95,7 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
     const token = tokenRef.current
     if (lockScroll) lockBodyScroll()
 
-    const unregister = registerStackEntry({
+    registerStackEntry({
       token,
       onClose: () => onCloseRef.current(),
       tracksHistory: trackBrowserHistory,
@@ -142,7 +145,12 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
-      unregister()
+      unregisterStackEntry(token, {
+        syncHistory: skipHistorySyncRef?.current ? false : undefined,
+      })
+      if (skipHistorySyncRef) {
+        skipHistorySyncRef.current = false
+      }
       if (lockScroll) unlockBodyScroll()
 
       const restoreTarget = restoreFocusRef.current
@@ -155,6 +163,7 @@ export function useAccessibleModal<T extends HTMLElement = HTMLDivElement>({
     initialFocusRef,
     isOpen,
     lockScroll,
+    skipHistorySyncRef,
     trackBrowserHistory,
   ])
 

@@ -7,6 +7,22 @@ import { createSearchListing } from "@/test/fixtures/listings"
 import { ListingGridPreviewPortal } from "./ListingGridPreviewPortal"
 import { useListingGridPreview } from "./useListingGridPreview"
 
+const previewController = vi.hoisted(() => ({
+  previewListing: null as ReturnType<typeof createSearchListing> | null,
+  closePreview: vi.fn(),
+  skipHistorySyncOnCloseRef: { current: false },
+}))
+
+vi.mock("./useListingGridPreview", () => ({
+  useListingGridPreview: () => ({
+    previewListing: previewController.previewListing,
+    isPreviewOpen: previewController.previewListing != null,
+    openPreview: vi.fn(),
+    closePreview: previewController.closePreview,
+    skipHistorySyncOnCloseRef: previewController.skipHistorySyncOnCloseRef,
+  }),
+}))
+
 function PreviewPortalHarness({
   onOpenDetail,
   showBuildingName = true,
@@ -34,27 +50,30 @@ function PreviewPortalHarness({
 }
 
 describe("ListingGridPreviewPortal", () => {
-  it("closes preview before opening detail", async () => {
-    const user = userEvent.setup()
+  it("hands off preview history before opening detail", async () => {
     const onOpenDetail = vi.fn()
+
+    previewController.previewListing = createSearchListing()
+    previewController.closePreview.mockImplementation(() => {
+      previewController.previewListing = null
+    })
 
     render(<PreviewPortalHarness onOpenDetail={onOpenDetail} />)
 
-    await user.click(screen.getByRole("button", { name: "Open preview" }))
-    await user.click(
+    await userEvent.setup().click(
       screen.getByRole("button", {
         name: "Preview listing ฿14k. Tap for full details.",
       }),
     )
 
+    expect(previewController.closePreview).toHaveBeenCalledWith({
+      handoffToDetail: true,
+    })
     expect(onOpenDetail).toHaveBeenCalledWith("listing-1")
-    expect(
-      screen.queryByRole("dialog", { name: "Preview listing ฿14k" }),
-    ).not.toBeInTheDocument()
   })
 
   it("forwards showBuildingName to the preview modal", async () => {
-    const user = userEvent.setup()
+    previewController.previewListing = createSearchListing()
 
     render(
       <PreviewPortalHarness
@@ -62,8 +81,6 @@ describe("ListingGridPreviewPortal", () => {
         onOpenDetail={vi.fn()}
       />,
     )
-
-    await user.click(screen.getByRole("button", { name: "Open preview" }))
 
     expect(screen.queryByText("Bangkapi Residence")).not.toBeInTheDocument()
   })

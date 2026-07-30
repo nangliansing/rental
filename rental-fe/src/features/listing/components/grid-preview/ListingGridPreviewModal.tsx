@@ -1,5 +1,6 @@
 import { ModalPortal } from "@/shared/components/ModalPortal"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
+import type { RefObject } from "react"
 
 import type { ListingGridCardListing } from "../listingGridCardTypes"
 import { ListingCoverImage } from "../ListingPresentationPrimitives"
@@ -15,6 +16,7 @@ export type ListingGridPreviewModalProps = {
   onClose: () => void
   onOpenDetail: (listingId: string) => void
   showBuildingName?: boolean
+  skipHistorySyncOnCloseRef?: RefObject<boolean>
 }
 
 export function ListingGridPreviewModal({
@@ -22,11 +24,13 @@ export function ListingGridPreviewModal({
   onClose,
   onOpenDetail,
   showBuildingName = true,
+  skipHistorySyncOnCloseRef,
 }: ListingGridPreviewModalProps) {
   const isOpen = listing != null
   const { containerRef, onBackdropClick } = useAccessibleModal<HTMLDivElement>({
     isOpen,
     onClose,
+    skipHistorySyncRef: skipHistorySyncOnCloseRef,
   })
 
   if (!listing) return null
