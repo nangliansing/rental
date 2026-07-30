@@ -6,7 +6,7 @@ import {
   searchSmokeOwnerListings,
   sortSmokeOwnerListings,
   toSmokeOwnerListingAgentProfile,
-} from "./owner-listings-session"
+} from "../../../e2e/fixtures/owner-listings-session"
 
 const referenceDate = new Date("2026-07-30T12:00:00.000Z")
 const listedBy = "user-smoke-1"

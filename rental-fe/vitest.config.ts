@@ -9,8 +9,7 @@ export default mergeConfig(
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
-      include: ["src/**/*.{test,spec}.{ts,tsx}", "e2e/fixtures/**/*.test.ts"],
-      exclude: ["**/node_modules/**", "**/dist/**", "e2e/**/*.spec.ts"],
+      exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
       clearMocks: true,
       restoreMocks: true,
       css: true,
