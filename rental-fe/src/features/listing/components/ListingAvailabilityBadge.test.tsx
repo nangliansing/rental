@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import * as listingAvailability from "../utils/listingAvailability"
 import { ListingAvailabilityBadge } from "./ListingAvailabilityBadge"
 
 const referenceDate = new Date("2026-07-29T12:00:00+07:00")
@@ -21,7 +22,19 @@ async function pickAvailability(
 
 describe("ListingAvailabilityBadge", () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
+  })
+
+  it("computes availability display once per render", () => {
+    const displaySpy = vi.spyOn(
+      listingAvailability,
+      "getListingAvailabilityDisplay",
+    )
+
+    render(<ListingAvailabilityBadge availableAt={null} />)
+
+    expect(displaySpy).toHaveBeenCalledTimes(1)
   })
 
   describe("display states", () => {

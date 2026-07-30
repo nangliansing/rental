@@ -131,6 +131,30 @@ describe("ListingGridCard", () => {
     )
 
     expect(screen.queryByLabelText("Available now")).not.toBeInTheDocument()
+    expect(screen.queryByText("Aug 15")).not.toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
+  it("shows compact future dates when availabilityVariant is timing", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    render(
+      <MemoryRouter>
+        <ListingGridCard
+          listing={createSearchListing({
+            availableAt: "2026-08-15T00:00:00+07:00",
+          })}
+          availabilityVariant="compact"
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Aug 15")).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("Available from Aug 15, 2026"),
+    ).toBeInTheDocument()
 
     vi.useRealTimers()
   })

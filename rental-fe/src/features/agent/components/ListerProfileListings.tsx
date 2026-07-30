@@ -10,6 +10,8 @@ import {
 import { ProfileTabPanel } from "@/features/profile/components/ProfileTabPanel"
 import { PROFILE_TAB_CONTENT_TOP_CLASS } from "@/features/profile/utils/profileLayoutStyles"
 import type { SearchListing } from "@/features/map-search/types"
+import { getListingGridAvailabilityVariant } from "@/features/listing/utils/listingGridAvailabilityVariant"
+import type { ListingAvailabilityFilter } from "../api"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
 import {
   ListingCollectionMessage,
@@ -18,6 +20,7 @@ import {
 
 type ListerProfileListingsProps = {
   listings: SearchListing[]
+  listingFilter: ListingAvailabilityFilter
   isLoading: boolean
   isError: boolean
   hasNextPage: boolean
@@ -29,6 +32,7 @@ type ListerProfileListingsProps = {
 
 export function ListerProfileListings({
   listings,
+  listingFilter,
   isLoading,
   isError,
   hasNextPage,
@@ -80,6 +84,7 @@ export function ListerProfileListings({
           <ListingGridCard
             key={listing._id}
             listing={listing}
+            availabilityVariant={getListingGridAvailabilityVariant(listingFilter)}
             onActivate={preview.openPreview}
           />
         ))}

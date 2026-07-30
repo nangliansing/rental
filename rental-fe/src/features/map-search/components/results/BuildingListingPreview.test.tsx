@@ -1,11 +1,15 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { createSearchListing } from "@/test/fixtures/listings"
 
 import { BuildingListingPreview } from "./BuildingListingPreview"
 
 describe("BuildingListingPreview", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("uses shared listing presentation for normal data", () => {
     render(<BuildingListingPreview listing={createSearchListing()} />)
 
@@ -14,6 +18,36 @@ describe("BuildingListingPreview", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("฿14k")).toBeInTheDocument()
     expect(screen.getByLabelText("1 bed")).toHaveTextContent("1")
+  })
+
+  it("shows compact availability in the top-left corner", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00+07:00"))
+
+    const { rerender } = render(
+      <BuildingListingPreview
+        listing={createSearchListing({ availableAt: null })}
+      />,
+    )
+    expect(screen.queryByLabelText(/Flexible|Available now|Available from/i)).not.toBeInTheDocument()
+
+    rerender(
+      <BuildingListingPreview
+        listing={createSearchListing({
+          availableAt: "2026-07-29T00:00:00+07:00",
+        })}
+      />,
+    )
+    expect(screen.getByLabelText("Available now")).toBeInTheDocument()
+
+    rerender(
+      <BuildingListingPreview
+        listing={createSearchListing({
+          availableAt: "2026-08-15T00:00:00+07:00",
+        })}
+      />,
+    )
+    expect(screen.getByText("Aug 15")).toBeInTheDocument()
   })
 
   it("renders safe fallbacks when media and numeric data are invalid", () => {
