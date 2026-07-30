@@ -536,6 +536,7 @@ describe("optimisticallyDeleteListing", () => {
     const queryClient = new QueryClient()
     const agentKey = queryKeys.agentListings.list({
       agentProfileId: "agent-1",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

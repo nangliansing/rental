@@ -18,6 +18,7 @@ import { AppError } from "../../shared/errors/app-error.js";
 import {
   KITCHEN_TYPES,
   LISTING_FACILITIES,
+  LISTING_AVAILABILITY_FILTERS,
   LISTING_VISIBILITIES,
   OWNER_LISTING_FILTERS,
   OWNER_LISTING_SORTS,
@@ -50,6 +51,23 @@ export const validateOwnerListingVisibilityFilter = (input) => {
   );
 };
 
+export const validateListingAvailabilityFilter = (input) => {
+  if (input == null) return LISTING_AVAILABILITY_FILTERS.ALL;
+
+  if (typeof input !== "string") {
+    throw new AppError("filter must be a string", 422, "VALIDATION_ERROR");
+  }
+
+  const normalized = input.trim().toLowerCase();
+
+  return validateEnumValue(
+    normalized,
+    "filter",
+    Object.values(LISTING_AVAILABILITY_FILTERS),
+    LISTING_AVAILABILITY_FILTERS.ALL,
+  );
+};
+
 export const validateOwnerListingFilter = (input) => {
   if (input == null) return OWNER_LISTING_FILTERS.ALL;
 
@@ -63,7 +81,7 @@ export const validateOwnerListingFilter = (input) => {
     normalized,
     "filter",
     Object.values(OWNER_LISTING_FILTERS),
-    OWNER_LISTING_FILTERS.ALL
+    OWNER_LISTING_FILTERS.ALL,
   );
 };
 

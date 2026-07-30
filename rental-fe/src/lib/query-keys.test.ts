@@ -177,10 +177,11 @@ describe("queryKeys", () => {
       {
         actual: queryKeys.agentListings.list({
           agentProfileId: "profile-1",
+          filter: "now",
           sort: "latest",
           limit: 10,
         }),
-        expected: ["agent-listings", "profile-1", "latest", 10],
+        expected: ["agent-listings", "profile-1", "now", "latest", 10],
       },
       {
         actual: queryKeys.buildings.detail("building-1"),
@@ -337,6 +338,7 @@ describe("queryKeys", () => {
         family: queryKeys.agentListings.lists,
         member: queryKeys.agentListings.list({
           agentProfileId: "profile-1",
+          filter: "all",
           sort: "latest",
           limit: 10,
         }),

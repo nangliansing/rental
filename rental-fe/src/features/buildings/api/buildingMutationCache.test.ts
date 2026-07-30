@@ -389,6 +389,7 @@ describe("patchBuildingInRelatedQueries", () => {
     const ownerDetailKey = queryKeys.listings.ownerDetail("listing-1")
     const agentKey = queryKeys.agentListings.list({
       agentProfileId: "agent-1",
+      filter: "all",
       sort: "latest",
       limit: 20,
     })

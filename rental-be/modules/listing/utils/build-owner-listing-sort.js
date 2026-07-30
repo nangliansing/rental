@@ -1,6 +1,6 @@
 // modules/listing/utils/build-owner-listing-sort.js
 import {
-  OWNER_LISTING_FILTERS,
+  LISTING_AVAILABILITY_FILTERS,
   OWNER_LISTING_SORTS,
 } from "../listing.constants.js";
 
@@ -19,7 +19,7 @@ const buildCreatedAtTieBreakerSort = (sort) => {
 export const buildOwnerListingSort = ({ filter, sort }) => {
   const tieBreaker = buildCreatedAtTieBreakerSort(sort);
 
-  if (filter === OWNER_LISTING_FILTERS.SOON) {
+  if (filter === LISTING_AVAILABILITY_FILTERS.SOON) {
     return {
       availableAt: 1,
       ...tieBreaker,

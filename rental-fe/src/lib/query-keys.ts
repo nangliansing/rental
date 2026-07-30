@@ -6,6 +6,7 @@ type OwnerListingKeyInput = {
 
 type AgentListingKeyInput = {
   agentProfileId: string
+  filter: string
   sort: string
   limit: number
 }
@@ -112,8 +113,8 @@ export const queryKeys = {
   agentListings: {
     all: roots.agentListings,
     lists: roots.agentListings,
-    list: ({ agentProfileId, sort, limit }: AgentListingKeyInput) =>
-      childKey(roots.agentListings, agentProfileId, sort, limit),
+    list: ({ agentProfileId, filter, sort, limit }: AgentListingKeyInput) =>
+      childKey(roots.agentListings, agentProfileId, filter, sort, limit),
   },
   buildings: {
     all: roots.buildings,

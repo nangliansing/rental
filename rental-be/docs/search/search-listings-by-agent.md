@@ -21,7 +21,7 @@ GET http://localhost:3000/api/v1/search/agents/:agentProfileId/listings
 Example:
 
 ```http
-GET http://localhost:3000/api/v1/search/agents/6a5669f81a9630e315e059a7/listings?page=1&limit=20&sort=latest
+GET http://localhost:3000/api/v1/search/agents/6a5669f81a9630e315e059a7/listings?page=1&limit=20&filter=now&sort=latest
 ```
 
 ## Headers
@@ -55,10 +55,29 @@ Anonymous viewers always get:
 ## Query Params
 
 ```txt
-page   optional, default 1, range 1 to 10000
-limit  optional, default 20, range 1 to 100
-sort   optional, default latest
+page    optional, default 1, range 1 to 10000
+limit   optional, default 20, range 1 to 100
+filter  optional, default all
+sort    optional, default latest
 ```
+
+Allowed `filter` values:
+
+```txt
+all
+now
+soon
+```
+
+Availability boundaries use the Thailand calendar (`Asia/Bangkok`, UTC+7). See [`../listing/available-at-response.md`](../listing/available-at-response.md).
+
+| Filter | Meaning |
+| --- | --- |
+| `all` | All public listings for the agent (includes flexible listings with `availableAt: null`) |
+| `now` | Public listings with a set `availableAt` on or before today (Bangkok calendar) |
+| `soon` | Public listings with `availableAt` on or after tomorrow (Bangkok calendar) |
+
+Flexible public listings (`availableAt: null`) appear only under `all`, not `now` or `soon`.
 
 Allowed `sort` values:
 
@@ -66,6 +85,13 @@ Allowed `sort` values:
 latest
 oldest
 ```
+
+| Filter | Primary sort | Tie-breakers |
+| --- | --- | --- |
+| `all`, `now` | `createdAt` (`latest` → descending, `oldest` → ascending) | `_id` |
+| `soon` | `availableAt` ascending (soonest availability first) | `createdAt`, then `_id` |
+
+For `filter=soon`, the requested `sort` value applies only as a tie-breaker when multiple listings share the same availability date.
 
 ## Public Visibility Rules
 
@@ -256,6 +282,16 @@ Invalid `limit`:
 }
 ```
 
+Invalid `filter`:
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "message": "Invalid filter: private"
+}
+```
+
 Invalid `sort`:
 
 ```json
@@ -283,14 +319,16 @@ Agent profile not found, deleted, or linked owner user is missing/suspended/inac
 - `200` anonymous success
 - `200` page 1 and page 2 pagination
 - `200` page beyond total returns empty `listings`
-- `sort=latest`
-- `sort=oldest`
+- `filter=all`, `now`, and `soon`
+- flexible public listings excluded from `now` and `soon`
+- `sort=latest` and `sort=oldest` for non-soon filters (by `createdAt`)
+- `filter=soon` sorts by `availableAt` ascending with `createdAt` tie-breakers
 - active authenticated viewer calculates `isSavedByMe`
 - invalid token falls back to anonymous
 - suspended viewer token falls back to anonymous
 - inactive viewer token falls back to anonymous
 - missing viewer token falls back to anonymous
-- invalid `agentProfileId`
+- invalid `filter`, `sort`, `page`, and `limit` values
 - unknown `agentProfileId`
 - deleted agent profile returns `AGENT_PROFILE_NOT_FOUND`
 - suspended agent owner returns `AGENT_PROFILE_NOT_FOUND`
