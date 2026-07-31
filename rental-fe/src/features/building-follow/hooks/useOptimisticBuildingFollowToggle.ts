@@ -1,23 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import {
-  createBuildingFollow,
-  deleteBuildingFollow,
-  isBuildingAlreadyFollowedError,
-  isBuildingFollowNotFoundError,
-} from "../api"
-import {
-  BUILDING_FOLLOW_WRITE_SCOPE_ID,
-  patchBuildingFollowingStateInCache,
-  syncBuildingFollowingState,
-} from "../utils/buildingFollowCache"
+import type { ActiveToggleSettleOutcome } from "@/shared/components/toggle/ActiveToggleCircleButton"
 
-type FollowMutationInput = {
-  controller: AbortController
-  isFollowing: boolean
-  operationId: number
-}
+import { useCreateBuildingFollow } from "../api/useCreateBuildingFollow"
+import { useDeleteBuildingFollow } from "../api/useDeleteBuildingFollow"
+import { useBuildingFollowingFromCache } from "./useBuildingFollowingFromCache"
 
 type UseOptimisticBuildingFollowToggleInput = {
   buildingId: string
@@ -25,104 +12,138 @@ type UseOptimisticBuildingFollowToggleInput = {
   enabled?: boolean
 }
 
+type FollowMutationCallbacks = {
+  controller: AbortController
+  isFollowing: boolean
+  operationId: number
+}
+
 export function useOptimisticBuildingFollowToggle({
   buildingId,
   initialIsFollowing,
   enabled = true,
 }: UseOptimisticBuildingFollowToggleInput) {
-  const queryClient = useQueryClient()
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
-  const confirmedRef = useRef(initialIsFollowing)
-  const desiredRef = useRef(initialIsFollowing)
+  const externalIsFollowing = useBuildingFollowingFromCache({
+    buildingId,
+    fallbackIsFollowing: initialIsFollowing,
+    enabled,
+  })
+  const [isFollowing, setIsFollowing] = useState(externalIsFollowing)
+  const [settleSignal, setSettleSignal] = useState(0)
+  const [lastOutcome, setLastOutcome] = useState<ActiveToggleSettleOutcome | null>(
+    null,
+  )
+  const confirmedRef = useRef(externalIsFollowing)
+  const desiredRef = useRef(externalIsFollowing)
   const controllerRef = useRef<AbortController | null>(null)
   const latestOperationIdRef = useRef(0)
-  const hasLocalToggleRef = useRef(false)
   const isMountedRef = useRef(true)
 
-  const applyOptimisticState = useCallback(
-    (nextFollowing: boolean) => {
-      desiredRef.current = nextFollowing
-      if (isMountedRef.current) setIsFollowing(nextFollowing)
-      patchBuildingFollowingStateInCache({
-        queryClient,
-        buildingId,
-        isFollowing: nextFollowing,
-      })
+  const createFollow = useCreateBuildingFollow()
+  const deleteFollow = useDeleteBuildingFollow()
+  const isPending = createFollow.isPending || deleteFollow.isPending
+
+  const recordSettle = useCallback((outcome: ActiveToggleSettleOutcome) => {
+    if (!isMountedRef.current) return
+
+    setLastOutcome(outcome)
+    setSettleSignal((current) => current + 1)
+  }, [])
+
+  const applyOptimisticUi = useCallback((nextFollowing: boolean) => {
+    desiredRef.current = nextFollowing
+    if (isMountedRef.current) setIsFollowing(nextFollowing)
+  }, [])
+
+  const handleMutationSuccess = useCallback(
+    (isFollowing: boolean, operationId: number, controller: AbortController) => {
+      if (
+        controller.signal.aborted ||
+        operationId !== latestOperationIdRef.current
+      ) {
+        return
+      }
+
+      confirmedRef.current = isFollowing
+
+      if (desiredRef.current !== isFollowing) return
+
+      if (isMountedRef.current) setIsFollowing(isFollowing)
     },
-    [buildingId, queryClient],
+    [],
   )
 
-  const mutation = useMutation({
-    scope: { id: BUILDING_FOLLOW_WRITE_SCOPE_ID },
-    mutationFn: async ({ controller, isFollowing }: FollowMutationInput) => {
-      try {
-        if (isFollowing) {
-          return await createBuildingFollow({
+  const handleMutationError = useCallback(
+    (operationId: number, controller: AbortController) => {
+      if (
+        controller.signal.aborted ||
+        operationId !== latestOperationIdRef.current
+      ) {
+        return
+      }
+
+      applyOptimisticUi(confirmedRef.current)
+    },
+    [applyOptimisticUi],
+  )
+
+  const handleMutationSettled = useCallback(
+    (
+      operationId: number,
+      controller: AbortController,
+      error: Error | null,
+    ) => {
+      if (operationId !== latestOperationIdRef.current) return
+
+      controllerRef.current = null
+
+      if (controller.signal.aborted) return
+
+      recordSettle(error ? "error" : "success")
+    },
+    [recordSettle],
+  )
+
+  const runMutation = useCallback(
+    ({ controller, isFollowing, operationId }: FollowMutationCallbacks) => {
+      const options = {
+        onSuccess: () =>
+          handleMutationSuccess(isFollowing, operationId, controller),
+        onError: () => handleMutationError(operationId, controller),
+        onSettled: (_data: unknown, error: Error | null) =>
+          handleMutationSettled(operationId, controller, error),
+      }
+      if (isFollowing) {
+        createFollow.mutate(
+          {
             buildingId,
             signal: controller.signal,
-          })
-        }
+          },
+          options,
+        )
+        return
+      }
 
-        return await deleteBuildingFollow({
+      deleteFollow.mutate(
+        {
           buildingId,
           signal: controller.signal,
-        })
-      } catch (error) {
-        const serverAlreadyMatches = isFollowing
-          ? isBuildingAlreadyFollowedError(error)
-          : isBuildingFollowNotFoundError(error)
-
-        if (!serverAlreadyMatches) throw error
-        return null
-      }
+        },
+        options,
+      )
     },
-    onSuccess: async (_data, variables) => {
-      if (
-        variables.controller.signal.aborted ||
-        variables.operationId !== latestOperationIdRef.current
-      ) {
-        return
-      }
-
-      confirmedRef.current = variables.isFollowing
-
-      if (desiredRef.current !== variables.isFollowing) return
-
-      if (isMountedRef.current) setIsFollowing(variables.isFollowing)
-      await syncBuildingFollowingState({
-        queryClient,
-        buildingId,
-        isFollowing: variables.isFollowing,
-      })
-
-      if (desiredRef.current !== variables.isFollowing) {
-        patchBuildingFollowingStateInCache({
-          queryClient,
-          buildingId,
-          isFollowing: desiredRef.current,
-        })
-      }
-    },
-    onError: (_error, variables) => {
-      if (
-        variables.controller.signal.aborted ||
-        variables.operationId !== latestOperationIdRef.current
-      ) {
-        return
-      }
-
-      applyOptimisticState(confirmedRef.current)
-    },
-    onSettled: (_data, _error, variables) => {
-      if (variables.operationId !== latestOperationIdRef.current) return
-      controllerRef.current = null
-    },
-  })
+    [
+      buildingId,
+      createFollow,
+      deleteFollow,
+      handleMutationError,
+      handleMutationSettled,
+      handleMutationSuccess,
+    ],
+  )
 
   const toggle = useCallback(() => {
-    if (!enabled || mutation.isPending) return
-
-    hasLocalToggleRef.current = true
+    if (!enabled || isPending) return
 
     const activeController = controllerRef.current
     if (activeController) {
@@ -132,14 +153,15 @@ export function useOptimisticBuildingFollowToggle({
     }
 
     const nextFollowing = !desiredRef.current
-    applyOptimisticState(nextFollowing)
+    applyOptimisticUi(nextFollowing)
 
     const controller = new AbortController()
     const operationId = latestOperationIdRef.current + 1
     latestOperationIdRef.current = operationId
     controllerRef.current = controller
-    mutation.mutate({ controller, isFollowing: nextFollowing, operationId })
-  }, [applyOptimisticState, enabled, mutation])
+
+    runMutation({ controller, isFollowing: nextFollowing, operationId })
+  }, [applyOptimisticUi, enabled, isPending, runMutation])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -149,24 +171,19 @@ export function useOptimisticBuildingFollowToggle({
   }, [])
 
   useEffect(() => {
-    hasLocalToggleRef.current = false
-    confirmedRef.current = initialIsFollowing
-    desiredRef.current = initialIsFollowing
-    setIsFollowing(initialIsFollowing)
-  }, [buildingId])
+    if (isPending) return
+    if (externalIsFollowing === confirmedRef.current) return
 
-  useEffect(() => {
-    if (mutation.isPending || hasLocalToggleRef.current) return
-    if (initialIsFollowing === confirmedRef.current) return
-
-    confirmedRef.current = initialIsFollowing
-    desiredRef.current = initialIsFollowing
-    setIsFollowing(initialIsFollowing)
-  }, [initialIsFollowing, mutation.isPending])
+    confirmedRef.current = externalIsFollowing
+    desiredRef.current = externalIsFollowing
+    setIsFollowing(externalIsFollowing)
+  }, [buildingId, externalIsFollowing, isPending])
 
   return {
     isFollowing,
-    isPending: mutation.isPending,
+    isPending,
+    settleSignal,
+    lastOutcome,
     toggle,
   }
 }

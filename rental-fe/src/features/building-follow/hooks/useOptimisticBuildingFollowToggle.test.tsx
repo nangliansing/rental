@@ -1,63 +1,106 @@
 import type { PropsWithChildren } from "react"
-import { act, renderHook } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { queryKeys } from "@/lib/query-keys"
 
 const mocks = vi.hoisted(() => ({
   createBuildingFollow: vi.fn(),
   deleteBuildingFollow: vi.fn(),
-  patchBuildingFollowingStateInCache: vi.fn(),
-  syncBuildingFollowingState: vi.fn(),
 }))
 
-vi.mock("../api", () => ({
+vi.mock("../api/createBuildingFollow", () => ({
   createBuildingFollow: mocks.createBuildingFollow,
-  deleteBuildingFollow: mocks.deleteBuildingFollow,
   isBuildingAlreadyFollowedError: () => false,
-  isBuildingFollowNotFoundError: () => false,
 }))
 
-vi.mock("../utils/buildingFollowCache", () => ({
-  patchBuildingFollowingStateInCache: mocks.patchBuildingFollowingStateInCache,
-  BUILDING_FOLLOW_WRITE_SCOPE_ID: "building-follow-write",
-  syncBuildingFollowingState: mocks.syncBuildingFollowingState,
+vi.mock("../api/deleteBuildingFollow", () => ({
+  deleteBuildingFollow: mocks.deleteBuildingFollow,
+  isBuildingFollowNotFoundError: () => false,
 }))
 
 import { useOptimisticBuildingFollowToggle } from "./useOptimisticBuildingFollowToggle"
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { mutations: { retry: false } },
-  })
-
+function createWrapper(queryClient: QueryClient) {
   return function Wrapper({ children }: PropsWithChildren) {
     return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
   }
 }
 
 describe("useOptimisticBuildingFollowToggle", () => {
   beforeEach(() => {
-    mocks.createBuildingFollow.mockResolvedValue({})
-    mocks.deleteBuildingFollow.mockResolvedValue({})
-    mocks.syncBuildingFollowingState.mockResolvedValue(undefined)
+    mocks.createBuildingFollow.mockResolvedValue({
+      _id: "follow-1",
+      userId: "user-1",
+      buildingId: "building-1",
+    })
+    mocks.deleteBuildingFollow.mockResolvedValue({
+      _id: "follow-1",
+      userId: "user-1",
+      buildingId: "building-1",
+    })
   })
 
   afterEach(() => {
     vi.clearAllMocks()
   })
 
+  it("updates immediately and sends the unfollow request", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+    const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
+    queryClient.setQueryData(publicKey, {
+      listing: {
+        _id: "listing-1",
+        building: { _id: "building-1", name: "Sample", isFollowing: true },
+      },
+    })
+
+    const { result } = renderHook(
+      () =>
+        useOptimisticBuildingFollowToggle({
+          buildingId: "building-1",
+          initialIsFollowing: true,
+        }),
+      { wrapper: createWrapper(queryClient) },
+    )
+
+    await act(async () => {
+      result.current.toggle()
+      await Promise.resolve()
+    })
+
+    expect(result.current.isFollowing).toBe(false)
+    expect(mocks.deleteBuildingFollow).toHaveBeenCalledOnce()
+    expect(mocks.createBuildingFollow).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(publicKey)).toMatchObject({
+      listing: { building: { isFollowing: false } },
+    })
+  })
+
   it("updates immediately and sends the follow request without debounce", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+    const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
+    queryClient.setQueryData(publicKey, {
+      listing: {
+        _id: "listing-1",
+        building: { _id: "building-1", name: "Sample", isFollowing: false },
+      },
+    })
+
     const { result } = renderHook(
       () =>
         useOptimisticBuildingFollowToggle({
           buildingId: "building-1",
           initialIsFollowing: false,
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createWrapper(queryClient) },
     )
 
     await act(async () => {
@@ -68,6 +111,9 @@ describe("useOptimisticBuildingFollowToggle", () => {
     expect(result.current.isFollowing).toBe(true)
     expect(mocks.createBuildingFollow).toHaveBeenCalledOnce()
     expect(mocks.deleteBuildingFollow).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(publicKey)).toMatchObject({
+      listing: { building: { isFollowing: true } },
+    })
   })
 
   it("ignores rapid toggles while a request is pending", async () => {
@@ -79,13 +125,17 @@ describe("useOptimisticBuildingFollowToggle", () => {
         }),
     )
 
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+
     const { result } = renderHook(
       () =>
         useOptimisticBuildingFollowToggle({
           buildingId: "building-1",
           initialIsFollowing: false,
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createWrapper(queryClient) },
     )
 
     await act(async () => {
@@ -109,8 +159,19 @@ describe("useOptimisticBuildingFollowToggle", () => {
     })
   })
 
-  it("rolls back to the confirmed state after a genuine failure", async () => {
+  it("rolls back UI and cache after a genuine failure", async () => {
     mocks.createBuildingFollow.mockRejectedValue(new Error("Network error"))
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+    const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
+    const publicData = {
+      listing: {
+        _id: "listing-1",
+        building: { _id: "building-1", name: "Sample", isFollowing: false },
+      },
+    }
+    queryClient.setQueryData(publicKey, publicData)
 
     const { result } = renderHook(
       () =>
@@ -118,7 +179,7 @@ describe("useOptimisticBuildingFollowToggle", () => {
           buildingId: "building-1",
           initialIsFollowing: false,
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createWrapper(queryClient) },
     )
 
     act(() => {
@@ -127,18 +188,15 @@ describe("useOptimisticBuildingFollowToggle", () => {
 
     expect(result.current.isFollowing).toBe(true)
 
-    await act(async () => Promise.resolve())
-
-    expect(result.current.isFollowing).toBe(false)
-    expect(mocks.patchBuildingFollowingStateInCache).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        buildingId: "building-1",
-        isFollowing: false,
-      }),
-    )
+    await waitFor(() => expect(result.current.isFollowing).toBe(false))
+    expect(queryClient.getQueryData(publicKey)).toEqual(publicData)
   })
 
   it("syncs local state when initialIsFollowing changes after server refresh", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+
     const { result, rerender } = renderHook(
       ({ initialIsFollowing }: { initialIsFollowing: boolean }) =>
         useOptimisticBuildingFollowToggle({
@@ -146,7 +204,7 @@ describe("useOptimisticBuildingFollowToggle", () => {
           initialIsFollowing,
         }),
       {
-        wrapper: createWrapper(),
+        wrapper: createWrapper(queryClient),
         initialProps: { initialIsFollowing: false },
       },
     )
@@ -156,5 +214,96 @@ describe("useOptimisticBuildingFollowToggle", () => {
     rerender({ initialIsFollowing: true })
 
     expect(result.current.isFollowing).toBe(true)
+  })
+
+  it("syncs follow state across mounted controls when another view patches cache", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+    const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
+    queryClient.setQueryData(publicKey, {
+      listing: {
+        _id: "listing-1",
+        building: { _id: "building-1", name: "Sample", isFollowing: false },
+      },
+    })
+
+    const buildingDetail = renderHook(
+      () =>
+        useOptimisticBuildingFollowToggle({
+          buildingId: "building-1",
+          initialIsFollowing: false,
+        }),
+      { wrapper: createWrapper(queryClient) },
+    )
+    const listingDetail = renderHook(
+      () =>
+        useOptimisticBuildingFollowToggle({
+          buildingId: "building-1",
+          initialIsFollowing: false,
+        }),
+      { wrapper: createWrapper(queryClient) },
+    )
+
+    await act(async () => {
+      buildingDetail.result.current.toggle()
+      await Promise.resolve()
+    })
+
+    expect(buildingDetail.result.current.isFollowing).toBe(true)
+    expect(listingDetail.result.current.isFollowing).toBe(true)
+
+    await act(async () => {
+      listingDetail.result.current.toggle()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(listingDetail.result.current.isFollowing).toBe(false)
+      expect(buildingDetail.result.current.isFollowing).toBe(false)
+    })
+  })
+
+  it("emits settleSignal with success and error outcomes", async () => {
+    mocks.createBuildingFollow.mockRejectedValueOnce(new Error("Network error"))
+
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+
+    const { result } = renderHook(
+      () =>
+        useOptimisticBuildingFollowToggle({
+          buildingId: "building-1",
+          initialIsFollowing: false,
+        }),
+      { wrapper: createWrapper(queryClient) },
+    )
+
+    await act(async () => {
+      result.current.toggle()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(result.current.settleSignal).toBe(1)
+      expect(result.current.lastOutcome).toBe("error")
+    })
+
+    mocks.createBuildingFollow.mockResolvedValueOnce({
+      _id: "follow-1",
+      userId: "user-1",
+      buildingId: "building-1",
+    })
+
+    await act(async () => {
+      result.current.toggle()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(result.current.settleSignal).toBe(2)
+      expect(result.current.lastOutcome).toBe("success")
+    })
   })
 })

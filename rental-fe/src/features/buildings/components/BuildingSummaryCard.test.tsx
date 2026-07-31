@@ -39,7 +39,11 @@ vi.mock("@/features/profile/api/useMyAgentProfile", () => ({
 
 vi.mock("@/features/building-follow/components/BuildingFollowControl", () => ({
   BuildingFollowControl: () => (
-    <button type="button" aria-label="Follow building">
+    <button
+      type="button"
+      data-testid="building-follow-control"
+      aria-label="Follow building"
+    >
       Follow
     </button>
   ),
@@ -203,6 +207,26 @@ describe("BuildingSummaryCard", () => {
       })
 
       expect(container.firstChild).toHaveClass("custom-summary")
+    })
+
+    it("places the follow control beside the building name", () => {
+      renderCard({ building })
+
+      const heading = screen.getByRole("heading", {
+        level: 1,
+        name: "Bangkapi Residence",
+      })
+      const followControl = screen.getByTestId("building-follow-control")
+
+      expect(heading.parentElement).toContainElement(followControl)
+    })
+
+    it("hides the follow control when showFollowAction is false", () => {
+      renderCard({ building, showFollowAction: false })
+
+      expect(
+        screen.queryByTestId("building-follow-control"),
+      ).not.toBeInTheDocument()
     })
   })
 

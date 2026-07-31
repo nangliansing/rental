@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
 import type React from "react"
 
+import { useAuth } from "@/features/auth/hooks/useAuth"
+import { BuildingFollowersSection } from "@/features/building-follow/components/BuildingFollowersSection"
 import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import {
@@ -39,6 +41,7 @@ export function BuildingDetailPage({
 }: BuildingDetailPageProps) {
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const preview = useListingGridPreview()
+  const { user } = useAuth()
   const exploreNeighbourhood = useBuildingDetailSession()
   const {
     selectedBuilding: building,
@@ -103,6 +106,12 @@ export function BuildingDetailPage({
         hideEmptyRent={isListingSearch}
         isExploreOpen={exploreNeighbourhood.isOpen}
         onExploreNeighbourhood={exploreNeighbourhood.open}
+      />
+
+      <BuildingFollowersSection
+        building={building}
+        viewerUserId={user?._id}
+        className="mt-4"
       />
 
       <div>

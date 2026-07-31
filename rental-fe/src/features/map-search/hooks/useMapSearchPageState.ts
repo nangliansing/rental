@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
+import { useBuildingFollowingFromCache } from "@/features/building-follow/hooks/useBuildingFollowingFromCache"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useMyAgentProfile } from "@/features/profile/api"
 
@@ -198,7 +199,25 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
         : null,
     [buildings, pendingBuildingId],
   )
-  const activeSelectedBuilding = selectedBuilding ?? urlSelectedBuilding
+  const baseActiveSelectedBuilding = selectedBuilding ?? urlSelectedBuilding
+  const cachedSelectedBuildingIsFollowing = useBuildingFollowingFromCache({
+    buildingId: baseActiveSelectedBuilding?._id ?? "",
+    fallbackIsFollowing: Boolean(baseActiveSelectedBuilding?.isFollowing),
+    enabled: Boolean(baseActiveSelectedBuilding?._id),
+  })
+  const activeSelectedBuilding = useMemo(() => {
+    if (!baseActiveSelectedBuilding) return null
+    if (
+      baseActiveSelectedBuilding.isFollowing === cachedSelectedBuildingIsFollowing
+    ) {
+      return baseActiveSelectedBuilding
+    }
+
+    return {
+      ...baseActiveSelectedBuilding,
+      isFollowing: cachedSelectedBuildingIsFollowing,
+    }
+  }, [baseActiveSelectedBuilding, cachedSelectedBuildingIsFollowing])
 
   const searchStatus = buildingSearch.status
   const isPendingBuildingUnresolved = useMemo(() => {
