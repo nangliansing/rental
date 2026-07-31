@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -15,7 +16,7 @@ describe("ListingGridPreviewModal", () => {
     document.body.style.overflow = ""
   })
 
-  it("closes from the backdrop and opens detail from the preview content", async () => {
+  it("closes from the backdrop and opens detail from the preview content in modal mode", async () => {
     const user = userEvent.setup()
     const listing = {
       ...createSearchListing(),
@@ -28,7 +29,7 @@ describe("ListingGridPreviewModal", () => {
       <ListingGridPreviewModal
         listing={listing}
         onClose={onClose}
-        onOpenDetail={onOpenDetail}
+        detailMode={{ mode: "modal", onOpenDetail }}
       />,
     )
 
@@ -60,7 +61,7 @@ describe("ListingGridPreviewModal", () => {
       <ListingGridPreviewModal
         listing={null}
         onClose={vi.fn()}
-        onOpenDetail={vi.fn()}
+        detailMode={{ mode: "modal", onOpenDetail: vi.fn() }}
       />,
     )
 
@@ -75,7 +76,7 @@ describe("ListingGridPreviewModal", () => {
       <ListingGridPreviewModal
         listing={createSearchListing()}
         onClose={onClose}
-        onOpenDetail={vi.fn()}
+        detailMode={{ mode: "modal", onOpenDetail: vi.fn() }}
       />,
     )
 
@@ -94,7 +95,7 @@ describe("ListingGridPreviewModal", () => {
           availableAt: "2026-08-15T00:00:00+07:00",
         })}
         onClose={vi.fn()}
-        onOpenDetail={vi.fn()}
+        detailMode={{ mode: "modal", onOpenDetail: vi.fn() }}
       />,
     )
 
@@ -112,7 +113,7 @@ describe("ListingGridPreviewModal", () => {
           availableAt: "2026-07-29T00:00:00+07:00",
         })}
         onClose={vi.fn()}
-        onOpenDetail={vi.fn()}
+        detailMode={{ mode: "modal", onOpenDetail: vi.fn() }}
       />,
     )
 
@@ -121,7 +122,7 @@ describe("ListingGridPreviewModal", () => {
     expect(screen.queryByText("Available from")).not.toBeInTheDocument()
   })
 
-  it("does not call onOpenDetail when listing id is blank", async () => {
+  it("does not call onOpenDetail in modal mode when listing id is blank", async () => {
     const user = userEvent.setup()
     const onOpenDetail = vi.fn()
 
@@ -129,7 +130,7 @@ describe("ListingGridPreviewModal", () => {
       <ListingGridPreviewModal
         listing={createSearchListing({ _id: "   " as never })}
         onClose={vi.fn()}
-        onOpenDetail={onOpenDetail}
+        detailMode={{ mode: "modal", onOpenDetail }}
       />,
     )
 
@@ -140,5 +141,44 @@ describe("ListingGridPreviewModal", () => {
     )
 
     expect(onOpenDetail).not.toHaveBeenCalled()
+  })
+
+  it("renders a detail link in link mode", async () => {
+    const user = userEvent.setup()
+    const onLinkActivate = vi.fn()
+    const listing = createSearchListing()
+
+    render(
+      <MemoryRouter>
+        <ListingGridPreviewModal
+          listing={listing}
+          onClose={vi.fn()}
+          detailMode={{
+            mode: "link",
+            link: {
+              to: "/listings/listing-1",
+              state: { returnTo: "/buildings/building-1" },
+            },
+            onLinkActivate,
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Preview listing ฿14k. Tap for full details.",
+      }),
+    ).not.toBeInTheDocument()
+
+    const detailLink = screen.getByRole("link", {
+      name: "Preview listing ฿14k. Tap for full details.",
+    })
+
+    expect(detailLink).toHaveAttribute("href", "/listings/listing-1")
+
+    await user.click(detailLink)
+
+    expect(onLinkActivate).toHaveBeenCalledOnce()
   })
 })

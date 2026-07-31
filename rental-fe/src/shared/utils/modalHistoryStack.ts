@@ -116,6 +116,14 @@ export function unregisterStackEntry(
   syncHistoryAfterClose(current)
 }
 
+export function dismissModalHistoryEntryIfActive() {
+  if (typeof window === "undefined") return
+  if (!isModalHistoryStateActive()) return
+
+  suppressNextPopstate = true
+  window.history.back()
+}
+
 export function requestStackClose(token: symbol) {
   const index = stack.findIndex((entry) => entry.token === token)
   if (index < 0 || index !== stack.length - 1) return

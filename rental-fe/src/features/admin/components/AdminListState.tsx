@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Button } from "@/components/ui/button"
 import { InfiniteScrollSentinel } from "@/shared/components/feedback/InfiniteScrollSentinel"
@@ -25,7 +25,7 @@ export function AdminListLoading() {
   return (
     <div className="flex min-h-48 items-center justify-center rounded-lg bg-slate-50">
       <div className="text-center">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
+        <LoaderIcon className="mx-auto h-6 w-6 text-slate-400" />
         <p className="mt-3 text-sm font-medium text-slate-600">
           Loading submissions...
         </p>

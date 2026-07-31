@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   __resetModalHistoryStackForTests,
+  dismissModalHistoryEntryIfActive,
   isTopStackEntry,
   registerStackEntry,
   requestStackClose,
@@ -196,5 +197,29 @@ describe("modalHistoryStack", () => {
     expect(onClose).toHaveBeenCalledOnce()
     expect(back).not.toHaveBeenCalled()
     expect(isTopStackEntry(token)).toBe(false)
+  })
+
+  it("dismisses an active modal history entry without invoking stack onClose", () => {
+    const back = vi.spyOn(window.history, "back")
+    const onClose = vi.fn()
+    const token = Symbol("modal")
+
+    registerStackEntry({
+      token,
+      onClose,
+      tracksHistory: true,
+    })
+
+    unregisterStackEntry(token, { syncHistory: false })
+    back.mockClear()
+    onClose.mockClear()
+
+    dismissModalHistoryEntryIfActive()
+
+    expect(back).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
+
+    window.dispatchEvent(new PopStateEvent("popstate"))
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

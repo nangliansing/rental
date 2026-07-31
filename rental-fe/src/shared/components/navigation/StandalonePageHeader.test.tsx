@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 
-import { StandalonePageBackProvider } from "./StandalonePageBackContext"
+import { StandalonePageBackProvider, useStandalonePageBack } from "./StandalonePageBackContext"
 import { StandalonePageHeader } from "./StandalonePageHeader"
 
 const navigateMock = vi.fn()
@@ -26,6 +26,11 @@ vi.mock("@/features/auth/hooks/useAuth", () => ({
 vi.mock("@/features/profile/api", () => ({
   useMyAgentProfile: () => ({ data: undefined }),
 }))
+
+function CustomBackPage({ onBack }: { onBack: () => void }) {
+  useStandalonePageBack(onBack)
+  return <div>Custom page</div>
+}
 
 function renderHeader(initialEntry = "/login") {
   return render(
@@ -70,6 +75,25 @@ describe("StandalonePageHeader", () => {
     await user.click(screen.getByRole("button", { name: "Go back" }))
 
     expect(navigateMock).toHaveBeenCalledWith(-1)
+  })
+
+  it("uses a page-specific back handler when registered", async () => {
+    const user = userEvent.setup()
+    const onBack = vi.fn()
+
+    render(
+      <MemoryRouter initialEntries={["/custom"]}>
+        <StandalonePageBackProvider>
+          <StandalonePageHeader />
+          <CustomBackPage onBack={onBack} />
+        </StandalonePageBackProvider>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Go back" }))
+
+    expect(onBack).toHaveBeenCalledOnce()
+    expect(navigateMock).not.toHaveBeenCalled()
   })
 
   it("falls back to home when there is no history entry", async () => {

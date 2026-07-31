@@ -41,6 +41,7 @@ function GridPreviewHarness({
       <ListingGridPreviewPortal
         preview={preview}
         showBuildingName={showBuildingName}
+        detailMode="modal"
         onOpenDetail={onOpenDetail}
       />
     </>
@@ -325,6 +326,7 @@ describe("listing grid preview integration", () => {
             </button>
             <ListingGridPreviewPortal
               preview={preview}
+              detailMode="modal"
               onOpenDetail={vi.fn()}
             />
           </>
@@ -350,7 +352,9 @@ describe("listing grid preview integration", () => {
             isPreviewOpen: true,
             openPreview: vi.fn(),
             closePreview: vi.fn(),
+            skipHistorySyncOnCloseRef: { current: false },
           }}
+          detailMode="modal"
           onOpenDetail={onOpenDetail}
         />,
       )

@@ -209,6 +209,30 @@ describe("BuildingSummaryCard", () => {
       expect(container.firstChild).toHaveClass("custom-summary")
     })
 
+    it("links the building name to the standalone building page", () => {
+      renderCard({ building, titleLevel: 2 })
+
+      expect(
+        screen.getByRole("link", { name: "Bangkapi Residence" }),
+      ).toHaveAttribute("href", "/buildings/building-1")
+    })
+
+    it("renders the building name as plain text when the building has no id", () => {
+      renderCard({
+        building: {
+          ...building,
+          _id: "   ",
+        },
+      })
+
+      expect(
+        screen.queryByRole("link", { name: "Bangkapi Residence" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { name: "Bangkapi Residence" }),
+      ).toBeInTheDocument()
+    })
+
     it("places the follow control beside the building name", () => {
       renderCard({ building })
 

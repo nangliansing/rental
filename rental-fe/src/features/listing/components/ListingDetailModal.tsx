@@ -1,8 +1,9 @@
-import { FileQuestion, Loader2 } from "lucide-react"
+import { FileQuestion } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { NeighbourhoodExploreDialogProvider } from "@/features/buildings/neighbourhood-explore"
 import { useMyAgentProfile } from "@/features/profile/api"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { ModalDismissHeader } from "@/shared/components/navigation/ModalDismissHeader"
 import { ResponsiveScreenModal } from "@/shared/components/modals/ResponsiveScreenModal"
 
@@ -49,7 +50,7 @@ export function ListingDetailModal({
           <div className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
             {isLoading ? (
               <div className="flex min-h-[55vh] items-center justify-center gap-2 text-sm font-medium text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LoaderIcon className="h-4 w-4" />
                 Loading listing...
               </div>
             ) : listing ? (

@@ -50,6 +50,7 @@ function PreviewToDetailHarness() {
       <ListingGridCard listing={listing} onActivate={preview.openPreview} />
       <ListingGridPreviewPortal
         preview={preview}
+        detailMode="modal"
         onOpenDetail={setSelectedListingId}
       />
       <ListingDetailModal

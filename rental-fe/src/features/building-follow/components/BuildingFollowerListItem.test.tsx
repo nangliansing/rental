@@ -79,4 +79,18 @@ describe("BuildingFollowerListItem", () => {
       screen.getByRole("button", { name: "Unfollow Fetch Agent" }),
     ).toBeDisabled()
   })
+
+  it("shows a loader icon while unfollow is pending", () => {
+    render(
+      <BuildingFollowerListItem
+        follower={follower}
+        isViewer
+        isUnfollowing
+        onUnfollow={vi.fn()}
+      />,
+    )
+
+    const button = screen.getByRole("button", { name: "Unfollow Fetch Agent" })
+    expect(button.querySelector("svg")).toHaveClass("animate-spin")
+  })
 })

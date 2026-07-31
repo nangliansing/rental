@@ -4,6 +4,7 @@ import {
   formatBuildingSummaryRent,
   getBuildingSummaryCoordinates,
   normalizeBuildingId,
+  getBuildingDetailPath,
   normalizeBuildingSummary,
   normalizeOptionalText,
   normalizeRent,
@@ -34,6 +35,13 @@ describe("buildingSummaryDisplay", () => {
       maxRent: null,
       coordinates: null,
     })
+  })
+
+  it("builds a shareable building detail path", () => {
+    expect(getBuildingDetailPath("building-1")).toBe("/buildings/building-1")
+    expect(getBuildingDetailPath("  building 2  ")).toBe("/buildings/building%202")
+    expect(getBuildingDetailPath("")).toBeNull()
+    expect(getBuildingDetailPath(null)).toBeNull()
   })
 
   it("falls back to a safe building name and clamps invalid rent ranges", () => {

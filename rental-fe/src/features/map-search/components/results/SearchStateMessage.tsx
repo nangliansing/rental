@@ -1,12 +1,12 @@
 import {
   Building2,
-  Loader2,
   Search,
   SlidersHorizontal,
   TriangleAlert,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import type {
   MapSearchSource,
   MapSearchStatus,
@@ -72,7 +72,7 @@ export function SearchStateMessage({
         className="flex flex-col items-center justify-center px-5 py-10 text-center"
         role="status"
       >
-        <Loader2 className="mb-3 h-6 w-6 animate-spin text-slate-400" />
+        <LoaderIcon className="mb-3 h-6 w-6 text-slate-400" />
 
         <p className="text-sm font-semibold text-slate-950">
           Searching {scope}

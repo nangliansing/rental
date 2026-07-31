@@ -2,7 +2,6 @@ import type React from "react"
 import { memo } from "react"
 import {
   Check,
-  Loader2,
   LocateFixed,
   MapPin,
   Radius,
@@ -15,6 +14,7 @@ import { useMapSearchMap } from "../hooks/useMapSearchMap"
 import { Popover } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import {
   Tooltip,
   TooltipContent,
@@ -163,7 +163,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
           }
         >
           {isSearching ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin md:h-4 md:w-4" aria-hidden="true" />
+            <LoaderIcon className="h-3.5 w-3.5 md:h-4 md:w-4" aria-hidden="true" />
           ) : isLineMode ? (
             <Route className="h-3.5 w-3.5 md:h-4 md:w-4" aria-hidden="true" />
           ) : isPinMode ? (
@@ -204,7 +204,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
           }
         >
           {isLocating ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            <LoaderIcon className="h-5 w-5" aria-hidden="true" />
           ) : (
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100">
               <LocateFixed className="h-5 w-5" aria-hidden="true" />

@@ -11,6 +11,7 @@ export function getRouteTitle(pathname: string) {
   if (/^\/buildings\/[^/]+\/edit$/.test(pathname)) {
     return "Edit building"
   }
+  if (/^\/buildings\/[^/]+$/.test(pathname)) return "Building details"
   if (/^\/listers\/[^/]+$/.test(pathname)) return "Lister profile"
 
   return "Page"

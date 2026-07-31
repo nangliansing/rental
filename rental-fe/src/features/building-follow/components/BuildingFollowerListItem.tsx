@@ -1,4 +1,6 @@
-import { BadgeCheck, Loader2 } from "lucide-react"
+import { BadgeCheck } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Avatar } from "@/shared/components/data-display/Avatar"
 import { cn } from "@/lib/utils"
@@ -75,7 +77,7 @@ export function BuildingFollowerListItem({
           onClick={() => onUnfollow(follower)}
         >
           {isUnfollowing && (
-            <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+            <LoaderIcon aria-hidden="true" className="h-3.5 w-3.5" />
           )}
           Unfollow
         </button>

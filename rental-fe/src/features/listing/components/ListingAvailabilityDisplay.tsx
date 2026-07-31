@@ -1,4 +1,6 @@
-import { AlertCircle, CalendarDays, Loader2 } from "lucide-react"
+import { AlertCircle, CalendarDays } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { cn } from "@/lib/utils"
 
@@ -170,7 +172,7 @@ export function ListingAvailabilityDisplay({
   const shouldShowIcon = showIcon ?? true
   const Icon =
     status === "loading"
-      ? Loader2
+      ? LoaderIcon
       : status === "error"
         ? AlertCircle
         : CalendarDays
@@ -187,10 +189,7 @@ export function ListingAvailabilityDisplay({
       {shouldShowIcon ? (
         <Icon
           aria-hidden="true"
-          className={cn(
-            BADGE_ICON_CLASS_NAME,
-            status === "loading" && "animate-spin",
-          )}
+          className={BADGE_ICON_CLASS_NAME}
           strokeWidth={2.25}
         />
       ) : null}

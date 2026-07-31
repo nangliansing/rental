@@ -64,6 +64,13 @@ export function normalizeBuildingId(value: unknown): string {
   return normalizeOptionalText(value) ?? ""
 }
 
+export function getBuildingDetailPath(buildingId: unknown): string | null {
+  const normalizedId = normalizeBuildingId(buildingId)
+  if (!normalizedId) return null
+
+  return `/buildings/${encodeURIComponent(normalizedId)}`
+}
+
 export function getBuildingSummaryCoordinates(
   location: BuildingSummaryData["location"],
 ): { lat: number; lng: number } | null {

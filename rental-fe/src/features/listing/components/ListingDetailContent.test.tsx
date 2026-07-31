@@ -1,5 +1,5 @@
 import { screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createListingAgentProfile,
@@ -14,21 +14,48 @@ vi.mock("./ListingPostCard", () => ({
   ListingPostCard: () => <div>Listing post card</div>,
 }))
 
+vi.mock("./grid-preview", async () => {
+  const actual = await vi.importActual<typeof import("./grid-preview")>("./grid-preview")
+
+  return {
+    ...actual,
+    ListingGridPreviewPortal: ({
+      detailMode,
+      onOpenDetail,
+      resolveDetailLink,
+    }: {
+      detailMode: "modal" | "link"
+      onOpenDetail?: (listingId: string) => void
+      resolveDetailLink?: (listingId: string) => { to: string; state?: unknown } | null
+    }) => {
+      if (detailMode === "modal") {
+        return (
+          <button type="button" onClick={() => onOpenDetail?.("listing-2")}>
+            Open sibling from preview
+          </button>
+        )
+      }
+
+      const link = resolveDetailLink?.("listing-2")
+
+      return (
+        <a href={link?.to ?? "#"} data-testid="sibling-preview-link">
+          Open sibling from preview
+        </a>
+      )
+    },
+  }
+})
+
 vi.mock("@/features/buildings/components/BuildingPanelSummarySection", () => ({
   BuildingPanelSummarySection: () => <div>Building card</div>,
 }))
 
 vi.mock("@/features/map-search/api/useSearchListingsInBuilding", () => ({
-  useSearchListingsInBuilding: () => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    isFetchNextPageError: false,
-    fetchNextPage: vi.fn(),
-  }),
+  useSearchListingsInBuilding: vi.fn(),
 }))
+
+import { useSearchListingsInBuilding } from "@/features/map-search/api/useSearchListingsInBuilding"
 
 vi.mock("@/features/buildings/neighbourhood-explore", () => ({
   useNeighbourhoodExploreDialogContext: () => null,
@@ -60,6 +87,109 @@ vi.mock("./reviews/ListingDetailReviewsSection", () => ({
 }))
 
 describe("ListingDetailContent", () => {
+  beforeEach(() => {
+    vi.mocked(useSearchListingsInBuilding).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage: vi.fn(),
+    } as never)
+  })
+
+  it("opens sibling listings in modal mode from the more-rooms preview", async () => {
+    const onListingSelect = vi.fn()
+    const building = createSearchBuilding({ _id: "building-1", name: "Harbour View" })
+
+    vi.mocked(useSearchListingsInBuilding).mockReturnValue({
+      data: {
+        pages: [
+          {
+            data: {
+              building,
+              listings: [
+                createSearchListing({ _id: "listing-1", building }),
+                createSearchListing({ _id: "listing-2", building }),
+              ],
+            },
+            pagination: { total: 2 },
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage: vi.fn(),
+    } as never)
+
+    const { user } = renderWithProviders(
+      <ListingDetailContent
+        listing={createSearchListing({ _id: "listing-1", building })}
+        onListingSelect={onListingSelect}
+      />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "More rooms in this building" }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "Open sibling from preview" }),
+    )
+
+    expect(onListingSelect).toHaveBeenCalledWith("listing-2")
+  })
+
+  it("resolves sibling listing links in link mode from the more-rooms preview", async () => {
+    const building = createSearchBuilding({ _id: "building-1", name: "Harbour View" })
+
+    vi.mocked(useSearchListingsInBuilding).mockReturnValue({
+      data: {
+        pages: [
+          {
+            data: {
+              building,
+              listings: [
+                createSearchListing({ _id: "listing-1", building }),
+                createSearchListing({ _id: "listing-2", building }),
+              ],
+            },
+            pagination: { total: 2 },
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage: vi.fn(),
+    } as never)
+
+    const { user } = renderWithProviders(
+      <ListingDetailContent
+        listing={createSearchListing({ _id: "listing-1", building })}
+        siblingPreviewDetailMode="link"
+      />,
+      { initialEntries: ["/listings/listing-1"] },
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "More rooms in this building" }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByTestId("sibling-preview-link"))
+
+    expect(screen.getByTestId("sibling-preview-link")).toHaveAttribute(
+      "href",
+      "/listings/listing-2",
+    )
+  })
+
   it("places the reviews section between listing and building cards", () => {
     const listing = createSearchListing({
       building: createSearchBuilding({ name: "Harbour View" }),

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import { Link, useLocation, useSearchParams } from "react-router-dom"
-import { CheckCircle2, Loader2, MapPin } from "lucide-react"
+import { CheckCircle2, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,6 +17,7 @@ import {
 import { useMyProfileGate } from "@/features/profile/hooks/useMyProfileGate"
 import { useNavigateBack } from "@/shared/hooks/useNavigateBack"
 import { LoginRequired } from "@/shared/components/auth/LoginRequired"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { useStandalonePageBack } from "@/shared/components/navigation/StandalonePageBackContext"
 
 import {
@@ -152,7 +153,7 @@ export function ListingCreatePage() {
 
         {isExistingBuilding && buildingQuery.isLoading && (
           <section className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LoaderIcon className="h-4 w-4" />
             Loading selected building...
           </section>
         )}

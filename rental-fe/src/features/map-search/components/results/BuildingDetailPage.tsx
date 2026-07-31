@@ -12,7 +12,6 @@ import {
 } from "@/features/listing/components/grid-preview"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
 import {
-  CollectionRefreshStatus,
   ListingCollectionMessage,
   ListingCollectionSkeleton,
 } from "@/shared/components/collections/ListingCollectionState"
@@ -23,8 +22,8 @@ import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuildi
 import { useBuildingDetailSession } from "../../context/BuildingDetailSessionContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
 import { CollectionRefreshErrorBanner } from "./CollectionRefreshErrorBanner"
+import { BuildingListingsSectionHeader } from "./BuildingListingsSectionHeader"
 import {
-  BUILDING_DETAIL_LISTINGS_HEADING_CLASS,
   RESULTS_PANEL_LISTING_GRID_CLASS,
 } from "../../utils/building-list-layout"
 
@@ -115,16 +114,10 @@ export function BuildingDetailPage({
       />
 
       <div>
-        <p className={BUILDING_DETAIL_LISTINGS_HEADING_CLASS}>
-          {totalListings} available listings
-        </p>
-
-        {isBackgroundFetching && (
-          <CollectionRefreshStatus
-            label="Updating listings..."
-            className="mb-2"
-          />
-        )}
+        <BuildingListingsSectionHeader
+          totalListings={totalListings}
+          isRefreshing={isBackgroundFetching}
+        />
 
         {listingsQuery.isError && hasListings && (
           <CollectionRefreshErrorBanner
@@ -192,6 +185,7 @@ export function BuildingDetailPage({
       <ListingGridPreviewPortal
         preview={preview}
         showBuildingName={false}
+        detailMode="modal"
         onOpenDetail={openListing}
       />
     </>

@@ -10,7 +10,6 @@ import {
   Heart,
   Inbox,
   Info,
-  Loader2,
   MessageSquare,
   ShieldAlert,
   ShieldCheck,
@@ -22,6 +21,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { InfiniteScrollSentinel } from "@/shared/components/feedback/InfiniteScrollSentinel"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { FloatingActionPanel } from "@/shared/components/navigation/FloatingActionPanel"
 import { cn } from "@/lib/utils"
 
@@ -439,7 +439,7 @@ function NotificationRow({
 function NotificationLoading() {
   return (
     <div className="flex h-48 items-center justify-center gap-2 text-sm font-semibold text-slate-500">
-      <Loader2 className="h-4 w-4 animate-spin" />
+      <LoaderIcon className="h-4 w-4" />
       Loading notifications...
     </div>
   )

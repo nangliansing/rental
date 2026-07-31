@@ -87,6 +87,7 @@ export function ListerProfileListings({
 
       <ListingGridPreviewPortal
         preview={preview}
+        detailMode="modal"
         onOpenDetail={setSelectedListingId}
       />
 

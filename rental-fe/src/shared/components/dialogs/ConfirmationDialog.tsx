@@ -1,7 +1,8 @@
-import { Loader2, X } from "lucide-react"
+import { X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import {
   DialogDescription,
@@ -111,7 +112,7 @@ export function ConfirmationDialog({
               disabled={isSubmitting}
               onClick={onConfirm}
             >
-              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSubmitting && <LoaderIcon className="h-4 w-4" />}
               {confirmLabel}
             </button>
           </div>

@@ -36,7 +36,7 @@ export const RESULTS_PANEL_LISTING_GRID_CLASS =
   RESULTS_PANEL_CONTENT_BREAKOUT_CLASS
 
 export const BUILDING_DETAIL_LISTINGS_HEADING_CLASS =
-  "mb-3 pt-4 text-sm font-semibold"
+  "mb-3 flex items-center justify-between gap-2 pt-4 text-sm font-semibold text-slate-950"
 
 export const ESTIMATED_BUILDING_CARD_HEIGHT_PX = 290
 

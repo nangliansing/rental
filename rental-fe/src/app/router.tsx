@@ -80,6 +80,12 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "/buildings/:buildingId",
+        lazy: lazyStandaloneRoute(async () =>
+          (await import("@/features/buildings/pages/BuildingPage")).BuildingPage
+        ),
+      },
+      {
         path: "/buildings/:buildingId/edit",
         lazy: lazyStandaloneRoute(async () =>
           (await import("@/features/buildings/pages/BuildingEditRequestPage"))

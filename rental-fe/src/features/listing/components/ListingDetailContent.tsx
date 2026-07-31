@@ -1,3 +1,5 @@
+import { useCallback, useMemo } from "react"
+
 import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
 import { useNeighbourhoodExploreDialogContext } from "@/features/buildings/neighbourhood-explore"
 import { useSearchListingsInBuilding } from "@/features/map-search/api/useSearchListingsInBuilding"
@@ -8,9 +10,11 @@ import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 
 import type { ListingDetailListing } from "../types"
 import { buildListingDirectionsDestination } from "../utils/buildListingDirectionsDestination"
+import { getListingDetailPath } from "../utils/listingDisplay"
 import { ListingGridCard } from "./ListingGridCard"
 import {
   ListingGridPreviewPortal,
+  type ListingGridPreviewPortalDetailConfig,
   useListingGridPreview,
 } from "./grid-preview"
 import { ListingPostCard } from "./ListingPostCard"
@@ -24,6 +28,8 @@ type ListingDetailContentProps = {
   canCreateListing?: boolean
   onDeleted?: () => void
   onListingSelect?: (listingId: string) => void
+  /** How sibling listings open from the more-rooms preview. */
+  siblingPreviewDetailMode?: ListingGridPreviewPortalDetailConfig["detailMode"]
 }
 
 type ListingDetailSectionProps = {
@@ -32,6 +38,7 @@ type ListingDetailSectionProps = {
   canCreateListing: boolean
   onDeleted?: () => void
   onListingSelect?: (listingId: string) => void
+  siblingPreviewDetailMode: ListingGridPreviewPortalDetailConfig["detailMode"]
 }
 
 export function ListingDetailContent({
@@ -40,6 +47,7 @@ export function ListingDetailContent({
   canCreateListing = false,
   onDeleted,
   onListingSelect,
+  siblingPreviewDetailMode = "modal",
 }: ListingDetailContentProps) {
   const sectionProps: ListingDetailSectionProps = {
     listing,
@@ -47,6 +55,7 @@ export function ListingDetailContent({
     canCreateListing,
     onDeleted,
     onListingSelect,
+    siblingPreviewDetailMode,
   }
 
   return (
@@ -57,6 +66,7 @@ export function ListingDetailContent({
       <ListingDetailMoreListingsSection
         listing={listing}
         onListingSelect={onListingSelect}
+        siblingPreviewDetailMode={siblingPreviewDetailMode}
       />
     </>
   )
@@ -102,15 +112,18 @@ function ListingDetailBuildingSection({
 function ListingDetailMoreListingsSection({
   listing,
   onListingSelect,
+  siblingPreviewDetailMode,
 }: {
   listing: ListingDetailListing
   onListingSelect?: (listingId: string) => void
+  siblingPreviewDetailMode: ListingGridPreviewPortalDetailConfig["detailMode"]
 }) {
   return (
     <MoreListingsInBuilding
       building={listing.building}
       currentListingId={listing._id}
       onListingSelect={onListingSelect}
+      siblingPreviewDetailMode={siblingPreviewDetailMode}
     />
   )
 }
@@ -119,12 +132,48 @@ function MoreListingsInBuilding({
   building,
   currentListingId,
   onListingSelect,
+  siblingPreviewDetailMode,
 }: {
   building: ListingDetailListing["building"]
   currentListingId: string
   onListingSelect?: (listingId: string) => void
+  siblingPreviewDetailMode: ListingGridPreviewPortalDetailConfig["detailMode"]
 }) {
   const preview = useListingGridPreview()
+  const resolveListingDetailLink = useCallback((listingId: string) => {
+    const to = getListingDetailPath(listingId)
+    if (!to) return null
+
+    return { to }
+  }, [])
+  const handleSiblingListingSelect = useCallback(
+    (listingId: string) => {
+      onListingSelect?.(listingId)
+    },
+    [onListingSelect],
+  )
+  const previewPortalProps = useMemo(():
+    | ListingGridPreviewPortalDetailConfig
+    | null => {
+    if (siblingPreviewDetailMode === "link") {
+      return {
+        detailMode: "link",
+        resolveDetailLink: resolveListingDetailLink,
+      }
+    }
+
+    if (!onListingSelect) return null
+
+    return {
+      detailMode: "modal",
+      onOpenDetail: handleSiblingListingSelect,
+    }
+  }, [
+    handleSiblingListingSelect,
+    onListingSelect,
+    resolveListingDetailLink,
+    siblingPreviewDetailMode,
+  ])
   const listingsQuery = useSearchListingsInBuilding({
     buildingId: building?._id,
     filters: EMPTY_LISTING_FILTERS,
@@ -192,11 +241,13 @@ function MoreListingsInBuilding({
         ))}
       </ListingCardGrid>
 
-      <ListingGridPreviewPortal
-        preview={preview}
-        showBuildingName={false}
-        onOpenDetail={(listingId) => onListingSelect?.(listingId)}
-      />
+      {previewPortalProps && (
+        <ListingGridPreviewPortal
+          preview={preview}
+          showBuildingName={false}
+          {...previewPortalProps}
+        />
+      )}
     </section>
   )
 }

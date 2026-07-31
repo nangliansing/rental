@@ -1,4 +1,6 @@
-import { AlertCircle, Loader2, type LucideIcon } from "lucide-react"
+import { AlertCircle, type LucideIcon } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -21,7 +23,7 @@ export function CollectionRefreshStatus({
       role="status"
       aria-live="polite"
     >
-      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      <LoaderIcon className="h-3.5 w-3.5" aria-hidden="true" />
       {label}
     </div>
   )
@@ -54,7 +56,7 @@ export function ListingCollectionMessage({
     >
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
         {isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          <LoaderIcon className="h-5 w-5" aria-hidden="true" />
         ) : (
           <Icon className="h-5 w-5" aria-hidden="true" />
         )}
