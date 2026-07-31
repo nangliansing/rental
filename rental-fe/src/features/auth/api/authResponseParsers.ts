@@ -1,5 +1,6 @@
 // src/features/auth/api/authResponseParsers.ts
 import { ApiError } from "@/lib/api-client"
+import { parseUploadedMedia } from "@/features/pending-post/api"
 
 import type { AuthUser, AuthUserStatus } from "../types"
 
@@ -43,6 +44,7 @@ export const parseAuthUser = (value: unknown): AuthUser => {
         _id: readString(user._id),
         name: readString(user.name),
         email: readString(user.email),
+        profilePhoto: parseUploadedMedia(user.profilePhoto),
         authProvider: readString(user.authProvider, "UNKNOWN"),
         role: readString(user.role, "USER"),
         status: readAuthUserStatus(user.status),

@@ -7,6 +7,7 @@ import { Avatar } from "@/shared/components/data-display/Avatar"
 import { ProgressRing } from "@/shared/components/feedback/ProgressRing"
 
 import type { UploadedMedia } from "../api/uploadToCloudinary"
+import type { UploadPurpose } from "../api/createUploadSignature"
 import { useMediaUploader } from "../hooks/useMediaUploader"
 import { useMediaUploaderNotifications } from "../hooks/useMediaUploaderNotifications"
 import type { MediaUploaderState } from "./MediaUploader"
@@ -20,6 +21,7 @@ type AvatarUploaderProps = {
   allowedMimeTypes?: string[]
   defaultMedia?: UploadedMedia | null
   displayName?: string | null
+  purpose?: UploadPurpose
   onChange?: (media: UploadedMedia[]) => void
   onUploadStateChange?: (state: MediaUploaderState) => void
 }
@@ -47,6 +49,7 @@ export function AvatarUploader({
   allowedMimeTypes,
   defaultMedia,
   displayName,
+  purpose = "agent-profile-photo",
   onChange,
   onUploadStateChange,
 }: AvatarUploaderProps) {
@@ -59,7 +62,7 @@ export function AvatarUploader({
     ? defaultMedia
     : null
   const uploader = useMediaUploader({
-    purpose: "agent-profile-photo",
+    purpose,
     maxFileSizeMb,
     replaceExisting: true,
     allowedMimeTypes,

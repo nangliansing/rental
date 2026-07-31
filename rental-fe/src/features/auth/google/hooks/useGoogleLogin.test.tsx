@@ -73,7 +73,10 @@ describe("useGoogleLogin", () => {
 
     expect(await screen.findByText("/profile")).toBeInTheDocument()
     expect(getAccessToken()).toBe("google-access-token")
-    expect(queryClient.getQueryData(CURRENT_USER_QUERY_KEY)).toEqual(userResponse)
+    // Verify hydration includes expected user fields; cache may add normalized metadata.
+    expect(queryClient.getQueryData(CURRENT_USER_QUERY_KEY)).toEqual(
+      expect.objectContaining(userResponse),
+    )
     expect(
       queryClient.getQueryData(queryKeys.savedListings.list({ limit: 20 })),
     ).toBeUndefined()

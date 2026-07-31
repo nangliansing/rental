@@ -3,7 +3,7 @@ import { Home, User } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
-import { LogoutButton } from "@/features/auth/components/LogoutButton"
+import { UserMenuButton } from "@/features/user-menu"
 import { NotificationBellButton } from "@/features/notifications"
 import { SavedListingsButton } from "@/features/saved-listing/components/SavedListingsButton"
 import { cn } from "@/lib/utils"
@@ -73,7 +73,7 @@ export function AppNavigation() {
                         </div>
                     )}
                     <MobileNavLink item={navItems[1]} />
-                    {canUsePersonalActions && <LogoutButton variant="mobile" />}
+                    {canUsePersonalActions && <UserMenuButton variant="mobile" />}
                 </div>
             </nav>
 
@@ -108,7 +108,7 @@ export function AppNavigation() {
                         </NavLink>
                     )
                 })}
-                {canUsePersonalActions && <LogoutButton variant="desktop" />}
+                {canUsePersonalActions && <UserMenuButton variant="desktop" />}
             </nav>
         </>
     )

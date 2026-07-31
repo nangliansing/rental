@@ -40,8 +40,12 @@ const DEFAULT_MAX_FILE_SIZE_MB = 10
 
 const purposeMaxFiles: Record<UploadPurpose, number> = {
   "agent-profile-photo": 1,
+  "user-profile-photo": 1,
   "listing-photo": 20,
 }
+
+const isSinglePhotoPurpose = (purpose: UploadPurpose) =>
+  purpose === "agent-profile-photo" || purpose === "user-profile-photo"
 
 function createUploadId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`
@@ -91,7 +95,7 @@ export function useMediaUploader({
   purpose,
   maxFiles,
   maxFileSizeMb = DEFAULT_MAX_FILE_SIZE_MB,
-  replaceExisting = purpose === "agent-profile-photo",
+  replaceExisting = isSinglePhotoPurpose(purpose),
   allowedMimeTypes = DEFAULT_ALLOWED_MIME_TYPES,
   defaultMedia = [],
 }: UseMediaUploaderOptions) {

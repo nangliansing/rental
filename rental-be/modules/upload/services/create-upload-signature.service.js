@@ -18,6 +18,10 @@ const UPLOAD_PURPOSE_CONFIG = {
     folder: "agent-profiles",
     maxCount: 1,
   },
+  "user-profile-photo": {
+    folder: "users",
+    maxCount: 1,
+  },
   "listing-photo": {
     folder: "listings",
     maxCount: 20,
