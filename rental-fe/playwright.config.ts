@@ -2,6 +2,18 @@ import { defineConfig, devices } from "@playwright/test"
 import { loadEnv } from "vite"
 
 const env = loadEnv("development", process.cwd(), "")
+const webServerEnv = {
+  ...process.env,
+  ...env,
+  VITE_GOOGLE_MAPS_API_KEY:
+    process.env.VITE_GOOGLE_MAPS_API_KEY ??
+    env.VITE_GOOGLE_MAPS_API_KEY ??
+    "test-google-maps-api-key",
+  VITE_GOOGLE_MAPS_MAP_ID:
+    process.env.VITE_GOOGLE_MAPS_MAP_ID ??
+    env.VITE_GOOGLE_MAPS_MAP_ID ??
+    "test-google-maps-map-id",
+}
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173"
 const skipWebServer = Boolean(process.env.PLAYWRIGHT_SKIP_WEBSERVER)
 const browserChannel = process.env.PLAYWRIGHT_CHANNEL
@@ -39,10 +51,7 @@ export default defineConfig({
           url: baseURL,
           reuseExistingServer: !isCi,
           timeout: isCi ? 180_000 : 120_000,
-          env: {
-            ...process.env,
-            ...env,
-          },
+          env: webServerEnv,
         },
       }),
 })

@@ -1,5 +1,3 @@
-import { cn } from "@/lib/utils"
-
 import { useBuildingFollowersPreviewData } from "../hooks/useBuildingFollowersPreviewData"
 import { BuildingFollowersPreviewRow } from "./BuildingFollowersPreviewRow"
 import { BuildingFollowersPreviewSkeleton } from "./BuildingFollowersPreviewSkeleton"
