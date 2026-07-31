@@ -38,6 +38,7 @@ Body:
       "_id": "6a5638bafc6d6328c9e1b281",
       "name": "Test Normal User",
       "email": "test.normal.user@example.com",
+      "profilePhoto": null,
       "authProvider": "PASSWORD",
       "role": "USER",
       "status": "ACTIVE",

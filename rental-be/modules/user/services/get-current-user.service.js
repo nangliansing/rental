@@ -2,6 +2,7 @@ import {
     validateMongooseId,
     validateNullableObject,
 } from "../../../shared/validators/index.js";
+import { buildSafeUserResponse } from "../mappers/index.js";
 import { assertActiveUser } from "../utils/index.js";
 import User from "../user.model.js";
 
@@ -19,14 +20,5 @@ export async function getCurrentUserService(userId, session = null) {
 
     assertActiveUser(user);
 
-    return {
-        _id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        authProvider: user.authProvider,
-        role: user.role,
-        status: user.status,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-    };
+    return buildSafeUserResponse(user);
 }

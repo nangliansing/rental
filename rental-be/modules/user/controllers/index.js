@@ -7,3 +7,4 @@ export * from "./login-user-with-google.controller.js";
 export * from "./refresh-access-token.controller.js";
 export * from "./logout.controller.js";
 export * from "./get-current-user.controller.js";
+export * from "./update-current-user.controller.js";
