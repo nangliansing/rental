@@ -5,6 +5,7 @@ import {
   AUTH_PROVIDERS,
 } from "./user.constants.js";
 import { MODEL_NAMES, COLLECTION_NAMES } from "../../shared/constants/index.js";
+import { mediaSchema } from "../../shared/schemas/index.js";
 
 const userSchema = new Schema(
   {
@@ -44,6 +45,11 @@ const userSchema = new Schema(
       type: String,
       enum: Object.values(USER_STATUSES),
       default: USER_STATUSES.ACTIVE,
+    },
+
+    profilePhoto: {
+      type: mediaSchema,
+      default: null,
     },
   },
   { timestamps: true, versionKey: false }

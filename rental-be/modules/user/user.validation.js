@@ -7,6 +7,7 @@ import {
   validateMongooseId,
   validateObject,
   validatePage,
+  validateMediaItem,
 } from "../../shared/validators/index.js";
 
 import {
@@ -17,6 +18,12 @@ import {
 
 export const validateName = (input) => {
   return validateRequiredString(input, "name", 255);
+};
+
+export const validateProfilePhoto = (input) => {
+  if (input == null) return null;
+
+  return validateMediaItem(input, "profilePhoto");
 };
 
 export const validateUserEmail = (input) => {

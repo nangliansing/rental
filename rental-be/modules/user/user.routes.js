@@ -1,13 +1,17 @@
 import { Router } from "express";
 
 import { authenticate } from "../../shared/middlewares/authenticate.js";
-import { requireTrustedOrigin } from "../../shared/middlewares/index.js";
-import { authenticationRateLimit } from "../../shared/security/index.js";
+import { requireActiveUser, requireTrustedOrigin } from "../../shared/middlewares/index.js";
+import {
+  authenticationRateLimit,
+  sensitiveActionRateLimit,
+} from "../../shared/security/index.js";
 import {
   getCurrentUserController,
   loginUserWithGoogleController,
   logoutController,
   refreshAccessTokenController,
+  updateCurrentUserController,
 } from "./controllers/index.js";
 
 const router = Router();
@@ -22,5 +26,12 @@ router.post("/token/refresh", refreshAccessTokenController);
 router.post("/logout", logoutController);
 
 router.get("/me", authenticate, getCurrentUserController);
+router.patch(
+  "/me",
+  authenticate,
+  requireActiveUser,
+  sensitiveActionRateLimit,
+  updateCurrentUserController,
+);
 
 export default router;
