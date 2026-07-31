@@ -1,6 +1,8 @@
+import { Link } from "react-router-dom"
+import type { ReactNode, RefObject } from "react"
+
 import { ModalPortal } from "@/shared/components/ModalPortal"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
-import type { RefObject } from "react"
 
 import type { ListingGridCardListing } from "../listingGridCardTypes"
 import { ListingCoverImage } from "../ListingPresentationPrimitives"
@@ -8,22 +10,31 @@ import { ListingAvailabilityDisplay } from "../ListingAvailabilityDisplay"
 import { formatCompactMoney, getSortedListingPhotos } from "../../utils/listingDisplay"
 import { LISTING_GRID_CARD_AVAILABILITY_VARIANT } from "../../utils/listingGridAvailabilityVariant"
 import { ListingGridCardOverlayContent } from "./ListingGridCardOverlayContent"
+import { ListingGridCardBadge } from "./listingGridCardChrome"
 import {
-  ListingGridCardBadge,
-} from "./listingGridCardChrome"
+  isListingGridPreviewLinkDetailMode,
+  isListingGridPreviewModalDetailMode,
+  readListingGridPreviewListingId,
+  type ListingGridPreviewDetailMode,
+} from "./listingGridPreviewDetailMode"
 
-export type ListingGridPreviewModalProps = {
+export type { ListingGridPreviewDetailLink } from "./listingGridPreviewDetailMode"
+
+type ListingGridPreviewModalProps = {
   listing: ListingGridCardListing | null
   onClose: () => void
-  onOpenDetail: (listingId: string) => void
+  detailMode: ListingGridPreviewDetailMode
   showBuildingName?: boolean
   skipHistorySyncOnCloseRef?: RefObject<boolean>
 }
 
+const PREVIEW_CARD_CLASS_NAME =
+  "group relative block aspect-square w-full overflow-hidden text-left"
+
 export function ListingGridPreviewModal({
   listing,
   onClose,
-  onOpenDetail,
+  detailMode,
   showBuildingName = true,
   skipHistorySyncOnCloseRef,
 }: ListingGridPreviewModalProps) {
@@ -38,12 +49,32 @@ export function ListingGridPreviewModal({
 
   const [coverPhoto] = getSortedListingPhotos(listing.media)
   const previewLabel = `Preview listing ${formatCompactMoney(listing.rent)}`
-  const listingId = typeof listing._id === "string" ? listing._id.trim() : ""
+  const listingId = readListingGridPreviewListingId(listing)
+  const detailLabel = `${previewLabel}. Tap for full details.`
 
-  const openDetail = () => {
-    if (!listingId) return
-    onOpenDetail(listingId)
-  }
+  const previewCardContent = (
+    <>
+      <ListingCoverImage
+        photo={coverPhoto}
+        className="transition duration-200 group-hover:scale-[1.02]"
+        fallbackClassName="text-slate-300"
+        loading="eager"
+        fetchPriority="high"
+      />
+      <ListingAvailabilityDisplay
+        availableAt={listing.availableAt}
+        variant={LISTING_GRID_CARD_AVAILABILITY_VARIANT}
+      />
+      <ListingGridCardBadge listing={listing} />
+      <ListingGridCardOverlayContent
+        listing={listing}
+        showBuildingName={showBuildingName}
+        showFinePrint
+        showAvailabilityInFinePrint={false}
+        showAgentAttribution={!showBuildingName}
+      />
+    </>
+  )
 
   return (
     <ModalPortal>
@@ -59,34 +90,63 @@ export function ListingGridPreviewModal({
           className="relative w-full max-w-sm overflow-hidden rounded-xl bg-slate-950 shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
-          <button
-            type="button"
-            className="group relative block aspect-square w-full overflow-hidden text-left"
-            aria-label={`${previewLabel}. Tap for full details.`}
-            onClick={openDetail}
+          <ListingGridPreviewDetailActivator
+            detailMode={detailMode}
+            listingId={listingId}
+            detailLabel={detailLabel}
           >
-            <ListingCoverImage
-              photo={coverPhoto}
-              className="transition duration-200 group-hover:scale-[1.02]"
-              fallbackClassName="text-slate-300"
-              loading="eager"
-              fetchPriority="high"
-            />
-            <ListingAvailabilityDisplay
-              availableAt={listing.availableAt}
-              variant={LISTING_GRID_CARD_AVAILABILITY_VARIANT}
-            />
-            <ListingGridCardBadge listing={listing} />
-            <ListingGridCardOverlayContent
-              listing={listing}
-              showBuildingName={showBuildingName}
-              showFinePrint
-              showAvailabilityInFinePrint={false}
-              showAgentAttribution={!showBuildingName}
-            />
-          </button>
+            {previewCardContent}
+          </ListingGridPreviewDetailActivator>
         </div>
       </div>
     </ModalPortal>
+  )
+}
+
+type ListingGridPreviewDetailActivatorProps = {
+  detailMode: ListingGridPreviewDetailMode
+  listingId: string
+  detailLabel: string
+  children: ReactNode
+}
+
+function ListingGridPreviewDetailActivator({
+  detailMode,
+  listingId,
+  detailLabel,
+  children,
+}: ListingGridPreviewDetailActivatorProps) {
+  if (isListingGridPreviewLinkDetailMode(detailMode)) {
+    return (
+      <Link
+        to={detailMode.link.to}
+        state={detailMode.link.state}
+        className={PREVIEW_CARD_CLASS_NAME}
+        aria-label={detailLabel}
+        onClick={() => detailMode.onLinkActivate?.()}
+      >
+        {children}
+      </Link>
+    )
+  }
+
+  if (!isListingGridPreviewModalDetailMode(detailMode)) {
+    return null
+  }
+
+  const openDetailModal = () => {
+    if (!listingId) return
+    detailMode.onOpenDetail(listingId)
+  }
+
+  return (
+    <button
+      type="button"
+      className={PREVIEW_CARD_CLASS_NAME}
+      aria-label={detailLabel}
+      onClick={openDetailModal}
+    >
+      {children}
+    </button>
   )
 }

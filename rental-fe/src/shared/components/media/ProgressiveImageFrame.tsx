@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import type { ImgHTMLAttributes, ReactEventHandler, RefObject } from "react"
 
 import { cn } from "@/lib/utils"
@@ -94,7 +94,7 @@ export function ProgressiveImageFrame({
           role="status"
           aria-label="Loading photo"
         >
-          <Loader2 className="h-8 w-8 animate-spin text-white/85" />
+          <LoaderIcon className="h-8 w-8 text-white/85" />
         </div>
       )}
 

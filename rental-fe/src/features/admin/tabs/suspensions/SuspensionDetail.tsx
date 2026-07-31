@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Button } from "@/components/ui/button"
 
@@ -51,7 +51,7 @@ export function SuspensionDetail({
             className="shrink-0 gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={() => openLiftDialog(suspension)}
           >
-            {isLifting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isLifting && <LoaderIcon className="h-4 w-4" />}
             Lift suspension
           </Button>
         )}

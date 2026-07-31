@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { createSearchListing } from "@/test/fixtures/listings"
@@ -24,10 +25,21 @@ vi.mock("./useListingGridPreview", () => ({
 }))
 
 function PreviewPortalHarness({
-  onOpenDetail,
+  detailConfig,
   showBuildingName = true,
 }: {
-  onOpenDetail: (listingId: string) => void
+  detailConfig:
+    | {
+        detailMode: "modal"
+        onOpenDetail: (listingId: string) => void
+      }
+    | {
+        detailMode: "link"
+        resolveDetailLink: (listingId: string) => {
+          to: string
+          state?: unknown
+        } | null
+      }
   showBuildingName?: boolean
 }) {
   const preview = useListingGridPreview()
@@ -43,14 +55,14 @@ function PreviewPortalHarness({
       <ListingGridPreviewPortal
         preview={preview}
         showBuildingName={showBuildingName}
-        onOpenDetail={onOpenDetail}
+        {...detailConfig}
       />
     </>
   )
 }
 
 describe("ListingGridPreviewPortal", () => {
-  it("hands off preview history before opening detail", async () => {
+  it("uses modal mode to hand off preview history before opening detail", async () => {
     const onOpenDetail = vi.fn()
 
     previewController.previewListing = createSearchListing()
@@ -58,7 +70,13 @@ describe("ListingGridPreviewPortal", () => {
       previewController.previewListing = null
     })
 
-    render(<PreviewPortalHarness onOpenDetail={onOpenDetail} />)
+    render(
+      <MemoryRouter>
+        <PreviewPortalHarness
+          detailConfig={{ detailMode: "modal", onOpenDetail }}
+        />
+      </MemoryRouter>,
+    )
 
     await userEvent.setup().click(
       screen.getByRole("button", {
@@ -72,14 +90,55 @@ describe("ListingGridPreviewPortal", () => {
     expect(onOpenDetail).toHaveBeenCalledWith("listing-1")
   })
 
+  it("uses link mode to navigate to a routed detail page", async () => {
+    previewController.previewListing = createSearchListing()
+    previewController.closePreview.mockImplementation(() => {
+      previewController.previewListing = null
+    })
+
+    render(
+      <MemoryRouter>
+        <PreviewPortalHarness
+          detailConfig={{
+            detailMode: "link",
+            resolveDetailLink: (listingId) => ({
+              to: `/listings/${listingId}`,
+              state: { returnTo: "/buildings/building-1" },
+            }),
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Preview listing ฿14k. Tap for full details.",
+      }),
+    ).not.toBeInTheDocument()
+
+    const detailLink = screen.getByRole("link", {
+      name: "Preview listing ฿14k. Tap for full details.",
+    })
+
+    expect(detailLink).toHaveAttribute("href", "/listings/listing-1")
+
+    await userEvent.setup().click(detailLink)
+
+    expect(previewController.closePreview).toHaveBeenCalledWith({
+      handoffToDetail: true,
+    })
+  })
+
   it("forwards showBuildingName to the preview modal", async () => {
     previewController.previewListing = createSearchListing()
 
     render(
-      <PreviewPortalHarness
-        showBuildingName={false}
-        onOpenDetail={vi.fn()}
-      />,
+      <MemoryRouter>
+        <PreviewPortalHarness
+          showBuildingName={false}
+          detailConfig={{ detailMode: "modal", onOpenDetail: vi.fn() }}
+        />
+      </MemoryRouter>,
     )
 
     expect(screen.queryByText("Bangkapi Residence")).not.toBeInTheDocument()

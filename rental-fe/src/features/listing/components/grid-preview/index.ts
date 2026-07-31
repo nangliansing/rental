@@ -6,5 +6,14 @@ export {
   ListingGridCardBadge,
 } from "./listingGridCardChrome"
 export { ListingGridPreviewModal } from "./ListingGridPreviewModal"
+export type { ListingGridPreviewDetailLink } from "./listingGridPreviewDetailMode"
+export {
+  isListingGridPreviewLinkDetailMode,
+  isListingGridPreviewModalDetailMode,
+  type ListingGridPreviewDetailMode,
+  type ListingGridPreviewLinkDetailMode,
+  type ListingGridPreviewModalDetailMode,
+  type ListingGridPreviewPortalDetailConfig,
+} from "./listingGridPreviewDetailMode"
 export { ListingGridPreviewPortal } from "./ListingGridPreviewPortal"
 export { useListingGridPreview } from "./useListingGridPreview"

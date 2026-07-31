@@ -1,4 +1,6 @@
-import { Loader2, type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
@@ -77,7 +79,7 @@ export function FormTabTrigger({
         }}
       >
         {isLoading ? (
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+          <LoaderIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
         ) : Icon ? (
           <Icon className="h-4 w-4 shrink-0 text-slate-700" aria-hidden="true" />
         ) : null}

@@ -93,6 +93,7 @@ export function MyProfileListingsPanel({
 
             <ListingGridPreviewPortal
                 preview={preview}
+                detailMode="modal"
                 onOpenDetail={setSelectedListingId}
             />
 

@@ -1,4 +1,6 @@
-import { Loader2, type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import type { FormEvent, ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -136,7 +138,7 @@ export function OptionEditFormShell({
           className="h-11 w-full rounded-full bg-slate-950 text-white hover:bg-slate-800 md:h-9 md:w-auto md:min-w-24 md:px-5"
           disabled={isSubmitting || !hasChanged}
         >
-          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isSubmitting && <LoaderIcon className="h-4 w-4" />}
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </footer>

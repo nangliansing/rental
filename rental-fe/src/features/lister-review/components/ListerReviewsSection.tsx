@@ -5,12 +5,13 @@ import {
   useMemo,
   useState,
 } from "react"
-import { Loader2, Plus, X } from "lucide-react"
+import { Plus, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useMyAgentProfile } from "@/features/profile/api/useMyAgentProfile"
 import { cn } from "@/lib/utils"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import {
   DialogDescription,
   DialogShell,
@@ -465,7 +466,7 @@ function ReviewsMessage({
 }) {
   return (
     <div className="flex min-h-40 flex-col items-center justify-center gap-2 text-center text-sm font-semibold text-slate-500">
-      {isLoading && <Loader2 className="h-5 w-5 animate-spin text-slate-400" />}
+      {isLoading && <LoaderIcon className="h-5 w-5 text-slate-400" />}
       {message}
     </div>
   )

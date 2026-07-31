@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { CheckCircle2, Loader2, MapPin } from "lucide-react"
+import { CheckCircle2, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useCreateBuildingEditRequest } from "@/features/building-edit-request/api"
 import { ApiError } from "@/lib/api-client"
 import { LoginRequired } from "@/shared/components/auth/LoginRequired"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { useNavigateBack } from "@/shared/hooks/useNavigateBack"
 
 import { useBuildingById, type BuildingDetails } from "../api"
@@ -64,7 +65,7 @@ function formatCoordinate(value: number) {
 function BuildingEditLoading() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <Loader2 className="mb-3 h-6 w-6 animate-spin text-slate-400" />
+      <LoaderIcon className="mb-3 h-6 w-6 text-slate-400" />
       <p className="text-sm font-medium text-slate-600">Loading building...</p>
     </div>
   )

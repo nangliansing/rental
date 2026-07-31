@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react"
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Button } from "@/components/ui/button"
 import { FormField } from "@/components/ui/form-field"
@@ -136,7 +136,7 @@ export function ReviewForm({
         className="h-11 w-full rounded-full"
         disabled={isSubmitting || !hasChanges}
       >
-        {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+        {isSubmitting && <LoaderIcon className="h-4 w-4" />}
         {submitLabel}
       </Button>
     </form>

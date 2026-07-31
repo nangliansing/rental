@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Button } from "@/components/ui/button"
 import { ApiError } from "@/lib/api-client"
@@ -119,7 +119,7 @@ function ListerPageLoading() {
   return (
     <main className={PROFILE_PAGE_SHELL_CLASS}>
       <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center gap-2 text-sm font-medium text-slate-500">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderIcon className="h-4 w-4" />
         Loading lister...
       </div>
     </main>

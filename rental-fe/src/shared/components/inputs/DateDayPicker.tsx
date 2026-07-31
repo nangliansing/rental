@@ -1,5 +1,7 @@
 import { useId, useMemo, useState, type ReactNode } from "react"
-import { Loader2, type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { cn } from "@/lib/utils"
 import { FormTabTrigger } from "@/shared/components/inputs/FormTabTrigger"
@@ -258,8 +260,8 @@ export function DateDayPicker({
           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-500">
             {isLoading ? (
               <>
-                <Loader2
-                  className="h-3.5 w-3.5 animate-spin"
+                <LoaderIcon
+                  className="h-3.5 w-3.5"
                   aria-hidden="true"
                 />
                 Loading

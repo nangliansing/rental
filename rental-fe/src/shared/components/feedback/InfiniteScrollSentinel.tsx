@@ -1,9 +1,8 @@
 // src/shared/components/feedback/InfiniteScrollSentinel.tsx
 import { useCallback, useEffect, useRef } from "react"
 import type React from "react"
-import { Loader2 } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 type InfiniteScrollSentinelProps = {
     hasNextPage: boolean
@@ -94,7 +93,7 @@ export function InfiniteScrollSentinel({
         <div ref={sentinelRef} className="flex flex-col items-center py-4">
             {isFetchingNextPage ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <LoaderIcon className="h-4 w-4" />
                     Loading more...
                 </div>
             ) : (

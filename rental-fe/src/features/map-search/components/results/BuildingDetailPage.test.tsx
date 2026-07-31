@@ -163,4 +163,43 @@ describe("BuildingDetailPage", () => {
     expect(screen.queryByRole("dialog", { name: "Listing details" })).not.toBeInTheDocument()
     expect(preview).toHaveFocus()
   })
+
+  it("shows a background refresh loader while cached listings remain visible", () => {
+    vi.mocked(useSearchListingsInBuilding).mockReturnValue({
+      data: {
+        pages: [{
+          data: { building: createSearchBuilding(), listings: [createSearchListing()] },
+          pagination: { total: 1 },
+        }],
+      },
+      isPending: false,
+      isError: false,
+      isFetching: true,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    } as never)
+
+    vi.mocked(useMapSearchResults).mockReturnValue({
+      selectedBuilding: createSearchBuilding(),
+      canCreateListing: false,
+      isListingSearch: false,
+      pendingListingId: null,
+      onListingSelect: vi.fn(),
+      onListingClose: vi.fn(),
+    } as never)
+
+    renderWithProviders(
+      <BuildingDetailSessionProvider>
+        <BuildingDetailPage onBack={vi.fn()} />
+      </BuildingDetailSessionProvider>,
+    )
+
+    expect(screen.getByText("1 available listings")).toBeInTheDocument()
+    const status = screen.getByRole("status")
+    expect(status).toHaveTextContent("1 available listings")
+    expect(status.querySelector("svg")).toHaveClass("animate-spin")
+  })
 })

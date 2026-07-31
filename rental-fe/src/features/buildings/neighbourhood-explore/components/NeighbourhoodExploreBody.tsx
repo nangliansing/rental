@@ -1,4 +1,6 @@
-import { Loader2, SearchX } from "lucide-react"
+import { SearchX } from "lucide-react"
+
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { ListingCollectionMessage } from "@/shared/components/collections/ListingCollectionState"
@@ -25,7 +27,7 @@ export function NeighbourhoodExploreBody() {
     <div className="relative flex min-h-0 flex-1 flex-col bg-slate-50">
       {isInitialLoading && (
         <div className="flex h-full items-center justify-center gap-2 text-sm font-medium text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          <LoaderIcon className="h-4 w-4" aria-hidden="true" />
           Loading nearby places...
         </div>
       )}

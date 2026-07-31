@@ -3,7 +3,6 @@ import {
   Bed,
   ChevronLeft,
   ImageIcon,
-  Loader2,
   MoreHorizontal,
   Ruler,
   Trash2,
@@ -28,6 +27,7 @@ import {
   useDeleteOwnerPendingPost,
 } from "@/features/pending-post"
 import { cn } from "@/lib/utils"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { ModalPortal } from "@/shared/components/ModalPortal"
 import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
@@ -324,7 +324,7 @@ export function PendingPostDetailOverlay({
                       }}
                     >
                       {deleteMutation.isPending && (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <LoaderIcon className="h-4 w-4" />
                       )}
                       Delete
                     </button>

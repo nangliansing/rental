@@ -1,4 +1,5 @@
 import { Building2, MapPin } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { BuildingFollowControl } from "@/features/building-follow/components/BuildingFollowControl"
 import { cn } from "@/lib/utils"
@@ -8,6 +9,7 @@ import { BuildingSummaryActionBar } from "./BuildingSummaryActionBar"
 import { useBuildingSummaryActions } from "../hooks/useBuildingSummaryActions"
 import {
   formatBuildingSummaryRent,
+  getBuildingDetailPath,
   normalizeBuildingSummary,
   type BuildingSummaryData,
 } from "../utils/buildingSummaryDisplay"
@@ -68,6 +70,7 @@ export function BuildingSummaryCard({
   })
   const shouldShowRent = summary.minRent != null || !hideEmptyRent
   const Title = `h${titleLevel}` as "h1" | "h2" | "h3"
+  const buildingDetailPath = getBuildingDetailPath(summary.id)
 
   return (
     <section
@@ -77,8 +80,17 @@ export function BuildingSummaryCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <Title className="truncate text-lg font-semibold leading-tight text-slate-950">
-              {summary.name}
+            <Title className="min-w-0 truncate text-lg font-semibold leading-tight text-slate-950">
+              {buildingDetailPath ? (
+                <Link
+                  to={buildingDetailPath}
+                  className="truncate text-inherit transition-colors hover:text-slate-700 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/70 focus-visible:ring-offset-2"
+                >
+                  {summary.name}
+                </Link>
+              ) : (
+                summary.name
+              )}
             </Title>
             {showFollowAction && summary.id && (
               <BuildingFollowControl

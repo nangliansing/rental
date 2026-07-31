@@ -5,7 +5,6 @@ import {
   Building2,
   Clock3,
   Flag,
-  Loader2,
   MessageSquareWarning,
   ShieldCheck,
   UsersRound,
@@ -14,6 +13,7 @@ import {
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { LoginRequired } from "@/shared/components/auth/LoginRequired"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { SuspensionActionProvider, useSuspensionAction } from "../suspension"
 import { BuildingEditsTab } from "../tabs/building-edits"
@@ -219,7 +219,7 @@ function AdminLoading() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-white px-4 text-slate-950">
       <div className="text-center">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
+        <LoaderIcon className="mx-auto h-6 w-6 text-slate-400" />
         <p className="mt-3 text-sm font-medium text-slate-600">
           Checking admin access...
         </p>

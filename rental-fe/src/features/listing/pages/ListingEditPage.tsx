@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/hooks/useAuth"
@@ -20,7 +20,7 @@ import { mapListingToFormValues } from "../utils/mapListingToFormValues"
 function ListingEditLoading() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <Loader2 className="mb-3 h-6 w-6 animate-spin text-slate-400" />
+      <LoaderIcon className="mb-3 h-6 w-6 text-slate-400" />
       <p className="text-sm font-medium text-slate-600">Loading listing...</p>
     </div>
   )
