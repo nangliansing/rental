@@ -75,10 +75,18 @@ export function BuildingSummaryCard({
       aria-label={`Building summary for ${summary.name}`}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <Title className="truncate text-lg font-semibold leading-tight text-slate-950">
-            {summary.name}
-          </Title>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <Title className="truncate text-lg font-semibold leading-tight text-slate-950">
+              {summary.name}
+            </Title>
+            {showFollowAction && summary.id && (
+              <BuildingFollowControl
+                buildingId={summary.id}
+                initialIsFollowing={Boolean(building.isFollowing)}
+              />
+            )}
+          </div>
 
           {summary.buildingType && (
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-sm font-medium text-slate-500">
@@ -88,26 +96,18 @@ export function BuildingSummaryCard({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          {showFollowAction && summary.id && (
-            <BuildingFollowControl
-              buildingId={summary.id}
-              initialIsFollowing={Boolean(building.isFollowing)}
-            />
-          )}
-          {shouldShowRent && (
-            <div className="text-right">
-              <p
-                className={cn(
-                  "text-sm font-semibold",
-                  summary.minRent == null ? "text-slate-400" : "text-slate-950",
-                )}
-              >
-                {formatBuildingSummaryRent(summary.minRent, summary.maxRent)}
-              </p>
-            </div>
-          )}
-        </div>
+        {shouldShowRent && (
+          <div className="shrink-0 text-right">
+            <p
+              className={cn(
+                "text-sm font-semibold",
+                summary.minRent == null ? "text-slate-400" : "text-slate-950",
+              )}
+            >
+              {formatBuildingSummaryRent(summary.minRent, summary.maxRent)}
+            </p>
+          </div>
+        )}
       </div>
 
       {summary.address && (

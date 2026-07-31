@@ -236,6 +236,50 @@
     backface-visibility: hidden;
   }
 
+  @keyframes active-toggle-pending {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.94);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes active-toggle-settle {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.84);
+    }
+
+    55% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .active-toggle-pending {
+    animation: active-toggle-pending 1.1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    transform-origin: center;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+
+  .active-toggle-settle {
+    animation: active-toggle-settle 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: center;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+
   @keyframes error-page-aurora-drift {
     0%,
     100% {
@@ -333,7 +377,9 @@
     }
 
     .save-heart-pop,
-    .save-heart-unpop {
+    .save-heart-unpop,
+    .active-toggle-pending,
+    .active-toggle-settle {
       animation: none;
       will-change: auto;
     }

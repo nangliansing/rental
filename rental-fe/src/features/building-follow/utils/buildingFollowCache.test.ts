@@ -6,6 +6,7 @@ import { queryKeys } from "@/lib/query-keys"
 import {
   applyDeletedBuildingFollowToCache,
   patchBuildingFollowingStateInCache,
+  readBuildingFollowingFromCache,
   relatedBuildingFollowQueryKeys,
   syncBuildingFollowingState,
 } from "./buildingFollowCache"
@@ -137,10 +138,67 @@ describe("patchBuildingFollowingStateInCache", () => {
   })
 })
 
+describe("readBuildingFollowingFromCache", () => {
+  it("returns undefined when no related cache entry contains the building", () => {
+    const queryClient = createQueryClient()
+
+    expect(readBuildingFollowingFromCache(queryClient, "building-1")).toBeUndefined()
+  })
+
+  it("reads isFollowing from related cache families", () => {
+    const queryClient = createQueryClient()
+    const buildingKey = queryKeys.buildings.detail("building-1")
+    const mapKey = queryKeys.mapSearch.buildingResults({
+      bounds: { north: 14 },
+      filters: {},
+      limit: 20,
+    })
+    const listingsKey = queryKeys.mapSearch.listingsInBuildingResults({
+      buildingId: "building-1",
+      filters: {},
+      limit: 20,
+    })
+    const publicKey = queryKeys.listings.publicDetail("listing-1", "user-1")
+
+    queryClient.setQueryData(buildingKey, buildingRow("building-1", true))
+    expect(readBuildingFollowingFromCache(queryClient, "building-1")).toBe(true)
+
+    queryClient.removeQueries({ queryKey: buildingKey })
+    queryClient.setQueryData(listingsKey, {
+      pages: [
+        {
+          data: {
+            building: buildingRow("building-1", false),
+            listings: [],
+          },
+        },
+      ],
+      pageParams: [1],
+    })
+    expect(readBuildingFollowingFromCache(queryClient, "building-1")).toBe(false)
+
+    queryClient.removeQueries({ queryKey: listingsKey })
+    queryClient.setQueryData(publicKey, {
+      listing: {
+        _id: "listing-1",
+        building: buildingRow("building-1", true),
+      },
+    })
+    expect(readBuildingFollowingFromCache(queryClient, "building-1")).toBe(true)
+
+    queryClient.removeQueries({ queryKey: publicKey })
+    queryClient.setQueryData(mapKey, {
+      data: [buildingRow("building-1", false)],
+      pagination: { total: 1 },
+    })
+    expect(readBuildingFollowingFromCache(queryClient, "building-1")).toBe(false)
+  })
+})
+
 describe("applyDeletedBuildingFollowToCache", () => {
   it("clears follow rows and marks building copies unfollowed", () => {
     const queryClient = createQueryClient()
-    const followsKey = queryKeys.buildingFollows.list({ limit: 20 })
+    const followsKey = queryKeys.buildingFollows.list({ userId: "user-1", limit: 20 })
     const buildingKey = queryKeys.buildings.detail("building-1")
     queryClient.setQueryData(followsKey, {
       pages: [
@@ -199,7 +257,7 @@ describe("syncBuildingFollowingState", () => {
   it("removes follow rows locally on unfollow without invalidating", async () => {
     const queryClient = createQueryClient()
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-    const followsKey = queryKeys.buildingFollows.list({ limit: 20 })
+    const followsKey = queryKeys.buildingFollows.list({ userId: "user-1", limit: 20 })
     queryClient.setQueryData(followsKey, {
       pages: [
         {

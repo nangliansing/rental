@@ -38,8 +38,15 @@ describe("queryKeys", () => {
     ).toEqual(["saved-listings", 20])
 
     expect(
-      queryKeys.buildingFollows.list({ limit: 20 }),
-    ).toEqual(["building-follows", 20])
+      queryKeys.buildingFollows.list({ userId: "user-1", limit: 20 }),
+    ).toEqual(["building-follows", "user-1", 20])
+
+    expect(
+      queryKeys.buildingFollows.buildingList({
+        buildingId: "building-1",
+        limit: 20,
+      }),
+    ).toEqual(["building-follows", "building", "building-1", 20])
   })
 
   it("provides prefixes for all viewer-specific listing details", () => {
@@ -164,8 +171,8 @@ describe("queryKeys", () => {
         expected: ["saved-listings", 10],
       },
       {
-        actual: queryKeys.buildingFollows.list({ limit: 10 }),
-        expected: ["building-follows", 10],
+        actual: queryKeys.buildingFollows.list({ userId: "user-1", limit: 10 }),
+        expected: ["building-follows", "user-1", 10],
       },
       {
         actual: queryKeys.listerReviews.list({
@@ -328,8 +335,8 @@ describe("queryKeys", () => {
         member: queryKeys.savedListings.list({ limit: 10 }),
       },
       {
-        family: queryKeys.buildingFollows.lists,
-        member: queryKeys.buildingFollows.list({ limit: 10 }),
+        family: queryKeys.buildingFollows.byUser("user-1"),
+        member: queryKeys.buildingFollows.list({ userId: "user-1", limit: 10 }),
       },
       {
         family: queryKeys.listerReviews.byLister("profile-1"),

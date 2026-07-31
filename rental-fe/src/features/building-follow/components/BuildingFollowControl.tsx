@@ -40,7 +40,8 @@ export function BuildingFollowControl({
     <FollowBuildingButton
       isFollowing={followToggle.isFollowing}
       isPending={followToggle.isPending}
-      isDisabled={!isAuthenticated || !hasActiveAccount}
+      settleSignal={followToggle.settleSignal}
+      isDisabled={isAuthenticated && !hasActiveAccount}
       onClick={handleToggle}
     />
   )

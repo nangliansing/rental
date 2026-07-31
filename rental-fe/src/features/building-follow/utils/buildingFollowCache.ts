@@ -5,7 +5,14 @@ import {
   updateDeep,
   updateDeepInQueries,
 } from "@/lib/query-state"
-import { applyToCachedQueries } from "@/lib/query-state/shared"
+import {
+  applyToCachedQueries,
+  forEachCachedQuery,
+  isQueryStateRecord,
+  MAX_TRAVERSAL_DEPTH,
+  readArrayLength,
+  safeMatch,
+} from "@/lib/query-state/shared"
 
 export const BUILDING_FOLLOW_WRITE_SCOPE_ID = "building-follow-write"
 
@@ -16,6 +23,11 @@ export const relatedBuildingFollowQueryKeys: QueryKey[] = [
   queryKeys.mapSearch.listingsInBuilding,
   queryKeys.listings.publicDetails,
   queryKeys.listings.ownerDetails,
+]
+
+/** Followings list needs a refetch after create; create payloads omit populated buildings. */
+export const buildingFollowRefetchQueryKeys: QueryKey[] = [
+  queryKeys.buildingFollows.all,
 ]
 
 const isBuildingFollowingStateTarget =
@@ -81,6 +93,113 @@ export function applyDeletedBuildingFollowToCache(
     isFollowing: false,
   })
   removeBuildingFollowRowsFromCache(queryClient, buildingId)
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined
+}
+
+function findBuildingFollowingInValue(
+  value: unknown,
+  buildingId: string,
+  path: WeakSet<object>,
+  depth: number,
+): boolean | undefined {
+  if (depth > MAX_TRAVERSAL_DEPTH) return undefined
+
+  if (Array.isArray(value)) {
+    if (path.has(value)) return undefined
+
+    const length = readArrayLength(value)
+    if (length === undefined) return undefined
+
+    path.add(value)
+    try {
+      for (let index = 0; index < length; index += 1) {
+        const found = findBuildingFollowingInValue(
+          value[index],
+          buildingId,
+          path,
+          depth + 1,
+        )
+        if (found !== undefined) return found
+      }
+      return undefined
+    } finally {
+      path.delete(value)
+    }
+  }
+
+  if (!isQueryStateRecord(value)) return undefined
+  if (path.has(value)) return undefined
+
+  path.add(value)
+  try {
+    if (
+      safeMatch(isBuildingFollowingStateTarget(buildingId), value) &&
+      readBoolean(value.isFollowing) !== undefined
+    ) {
+      return readBoolean(value.isFollowing)
+    }
+
+    for (const child of Object.values(value)) {
+      const found = findBuildingFollowingInValue(
+        child,
+        buildingId,
+        path,
+        depth + 1,
+      )
+      if (found !== undefined) return found
+    }
+
+    return undefined
+  } finally {
+    path.delete(value)
+  }
+}
+
+/**
+ * Reads the latest patched `isFollowing` value for a building from any
+ * related React Query cache entry. When multiple copies disagree, the value
+ * from the most recently updated cache entry wins. Returns `undefined` when
+ * no cached copy exists yet.
+ */
+export function readBuildingFollowingFromCache(
+  queryClient: QueryClient,
+  buildingId: string,
+): boolean | undefined {
+  if (!buildingId) return undefined
+
+  let resolved: boolean | undefined
+  let resolvedUpdatedAt = -1
+
+  forEachCachedQuery(
+    queryClient,
+    relatedBuildingFollowQueryKeys,
+    ({ queryHash, queryKey }) => {
+      try {
+        const current = queryClient.getQueryData(queryKey)
+        const found = findBuildingFollowingInValue(
+          current,
+          buildingId,
+          new WeakSet(),
+          0,
+        )
+        if (found === undefined) return
+
+        const updatedAt =
+          queryClient.getQueryCache().get(queryHash)?.state.dataUpdatedAt ?? 0
+        if (updatedAt >= resolvedUpdatedAt) {
+          resolved = found
+          resolvedUpdatedAt = updatedAt
+        }
+      } catch {
+        // Skip unreadable cache entries.
+      }
+    },
+  )
+
+  return resolved
 }
 
 export async function syncBuildingFollowingState({

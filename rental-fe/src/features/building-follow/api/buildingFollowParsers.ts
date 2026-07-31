@@ -2,12 +2,14 @@ import { ApiError } from "@/lib/api-client"
 
 import {
   normalizePositiveInteger,
-  parsePagination,
+  parseListingMedia,
   parseSearchListingsBuilding,
+  readBoolean,
   readRecord,
   readString,
 } from "@/features/listing/api/listingResponseParsers"
 import type {
+  ListingMedia,
   Pagination,
   SearchListingsBuilding,
 } from "@/features/map-search/types"
@@ -26,6 +28,65 @@ export type SearchUserBuildingFollowsResponse = {
     followings: SearchBuildingFollow[]
   }
   pagination: Pagination
+}
+
+export type BuildingFollowerUser = {
+  _id: string
+  name: string | null
+  displayName: string | null
+  profilePhoto: ListingMedia | null
+  isVerified: boolean | undefined
+}
+
+export type SearchBuildingFollower = {
+  _id: string
+  userId: string
+  buildingId: string
+  createdAt: string | undefined
+  updatedAt: string | undefined
+  user: BuildingFollowerUser | null
+}
+
+export type SearchBuildingFollowersResponse = {
+  success: true
+  data: {
+    followers: SearchBuildingFollower[]
+  }
+  pagination: Pagination
+}
+
+const invalidBuildingFollowResponse = () =>
+  new ApiError(
+    "Building follow response is missing required data.",
+    500,
+    "INVALID_BUILDING_FOLLOW_RESPONSE",
+  )
+
+const parseSearchPagination = (
+  value: unknown,
+  expected: { page: number; limit: number },
+): Pagination => {
+  const pagination = readRecord(value)
+  const page = pagination.page
+  const limit = pagination.limit
+  const total = pagination.total
+
+  if (
+    !Number.isInteger(page) ||
+    !Number.isInteger(limit) ||
+    !Number.isInteger(total) ||
+    page !== expected.page ||
+    limit !== expected.limit ||
+    (total as number) < 0
+  ) {
+    throw invalidBuildingFollowResponse()
+  }
+
+  return {
+    page: page as number,
+    limit: limit as number,
+    total: total as number,
+  }
 }
 
 export const parseBuildingFollow = (value: unknown): BuildingFollow => {
@@ -117,6 +178,76 @@ export const parseSearchUserBuildingFollowsResponse = (
     data: {
       followings: followings.map(parseSearchBuildingFollow),
     },
-    pagination: parsePagination(body.pagination, fallback),
+    pagination: parseSearchPagination(body.pagination, fallback),
+  }
+}
+
+export const parseBuildingFollowerUser = (
+  value: unknown,
+): BuildingFollowerUser | null => {
+  if (value === null || value === undefined) return null
+
+  const user = readRecord(value)
+  const id = readString(user._id)
+
+  if (!id) return null
+
+  return {
+    _id: id,
+    name: readString(user.name),
+    displayName: readString(user.displayName),
+    profilePhoto: parseListingMedia(user.profilePhoto),
+    isVerified: readBoolean(user.isVerified),
+  }
+}
+
+export const parseSearchBuildingFollower = (
+  value: unknown,
+): SearchBuildingFollower => {
+  const follow = readRecord(value)
+  const id = readString(follow._id)
+  const userId = readString(follow.userId)
+  const buildingId = readString(follow.buildingId)
+
+  if (!id || !userId || !buildingId) {
+    throw new ApiError(
+      "Building follow response is missing required data.",
+      500,
+      "INVALID_BUILDING_FOLLOW_RESPONSE",
+    )
+  }
+
+  return {
+    _id: id,
+    userId,
+    buildingId,
+    createdAt: readString(follow.createdAt),
+    updatedAt: readString(follow.updatedAt),
+    user: parseBuildingFollowerUser(follow.user),
+  }
+}
+
+export const parseSearchBuildingFollowersResponse = (
+  value: unknown,
+  fallback: { page: number; limit: number },
+): SearchBuildingFollowersResponse => {
+  const body = readRecord(value)
+  const data = readRecord(body.data)
+  const followers = data.followers
+
+  if (body.success !== true || !Array.isArray(followers)) {
+    throw new ApiError(
+      "Building followers response is missing required data.",
+      500,
+      "INVALID_BUILDING_FOLLOW_RESPONSE",
+    )
+  }
+
+  return {
+    success: true,
+    data: {
+      followers: followers.map(parseSearchBuildingFollower),
+    },
+    pagination: parseSearchPagination(body.pagination, fallback),
   }
 }

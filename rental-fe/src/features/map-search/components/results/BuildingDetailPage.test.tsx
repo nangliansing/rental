@@ -25,6 +25,18 @@ vi.mock("../../context/MapSearchSessionContext", async () => {
     useMapSearchResults: vi.fn(),
   }
 })
+vi.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: vi.fn(() => ({
+    user: { _id: "viewer-1", status: "ACTIVE" },
+    isAuthenticated: true,
+    isLoading: false,
+  })),
+}))
+vi.mock("@/features/building-follow/components/BuildingFollowersSection", () => ({
+  BuildingFollowersSection: () => (
+    <section aria-label="Building followers preview">Followers</section>
+  ),
+}))
 vi.mock("@/features/buildings/components/BuildingSummaryCard", () => ({
   BuildingSummaryCard: ({ building }: { building: { name: string } }) => (
     <h1>{building.name}</h1>

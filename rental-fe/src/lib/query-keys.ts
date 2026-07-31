@@ -17,6 +17,16 @@ type ListerReviewKeyInput = {
   limit: number
 }
 
+type BuildingFollowKeyInput = {
+  userId: string
+  limit: number
+}
+
+type BuildingFollowersKeyInput = {
+  buildingId: string
+  limit: number
+}
+
 /**
  * Query-key identity is owned by this module. Keep key segments JSON-safe and
  * build child keys from their family prefix so partial matching remains
@@ -93,8 +103,13 @@ export const queryKeys = {
   buildingFollows: {
     all: roots.buildingFollows,
     lists: roots.buildingFollows,
-    list: ({ limit }: { limit: number }) =>
-      childKey(roots.buildingFollows, limit),
+    byUser: (userId: string) => childKey(roots.buildingFollows, userId),
+    list: ({ userId, limit }: BuildingFollowKeyInput) =>
+      childKey(roots.buildingFollows, userId, limit),
+    byBuilding: (buildingId: string) =>
+      childKey(roots.buildingFollows, "building", buildingId),
+    buildingList: ({ buildingId, limit }: BuildingFollowersKeyInput) =>
+      childKey(roots.buildingFollows, "building", buildingId, limit),
   },
   listerReviews: {
     all: roots.listerReviews,
