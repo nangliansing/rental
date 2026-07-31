@@ -90,10 +90,10 @@ vi.mock("@/features/notifications", () => ({
   ),
 }))
 
-vi.mock("@/features/auth/components/LogoutButton", () => ({
-  LogoutButton: () => (
-    <button type="button" aria-label="Log out">
-      Log out
+vi.mock("@/features/user-menu", () => ({
+  UserMenuButton: () => (
+    <button type="button" aria-label="Account menu">
+      Account
     </button>
   ),
 }))

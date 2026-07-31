@@ -1,7 +1,10 @@
 // src/features/uploads/api/createUploadSignature.ts
 import { ApiError, apiClient } from "@/lib/api-client"
 
-export type UploadPurpose = "agent-profile-photo" | "listing-photo"
+export type UploadPurpose =
+  | "agent-profile-photo"
+  | "user-profile-photo"
+  | "listing-photo"
 
 export type UploadSignature = {
   cloudName: string
@@ -34,6 +37,7 @@ type CreateUploadSignaturePayload = {
 
 const uploadPurposes = new Set<UploadPurpose>([
   "agent-profile-photo",
+  "user-profile-photo",
   "listing-photo",
 ])
 

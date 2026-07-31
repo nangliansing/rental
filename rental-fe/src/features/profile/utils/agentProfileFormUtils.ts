@@ -4,6 +4,7 @@ import {
   normalizeFormText,
   sortFormStrings,
 } from "@/features/listing/utils/formFieldUtils"
+import { areMediaEqual } from "@/features/uploads/utils/mediaFormUtils"
 
 import { hasAgentContactMethod } from "./contactFieldDefinitions"
 
@@ -65,19 +66,6 @@ export function normalizeAgentProfileFormValues(
     viberPhone: normalizeFormText(values.viberPhone),
     supportLanguages: sortFormStrings(values.supportLanguages),
   }
-}
-
-function areMediaEqual(
-  firstMedia: UploadedMedia | null,
-  secondMedia: UploadedMedia | null,
-) {
-  if (!firstMedia && !secondMedia) return true
-  if (!firstMedia || !secondMedia) return false
-
-  return (
-    firstMedia.publicId === secondMedia.publicId &&
-    firstMedia.secureUrl === secondMedia.secureUrl
-  )
 }
 
 export function buildChangedAgentProfileValues(

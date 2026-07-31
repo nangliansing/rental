@@ -73,6 +73,13 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "/account/edit",
+        lazy: lazyStandaloneRoute(async () =>
+          (await import("@/features/account/pages/AccountSettingsPage"))
+            .AccountSettingsPage
+        ),
+      },
+      {
         path: "/listings/new",
         lazy: lazyStandaloneRoute(async () =>
           (await import("@/features/listing/pages/ListingCreatePage"))
