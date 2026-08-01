@@ -18,12 +18,21 @@ import {
 } from "./shared/runtime/index.js";
 import { initializeRateLimitStore } from "./shared/security/index.js";
 import {
+  closeQueueProducer,
+  createRealtimeSubscriber,
+  initializeQueueProducer,
+} from "./shared/queue/index.js";
+import Notification from "./modules/notification/notification.model.js";
+import {
   closeSocketServer,
+  emitNotificationToUser,
   initializeSocketServer,
 } from "./shared/socket/index.js";
 
 let rateLimitStore;
 let runtimeHealth;
+let queueProducer;
+let realtimeSubscriber;
 let server;
 let logger = createLogger({ environment: process.env.NODE_ENV || "unknown" });
 
@@ -37,6 +46,17 @@ try {
 
   configureCloudinary(config.cloudinary);
   rateLimitStore = await initializeRateLimitStore(config.rateLimit, { logger });
+  queueProducer = await initializeQueueProducer(config.queue, { logger });
+  realtimeSubscriber = await createRealtimeSubscriber(config.queue, {
+    logger,
+    onHint: async ({ userId, notificationId }) => {
+      const notification = await Notification.findById(notificationId).lean();
+      if (!notification) return;
+      if (notification.recipient.toString() !== userId) return;
+
+      emitNotificationToUser(userId, notification);
+    },
+  });
 
   runtimeHealth = createRuntimeHealth({
     isDatabaseReady: isDBReady,
@@ -59,6 +79,12 @@ try {
     closeSocketServer,
     closeDatabase: disconnectDB,
     closeRateLimitStore: rateLimitStore.close,
+    closeQueueResources: async () => {
+      await Promise.allSettled([
+        closeQueueProducer(),
+        realtimeSubscriber?.close?.(),
+      ]);
+    },
     logger,
     timeoutMs: config.shutdownTimeoutMs,
   });
@@ -86,6 +112,8 @@ try {
     closeSocketServer(),
     disconnectDB(),
     rateLimitStore?.close?.(),
+    closeQueueProducer(),
+    realtimeSubscriber?.close?.(),
   ]);
 
   process.exitCode = 1;

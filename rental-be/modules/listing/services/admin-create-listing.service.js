@@ -3,6 +3,7 @@ import { validateNullableObject } from "../../../shared/validators/index.js";
 import { AppError } from "../../../shared/errors/app-error.js";
 
 import { updateBuildingRentSummaryService } from "../../building/services/index.js";
+import { maybeEnqueueBuildingFollowerNewListing } from "../../building-follow-notify/services/enqueue-building-followers-notify.service.js";
 import { buildCreateListingRecord } from "../mappers/index.js";
 import Building from "../../building/building.model.js";
 import Listing from "../listing.model.js";
@@ -11,7 +12,8 @@ import { serializeListingDocumentForApi } from "../utils/index.js";
 export const adminCreateListingService = async (
     body,
     actorId,
-    session = null
+    session = null,
+    { logger = null } = {},
 ) => {
     validateNullableObject(session, "session");
 
@@ -38,7 +40,21 @@ export const adminCreateListingService = async (
         session ? { session } : undefined
     );
 
-    await updateBuildingRentSummaryService(record.buildingId, session);
+    await updateBuildingRentSummaryService(record.buildingId, session, {
+        logger,
+    });
 
-    return serializeListingDocumentForApi(listing);
+    const serializedListing = serializeListingDocumentForApi(listing);
+
+    if (!session?.inTransaction?.()) {
+        await maybeEnqueueBuildingFollowerNewListing({
+            listing,
+            buildingId: building._id,
+            buildingName: building.name,
+            occurredAt: new Date(),
+            logger,
+        });
+    }
+
+    return serializedListing;
 };

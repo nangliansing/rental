@@ -343,7 +343,77 @@ export const validateEnvironment = (env = process.env) => {
         issues,
       ),
     },
+    queue: {
+      enabled: parseBoolean(
+        env,
+        "QUEUE_ENABLED",
+        nodeEnv === "production",
+        issues,
+      ),
+      redisUrl: redisUrl || undefined,
+      prefix: readString(env, "QUEUE_PREFIX") || "rental:queue",
+      workerConcurrency: parseInteger(
+        env,
+        "WORKER_CONCURRENCY",
+        5,
+        1,
+        50,
+        issues,
+      ),
+      defaultAttempts: parseInteger(
+        env,
+        "QUEUE_DEFAULT_ATTEMPTS",
+        5,
+        1,
+        10,
+        issues,
+      ),
+      backoffDelayMs: parseInteger(
+        env,
+        "QUEUE_BACKOFF_DELAY_MS",
+        30000,
+        1000,
+        300000,
+        issues,
+      ),
+      removeOnCompleteAgeSeconds: parseInteger(
+        env,
+        "QUEUE_REMOVE_ON_COMPLETE_AGE_SECONDS",
+        7 * 24 * 60 * 60,
+        3600,
+        30 * 24 * 60 * 60,
+        issues,
+      ),
+      removeOnCompleteCount: parseInteger(
+        env,
+        "QUEUE_REMOVE_ON_COMPLETE_COUNT",
+        1000,
+        100,
+        100000,
+        issues,
+      ),
+      removeOnFailAgeSeconds: parseInteger(
+        env,
+        "QUEUE_REMOVE_ON_FAIL_AGE_SECONDS",
+        30 * 24 * 60 * 60,
+        3600,
+        90 * 24 * 60 * 60,
+        issues,
+      ),
+      removeOnFailCount: parseInteger(
+        env,
+        "QUEUE_REMOVE_ON_FAIL_COUNT",
+        5000,
+        100,
+        100000,
+        issues,
+      ),
+    },
   };
+
+  if (config.queue.enabled && !config.queue.redisUrl) {
+    issues.push("REDIS_URL is required when QUEUE_ENABLED=true");
+  }
 
   if (issues.length > 0) {
     throw new EnvironmentValidationError(issues);
@@ -363,6 +433,7 @@ export const validateEnvironment = (env = process.env) => {
     metrics: Object.freeze(config.metrics),
     rateLimit: Object.freeze(config.rateLimit),
     neighbourhood: Object.freeze(config.neighbourhood),
+    queue: Object.freeze(config.queue),
   });
 };
 

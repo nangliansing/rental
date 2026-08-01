@@ -148,6 +148,35 @@ describe("environment validation", () => {
     );
   });
 
+  test("requires Redis when the queue is enabled", () => {
+    expectIssues(
+      {
+        QUEUE_ENABLED: "true",
+      },
+      ["REDIS_URL is required when QUEUE_ENABLED=true"],
+    );
+  });
+
+  test("defaults the queue off in test and on in production", () => {
+    const testConfig = validateEnvironment(validEnvironment({ NODE_ENV: "test" }));
+    assert.equal(testConfig.queue.enabled, false);
+
+    const productionConfig = validateEnvironment(
+      validEnvironment({
+        NODE_ENV: "production",
+        CORS_ORIGINS: "https://app.example.com",
+        TRUST_PROXY_HOPS: "1",
+        RATE_LIMIT_STORE: "redis",
+        REDIS_URL: "redis://127.0.0.1:6379",
+        METRICS_TOKEN: "metrics-token-with-at-least-32-characters",
+      }),
+    );
+
+    assert.equal(productionConfig.queue.enabled, true);
+    assert.equal(productionConfig.queue.prefix, "rental:queue");
+    assert.equal(productionConfig.queue.workerConcurrency, 5);
+  });
+
   test("rejects malformed scalar configuration", () => {
     expectIssues(
       {

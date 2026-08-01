@@ -10,6 +10,10 @@ import { AppError } from "../../../shared/errors/app-error.js";
 import Building from "../../building/building.model.js";
 import { buildCreateBuildingRecord } from "../../building/mappers/index.js";
 import { adminCreateListingService } from "../../listing/services/index.js";
+import {
+  maybeEnqueueBuildingFollowerNewListing,
+  maybeEnqueueBuildingFollowerPriceDrop,
+} from "../../building-follow-notify/services/enqueue-building-followers-notify.service.js";
 import User from "../../user/user.model.js";
 import { createAndEmitNotification } from "../../notification/services/index.js";
 import {
@@ -167,6 +171,8 @@ async function approvePendingPost({
   );
 
   const listingSnapshot = toPlainObject(pendingPost.listing);
+  const previousMinRent = approvedBuilding.minRent ?? null;
+
   const listing = await adminCreateListingService(
     {
       ...listingSnapshot,
@@ -175,6 +181,12 @@ async function approvePendingPost({
     submittedBy,
     session,
   );
+
+  const currentMinRent =
+    (await Building.findById(approvedBuilding._id)
+      .select("minRent name")
+      .session(session)
+      .lean())?.minRent ?? null;
 
   const approvedPendingPost = await PendingPost.findOneAndUpdate(
     {
@@ -221,7 +233,37 @@ async function approvePendingPost({
   return {
     approvedPendingPost,
     notification,
+    followerSideEffects: {
+      building: approvedBuilding,
+      listing,
+      previousMinRent,
+      currentMinRent,
+    },
   };
+}
+
+async function runApproveFollowerSideEffects(followerSideEffects, { logger } = {}) {
+  if (!followerSideEffects) return;
+
+  const { building, listing, previousMinRent, currentMinRent } =
+    followerSideEffects;
+
+  await maybeEnqueueBuildingFollowerNewListing({
+    listing,
+    buildingId: building._id,
+    buildingName: building.name,
+    occurredAt: new Date(),
+    logger,
+  });
+
+  await maybeEnqueueBuildingFollowerPriceDrop({
+    buildingId: building._id,
+    buildingName: building.name,
+    oldMinRent: previousMinRent,
+    newMinRent: currentMinRent,
+    occurredAt: new Date(),
+    logger,
+  });
 }
 
 export const adminApprovePendingPostService = async ({
@@ -229,6 +271,7 @@ export const adminApprovePendingPostService = async ({
   actorId,
   body,
   session = null,
+  logger = null,
 }) => {
   validateNullableObject(session, "session");
   validateObject(body, "body");
@@ -259,16 +302,20 @@ export const adminApprovePendingPostService = async ({
   if (session) {
     let approvedPendingPost;
     let notification;
+    let followerSideEffects;
 
     await session.withTransaction(async () => {
       const result = await approveInSession(session);
       approvedPendingPost = result.approvedPendingPost;
       notification = result.notification;
+      followerSideEffects = result.followerSideEffects;
     });
 
     if (notification) {
       emitNotificationToUser(notification.recipient.toString(), notification);
     }
+
+    await runApproveFollowerSideEffects(followerSideEffects, { logger });
 
     return approvedPendingPost;
   }
@@ -278,17 +325,21 @@ export const adminApprovePendingPostService = async ({
   try {
     let approvedPendingPost;
     let notification;
+    let followerSideEffects;
 
     await transactionSession.withTransaction(async () => {
       const result = await approveInSession(transactionSession);
 
       approvedPendingPost = result.approvedPendingPost;
       notification = result.notification;
+      followerSideEffects = result.followerSideEffects;
     });
 
     if (notification) {
       emitNotificationToUser(notification.recipient.toString(), notification);
     }
+
+    await runApproveFollowerSideEffects(followerSideEffects, { logger });
 
     return approvedPendingPost;
   } finally {
