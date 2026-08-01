@@ -4,7 +4,11 @@ export const QUEUE_NAMES = Object.freeze({
 
 export const JOB_NAMES = Object.freeze({
   SYSTEM_PING: "system.ping",
+  /** @deprecated In-flight jobs only; new work uses type-specific names below. */
   BUILDING_FOLLOWERS_NOTIFY: "building.followers.notify",
+  BUILDING_FOLLOWERS_PRICE_DROP: "building.followers.price.drop",
+  BUILDING_FOLLOWERS_NEW_LISTING: "building.followers.new.listing",
+  BUILDING_FOLLOWERS_AVAILABLE_AGAIN: "building.followers.available.again",
 });
 
 export const REALTIME_PUBSUB_CHANNEL = "rental:queue:realtime";

@@ -38,6 +38,19 @@ const addOrUpdateDelayedJob = async (queue, validated) => {
   }
 
   if (!UPDATABLE_JOB_STATES.has(state)) {
+    if (state === "active" && validated.jobId) {
+      const overflowJobId = `${validated.jobId}-overflow-${Date.now()}`;
+
+      return {
+        job: await queue.add(validated.name, validated.data, {
+          ...addOptions,
+          jobId: overflowJobId,
+        }),
+        updated: false,
+        overflow: true,
+      };
+    }
+
     return {
       job: existingJob,
       updated: false,
@@ -88,7 +101,8 @@ export const enqueueJob = async ({
   }
 
   const queue = getQueue();
-  const { job, updated, skipped, reason } = await addOrUpdateDelayedJob(queue, validated);
+  const { job, updated, skipped, reason, overflow } =
+    await addOrUpdateDelayedJob(queue, validated);
 
   if (skipped) {
     return {
@@ -102,6 +116,7 @@ export const enqueueJob = async ({
   return {
     enqueued: true,
     updated,
+    overflow: overflow === true,
     name: validated.name,
     jobId: job.id,
     delayMs: validated.delayMs ?? 0,

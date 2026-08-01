@@ -74,7 +74,7 @@ describe(
         });
 
         await enqueueJob({
-          name: JOB_NAMES.BUILDING_FOLLOWERS_NOTIFY,
+          name: JOB_NAMES.BUILDING_FOLLOWERS_NEW_LISTING,
           data: payload,
           jobId: `building.followers.notify-${buildingId}-NEW_LISTING`,
           delayMs: 60_000,

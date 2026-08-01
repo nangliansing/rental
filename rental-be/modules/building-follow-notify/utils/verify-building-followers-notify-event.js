@@ -47,47 +47,86 @@ const loadEligibleListings = async (buildingId, listings) => {
     .filter(Boolean);
 };
 
-export const isBuildingFollowersNotifyEventStillValid = async (event) => {
+const isBuildingActive = async (buildingId) => {
+  const building = await Building.findById(buildingId)
+    .select("isActive")
+    .lean();
+
+  return Boolean(building && building.isActive !== false);
+};
+
+export const isPriceDropFollowerNotifyStillValid = async (event) => {
   const building = await Building.findById(event.buildingId)
-    .select("minRent isActive name")
+    .select("minRent isActive")
     .lean();
 
   if (!building || building.isActive === false) {
     return false;
   }
 
+  const currentMinRent = building.minRent;
+  const { oldMinRent, newMinRent } = event.metadata;
+
+  if (
+    typeof currentMinRent === "number" &&
+    Number.isFinite(currentMinRent) &&
+    typeof newMinRent === "number" &&
+    Number.isFinite(newMinRent) &&
+    currentMinRent <= newMinRent
+  ) {
+    return true;
+  }
+
+  return Boolean(
+    detectBuildingPriceDrop({
+      oldMinRent,
+      newMinRent: currentMinRent,
+    }),
+  );
+};
+
+export const isNewListingFollowerNotifyStillValid = async (event) => {
+  if (!(await isBuildingActive(event.buildingId))) {
+    return false;
+  }
+
+  const eligibleListings = await loadEligibleListings(
+    event.buildingId,
+    event.listings,
+  );
+
+  return eligibleListings.length > 0;
+};
+
+export const isAvailableAgainFollowerNotifyStillValid = async (event) => {
+  if (!(await isBuildingActive(event.buildingId))) {
+    return false;
+  }
+
+  const eligibleListings = await loadEligibleListings(
+    event.buildingId,
+    event.listings,
+  );
+
+  return eligibleListings.some(
+    (listing) =>
+      listing.becamePublic === true ||
+      listing.availabilityChanged === true ||
+      isListingAvailableNow(listing.availableAt),
+  );
+};
+
+/** @deprecated Prefer type-specific validators. */
+export const isBuildingFollowersNotifyEventStillValid = async (event) => {
   switch (event.changeType) {
-    case BUILDING_FOLLOWER_CHANGE_TYPES.PRICE_DROPPED: {
-      const drop = detectBuildingPriceDrop({
-        oldMinRent: event.metadata.oldMinRent,
-        newMinRent: building.minRent,
-      });
+    case BUILDING_FOLLOWER_CHANGE_TYPES.PRICE_DROPPED:
+      return isPriceDropFollowerNotifyStillValid(event);
 
-      return Boolean(drop);
-    }
+    case BUILDING_FOLLOWER_CHANGE_TYPES.NEW_LISTING:
+      return isNewListingFollowerNotifyStillValid(event);
 
-    case BUILDING_FOLLOWER_CHANGE_TYPES.NEW_LISTING: {
-      const eligibleListings = await loadEligibleListings(
-        event.buildingId,
-        event.listings,
-      );
-
-      return eligibleListings.length > 0;
-    }
-
-    case BUILDING_FOLLOWER_CHANGE_TYPES.AVAILABLE_AGAIN: {
-      const eligibleListings = await loadEligibleListings(
-        event.buildingId,
-        event.listings,
-      );
-
-      return eligibleListings.some(
-        (listing) =>
-          listing.becamePublic === true ||
-          listing.availabilityChanged === true ||
-          isListingAvailableNow(listing.availableAt),
-      );
-    }
+    case BUILDING_FOLLOWER_CHANGE_TYPES.AVAILABLE_AGAIN:
+      return isAvailableAgainFollowerNotifyStillValid(event);
 
     default:
       return false;

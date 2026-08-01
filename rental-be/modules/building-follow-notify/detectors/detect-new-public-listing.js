@@ -1,7 +1,11 @@
 import { BUILDING_FOLLOWER_CHANGE_TYPES } from "../building-follow-notify.constants.js";
 import { isNotifyEligibleListing } from "../utils/is-notify-eligible-listing.js";
 
-export const detectNewPublicListing = ({ listing, buildingId, buildingName }) => {
+export const detectNewPublicListing = ({
+  listing,
+  buildingId,
+  buildingName,
+} = {}) => {
   if (!isNotifyEligibleListing(listing)) {
     return null;
   }

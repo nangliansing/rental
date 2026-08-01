@@ -9,8 +9,8 @@
     "npm": ">=10.9.0 <11"
   },
   "scripts": {
-    "test": "node --test --test-concurrency=1",
-    "test:watch": "node --test --test-concurrency=1 --watch",
+    "test": "node --experimental-test-module-mocks --test --test-concurrency=1",
+    "test:watch": "node --experimental-test-module-mocks --test --test-concurrency=1 --watch",
     "ci:contracts": "node scripts/validate-ci-contracts.js",
     "ci:audit": "npm audit --omit=dev --audit-level=high",
     "ci:validate": "npm run ci:contracts && npm test",

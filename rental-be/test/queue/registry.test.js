@@ -23,6 +23,9 @@ describe("job handler registry", () => {
     assert.deepEqual(listRegisteredJobHandlers(), [
       JOB_NAMES.SYSTEM_PING,
       JOB_NAMES.BUILDING_FOLLOWERS_NOTIFY,
+      JOB_NAMES.BUILDING_FOLLOWERS_PRICE_DROP,
+      JOB_NAMES.BUILDING_FOLLOWERS_NEW_LISTING,
+      JOB_NAMES.BUILDING_FOLLOWERS_AVAILABLE_AGAIN,
     ]);
     assert.equal(typeof resolveJobHandler(JOB_NAMES.SYSTEM_PING), "function");
     assert.equal(

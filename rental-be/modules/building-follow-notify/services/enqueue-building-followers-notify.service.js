@@ -1,5 +1,5 @@
-import { JOB_NAMES } from "../../../shared/queue/constants.js";
 import { enqueueJob } from "../../../shared/queue/enqueue.js";
+import { resolveBuildingFollowerNotifyJobName } from "../building-follow-notify.constants.js";
 import { detectBuildingPriceDrop } from "../detectors/detect-building-price-drop.js";
 import { detectNewPublicListing } from "../detectors/detect-new-public-listing.js";
 import { detectListingAvailableAgain } from "../detectors/detect-listing-available-again.js";
@@ -103,7 +103,7 @@ export const enqueueBuildingFollowersNotify = async (input, options = {}) => {
   });
 
   const result = await enqueueJob({
-    name: JOB_NAMES.BUILDING_FOLLOWERS_NOTIFY,
+    name: resolveBuildingFollowerNotifyJobName(mergedPayload.changeType),
     data: mergedPayload,
     jobId,
     delayMs: validatedOptions.delayMs,

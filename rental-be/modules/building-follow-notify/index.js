@@ -5,5 +5,8 @@ export * from "./detectors/detect-new-public-listing.js";
 export * from "./detectors/detect-listing-available-again.js";
 export * from "./services/enqueue-building-followers-notify.service.js";
 export * from "./handlers/building-followers-notify.handler.js";
+export * from "./handlers/price-drop.handler.js";
+export * from "./handlers/new-listing.handler.js";
+export * from "./handlers/available-again.handler.js";
 export * from "./utils/is-notify-eligible-listing.js";
 export * from "./utils/listing-availability-state.js";
