@@ -53,6 +53,13 @@ vi.mock("@/features/building-follow/api", () => ({
   }),
 }))
 
+vi.mock("@/features/building-follow/api/useDeleteBuildingFollow", () => ({
+  useDeleteBuildingFollow: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+}))
+
 vi.mock("@/features/auth/hooks/useLogoutConfirmation", () => ({
   useLogoutConfirmation: () => ({
     isConfirmationOpen: false,
@@ -90,6 +97,9 @@ describe("UserMenuButton", () => {
       "href",
       "/buildings/building-1",
     )
+    expect(
+      screen.getByRole("button", { name: "Unfollow Bangkapi Residence" }),
+    ).toBeInTheDocument()
     expect(screen.getByRole("region", { name: "Account profile" })).toContainElement(
       screen.getByRole("button", { name: "Account actions" }),
     )

@@ -5,6 +5,7 @@ import { createSearchBuilding } from "@/test/fixtures/listings"
 
 import {
   parseBuildingFollowResponse,
+  parseFollowedBuildingSummary,
   parseSearchBuildingFollow,
   parseSearchBuildingFollower,
   parseSearchBuildingFollowersResponse,
@@ -12,6 +13,13 @@ import {
 } from "./buildingFollowParsers"
 
 describe("buildingFollowParsers", () => {
+  it("parseFollowedBuildingSummary omits viewer follow state", () => {
+    const parsed = parseFollowedBuildingSummary(createSearchBuilding())
+
+    expect(parsed.name).toBe("Bangkapi Residence")
+    expect(parsed).not.toHaveProperty("isFollowing")
+  })
+
   it("parseSearchBuildingFollow accepts null building snapshots", () => {
     const parsed = parseSearchBuildingFollow({
       _id: "follow-1",
@@ -56,6 +64,7 @@ describe("buildingFollowParsers", () => {
 
     expect(parsed.data.followings).toHaveLength(1)
     expect(parsed.data.followings[0]?.building?.name).toBe("Bangkapi Residence")
+    expect(parsed.data.followings[0]?.building).not.toHaveProperty("isFollowing")
   })
 
   it("parseSearchUserBuildingFollowsResponse rejects pagination mismatches", () => {

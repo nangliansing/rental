@@ -16,13 +16,18 @@ import {
 
 export const BUILDING_FOLLOW_WRITE_SCOPE_ID = "building-follow-write"
 
-export const relatedBuildingFollowQueryKeys: QueryKey[] = [
-  queryKeys.buildingFollows.all,
+/** Building records that expose viewer-specific `isFollowing`. */
+export const buildingFollowingStateQueryKeys: QueryKey[] = [
   queryKeys.buildings.all,
   queryKeys.mapSearch.buildings,
   queryKeys.mapSearch.listingsInBuilding,
   queryKeys.listings.publicDetails,
   queryKeys.listings.ownerDetails,
+]
+
+export const relatedBuildingFollowQueryKeys: QueryKey[] = [
+  queryKeys.buildingFollows.all,
+  ...buildingFollowingStateQueryKeys,
 ]
 
 /** Followings list needs a refetch after create; create payloads omit populated buildings. */
@@ -159,10 +164,9 @@ function findBuildingFollowingInValue(
 }
 
 /**
- * Reads the latest patched `isFollowing` value for a building from any
- * related React Query cache entry. When multiple copies disagree, the value
- * from the most recently updated cache entry wins. Returns `undefined` when
- * no cached copy exists yet.
+ * Reads the latest patched `isFollowing` value for a building from building
+ * detail/search caches. Followings-list rows are intentionally excluded because
+ * their nested building snapshots do not carry viewer follow state.
  */
 export function readBuildingFollowingFromCache(
   queryClient: QueryClient,
@@ -175,7 +179,7 @@ export function readBuildingFollowingFromCache(
 
   forEachCachedQuery(
     queryClient,
-    relatedBuildingFollowQueryKeys,
+    buildingFollowingStateQueryKeys,
     ({ queryHash, queryKey }) => {
       try {
         const current = queryClient.getQueryData(queryKey)

@@ -1,8 +1,15 @@
 import type { RefObject } from "react"
+import { useCallback, useState } from "react"
 
+import type { SearchBuildingFollow } from "@/features/building-follow/api"
+import { useDeleteBuildingFollow } from "@/features/building-follow/api/useDeleteBuildingFollow"
 import { InfiniteScrollSentinel } from "@/shared/components/feedback/InfiniteScrollSentinel"
 
 import { useUserMenuFollowedBuildings } from "../../hooks/useUserMenuFollowedBuildings"
+import {
+  getFollowedBuildingId,
+  normalizeFollowedBuildingFollowId,
+} from "../../utils/followedBuildingDisplay"
 import { normalizeUserMenuUserId } from "../../utils/userMenuDisplay"
 import { UserMenuFollowedBuildingRow } from "./UserMenuFollowedBuildingRow"
 import { UserMenuFollowedBuildingsEmpty } from "./UserMenuFollowedBuildingsEmpty"
@@ -24,6 +31,10 @@ export function UserMenuFollowedBuildingsSection({
   onNavigate,
 }: UserMenuFollowedBuildingsSectionProps) {
   const normalizedUserId = normalizeUserMenuUserId(userId)
+  const [unfollowingBuildingId, setUnfollowingBuildingId] = useState<string | null>(
+    null,
+  )
+  const unfollowMutation = useDeleteBuildingFollow()
   const {
     followedBuildings,
     totalFollowedBuildings,
@@ -39,6 +50,26 @@ export function UserMenuFollowedBuildingsSection({
     userId: normalizedUserId,
     enabled,
   })
+
+  const handleUnfollow = useCallback(
+    (follow: SearchBuildingFollow) => {
+      const buildingId = getFollowedBuildingId(follow)
+      if (!buildingId || unfollowMutation.isPending) return
+
+      setUnfollowingBuildingId(buildingId)
+      unfollowMutation.mutate(
+        { buildingId },
+        {
+          onSettled: () => {
+            setUnfollowingBuildingId((current) =>
+              current === buildingId ? null : current,
+            )
+          },
+        },
+      )
+    },
+    [unfollowMutation],
+  )
 
   if (!isQueryEnabled) {
     return null
@@ -59,13 +90,21 @@ export function UserMenuFollowedBuildingsSection({
         <UserMenuFollowedBuildingsEmpty />
       ) : (
         <div className="mt-2 divide-y divide-slate-100">
-          {followedBuildings.map((follow) => (
-            <UserMenuFollowedBuildingRow
-              key={follow._id}
-              follow={follow}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {followedBuildings.map((follow) => {
+            const buildingId = getFollowedBuildingId(follow)
+            const followKey = normalizeFollowedBuildingFollowId(follow) ?? buildingId
+
+            return (
+              <UserMenuFollowedBuildingRow
+                key={followKey}
+                follow={follow}
+                isUnfollowing={buildingId === unfollowingBuildingId}
+                isDisabled={unfollowMutation.isPending}
+                onNavigate={onNavigate}
+                onUnfollow={handleUnfollow}
+              />
+            )
+          })}
 
           <InfiniteScrollSentinel
             rootRef={rootRef}

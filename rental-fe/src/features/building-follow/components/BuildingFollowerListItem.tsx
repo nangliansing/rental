@@ -1,7 +1,5 @@
 import { BadgeCheck } from "lucide-react"
 
-import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
-
 import { Avatar } from "@/shared/components/data-display/Avatar"
 import { cn } from "@/lib/utils"
 
@@ -10,6 +8,7 @@ import {
   formatBuildingFollowedSince,
   getBuildingFollowerDisplayName,
 } from "../utils/buildingFollowerDisplay"
+import { BuildingUnfollowButton } from "./BuildingUnfollowButton"
 
 type BuildingFollowerListItemProps = {
   follower: SearchBuildingFollower
@@ -64,24 +63,13 @@ export function BuildingFollowerListItem({
         </p>
       </div>
 
-      {isViewer && onUnfollow && (
-        <button
-          type="button"
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-            "text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/70 focus-visible:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-60",
-          )}
-          aria-label={`Unfollow ${displayName}`}
-          disabled={isUnfollowing}
+      {isViewer && onUnfollow ? (
+        <BuildingUnfollowButton
+          subjectLabel={displayName}
+          isUnfollowing={isUnfollowing}
           onClick={() => onUnfollow(follower)}
-        >
-          {isUnfollowing && (
-            <LoaderIcon aria-hidden="true" className="h-3.5 w-3.5" />
-          )}
-          Unfollow
-        </button>
-      )}
+        />
+      ) : null}
     </article>
   )
 }
