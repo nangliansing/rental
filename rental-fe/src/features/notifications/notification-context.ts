@@ -19,6 +19,7 @@ export type NotificationContextValue = {
   fetchNextPage: () => void
   markAllAsRead: () => Promise<void>
   refetchNotifications: () => void
+  setNotificationsPanelOpen: (open: boolean) => void
 }
 
 export const NotificationContext =

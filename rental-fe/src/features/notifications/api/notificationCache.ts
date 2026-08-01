@@ -15,6 +15,10 @@ function isNotificationVisible(notification: NotificationItem) {
   return Number.isFinite(expiresAt) && expiresAt > Date.now()
 }
 
+export function isVisibleNotification(notification: NotificationItem) {
+  return isNotificationVisible(notification)
+}
+
 export function mergeNotificationIntoCache(
   currentData: NotificationsInfiniteData | undefined,
   incoming: NotificationItem,

@@ -23,6 +23,8 @@ import {
   useMarkMyNotificationsRead,
 } from "./api"
 import {
+  isVisibleNotification,
+  markNotificationsReadInCache,
   mergeNotificationIntoCache,
   type NotificationsInfiniteData,
 } from "./api/notificationCache"
@@ -41,6 +43,16 @@ type ServerToClientEvents = {
 
 type ClientToServerEvents = Record<string, never>
 
+const MARK_READ_SYNC_DEBOUNCE_MS = 500
+
+type MarkAllAsReadOptions = {
+  syncEvenIfCacheRead?: boolean
+}
+
+function getUnreadCount(currentData: NotificationsInfiniteData | undefined) {
+  return currentData?.pages[0]?.unreadCount ?? 0
+}
+
 function deferStateUpdate(update: () => void) {
   queueMicrotask(update)
 }
@@ -51,6 +63,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markNotificationsReadMutation = useMarkMyNotificationsRead()
   const socketRef =
     useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null)
+  const isPanelOpenRef = useRef(false)
+  const markReadPromiseRef = useRef<Promise<void> | null>(null)
+  const markReadSyncTimeoutRef = useRef<number | null>(null)
   const [connectionStatus, setConnectionStatus] =
     useState<NotificationConnectionStatus>("idle")
   const shouldUseNotifications =
@@ -70,15 +85,70 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     refetch: refetchNotificationsQuery,
   } = notificationsQuery
 
+  const markAllAsRead = useCallback(async (options: MarkAllAsReadOptions = {}) => {
+    const currentData = queryClient.getQueryData<NotificationsInfiniteData>(
+      NOTIFICATIONS_QUERY_KEY,
+    )
+    if (
+      !options.syncEvenIfCacheRead &&
+      getUnreadCount(currentData) === 0
+    ) {
+      return
+    }
+
+    if (markReadPromiseRef.current) {
+      return markReadPromiseRef.current
+    }
+
+    const promise = (async () => {
+      try {
+        await markNotificationsReadMutation.mutateAsync()
+      } catch {
+        // The mutation restores cached read state while preserving socket events.
+      } finally {
+        markReadPromiseRef.current = null
+      }
+    })()
+
+    markReadPromiseRef.current = promise
+    return promise
+  }, [markNotificationsReadMutation, queryClient])
+
+  const scheduleMarkReadSync = useCallback(() => {
+    if (!isPanelOpenRef.current) return
+
+    if (markReadSyncTimeoutRef.current) {
+      window.clearTimeout(markReadSyncTimeoutRef.current)
+    }
+
+    markReadSyncTimeoutRef.current = window.setTimeout(() => {
+      markReadSyncTimeoutRef.current = null
+      void markAllAsRead({ syncEvenIfCacheRead: true })
+    }, MARK_READ_SYNC_DEBOUNCE_MS)
+  }, [markAllAsRead])
+
   const addNotification = useCallback((notification: NotificationItem) => {
-    const parsedNotification = parseNotificationItem(notification)
+    let parsedNotification = parseNotificationItem(notification)
+    const isVisible = isVisibleNotification(parsedNotification)
+
+    if (isPanelOpenRef.current && isVisible) {
+      parsedNotification = {
+        ...parsedNotification,
+        isRead: true,
+        readAt: parsedNotification.readAt ?? new Date().toISOString(),
+      }
+    }
 
     queryClient.setQueryData<NotificationsInfiniteData>(
       NOTIFICATIONS_QUERY_KEY,
       (currentData) =>
         mergeNotificationIntoCache(currentData, parsedNotification),
     )
-  }, [queryClient])
+
+    if (isPanelOpenRef.current && isVisible) {
+      scheduleMarkReadSync()
+    }
+  }, [queryClient, scheduleMarkReadSync])
 
   const clearNotifications = useCallback(() => {
     queryClient.removeQueries({ queryKey: NOTIFICATIONS_QUERY_KEY })
@@ -89,14 +159,39 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [notificationsData],
   )
 
-  const markAllAsRead = useCallback(async () => {
-    if (unreadCount === 0) return
-    try {
-      await markNotificationsReadMutation.mutateAsync()
-    } catch {
-      // The mutation restores cached read state while preserving socket events.
+  const setNotificationsPanelOpen = useCallback((open: boolean) => {
+    isPanelOpenRef.current = open
+
+    if (open) {
+      const currentData = queryClient.getQueryData<NotificationsInfiniteData>(
+        NOTIFICATIONS_QUERY_KEY,
+      )
+      const hadUnread = getUnreadCount(currentData) > 0
+
+      if (hadUnread) {
+        queryClient.setQueryData<NotificationsInfiniteData>(
+          NOTIFICATIONS_QUERY_KEY,
+          markNotificationsReadInCache,
+        )
+        void markAllAsRead({ syncEvenIfCacheRead: true })
+      }
+
+      return
     }
-  }, [markNotificationsReadMutation, unreadCount])
+
+    if (markReadSyncTimeoutRef.current) {
+      window.clearTimeout(markReadSyncTimeoutRef.current)
+      markReadSyncTimeoutRef.current = null
+    }
+  }, [markAllAsRead, queryClient])
+
+  useEffect(() => {
+    return () => {
+      if (markReadSyncTimeoutRef.current) {
+        window.clearTimeout(markReadSyncTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const token = getAccessToken()
@@ -186,6 +281,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       fetchNextPage,
       markAllAsRead,
       refetchNotifications,
+      setNotificationsPanelOpen,
     }),
     [
       addNotification,
@@ -200,6 +296,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       notifications,
       notificationsError,
       refetchNotifications,
+      setNotificationsPanelOpen,
       unreadCount,
     ],
   )
