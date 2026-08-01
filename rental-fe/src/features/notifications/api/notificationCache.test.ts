@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { NotificationItem } from "../types"
 
 import {
+  isVisibleNotification,
   markNotificationsReadInCache,
   mergeNotificationIntoCache,
   rollbackNotificationsReadInCache,
@@ -69,6 +70,9 @@ describe("notificationCache", () => {
 
     expect(next.pages[0].data).toHaveLength(1)
     expect(next.pages[0].unreadCount).toBe(1)
+    expect(isVisibleNotification(notification("notification-expired", {
+      expiresAt: "2020-01-01T00:00:00.000Z",
+    }))).toBe(false)
   })
 
   it("marks all cached notifications read", () => {
@@ -78,6 +82,47 @@ describe("notificationCache", () => {
 
     expect(next?.pages[0].unreadCount).toBe(0)
     expect(next?.pages[0].data.every((item) => item.isRead)).toBe(true)
+  })
+
+  it("does not increment unread count when an already-read notification arrives", () => {
+    const next = mergeNotificationIntoCache(
+      data([notification("notification-1")]),
+      notification("notification-2", {
+        isRead: true,
+        readAt: "2026-07-22T01:00:00.000Z",
+      }),
+    )
+
+    expect(next.pages[0].unreadCount).toBe(1)
+    expect(next.pages[0].data[0]).toMatchObject({
+      _id: "notification-2",
+      isRead: true,
+    })
+  })
+
+  it("does not change unread count when the same unread notification is merged again", () => {
+    const next = mergeNotificationIntoCache(
+      data([notification("notification-1")]),
+      notification("notification-1", {
+        title: "Updated title",
+      }),
+    )
+
+    expect(next.pages[0].unreadCount).toBe(1)
+    expect(next.pages[0].data[0].title).toBe("Updated title")
+  })
+
+  it("creates a first page when cache is empty and a read notification arrives", () => {
+    const next = mergeNotificationIntoCache(
+      undefined,
+      notification("notification-1", {
+        isRead: true,
+        readAt: "2026-07-22T01:00:00.000Z",
+      }),
+    )
+
+    expect(next.pages[0].unreadCount).toBe(0)
+    expect(next.pages[0].data).toHaveLength(1)
   })
 
   it("rolls back read state without dropping concurrent socket events", () => {

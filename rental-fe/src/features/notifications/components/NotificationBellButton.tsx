@@ -225,7 +225,7 @@ export function NotificationBellButton({
   const {
     notifications,
     unreadCount,
-    markAllAsRead,
+    setNotificationsPanelOpen,
   } = useNotifications()
 
   const openPanel = useCallback(() => {
@@ -241,17 +241,19 @@ export function NotificationBellButton({
           .map((notification) => notification._id),
       ),
     )
+    setNotificationsPanelOpen(true)
     setIsOpen(true)
     window.requestAnimationFrame(() => {
       setIsVisible(true)
     })
-  }, [notifications])
+  }, [notifications, setNotificationsPanelOpen])
 
   const closePanel = useCallback(() => {
     if (closeTimeoutRef.current) {
       window.clearTimeout(closeTimeoutRef.current)
     }
 
+    setNotificationsPanelOpen(false)
     setIsVisible(false)
 
     closeTimeoutRef.current = window.setTimeout(() => {
@@ -259,7 +261,7 @@ export function NotificationBellButton({
       setHighlightedNotificationIds(new Set())
       closeTimeoutRef.current = null
     }, 220)
-  }, [])
+  }, [setNotificationsPanelOpen])
 
   useEffect(() => {
     return () => {
@@ -268,12 +270,6 @@ export function NotificationBellButton({
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (!isOpen || unreadCount === 0) return
-
-    void markAllAsRead()
-  }, [isOpen, markAllAsRead, unreadCount])
 
   const Icon = unreadCount > 0 ? BellRing : Bell
   const label = unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"

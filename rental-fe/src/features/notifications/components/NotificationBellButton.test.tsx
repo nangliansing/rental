@@ -12,6 +12,22 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
 }))
 
+function defaultNotificationsMock(
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    notifications: [],
+    unreadCount: 0,
+    isLoading: false,
+    isFetchingNextPage: false,
+    hasNextPage: false,
+    fetchNextPage: vi.fn(),
+    markAllAsRead: vi.fn(),
+    setNotificationsPanelOpen: vi.fn(),
+    ...overrides,
+  }
+}
+
 vi.mock("../useNotifications", () => ({
   useNotifications: () => mocks.notifications(),
 }))
@@ -57,15 +73,7 @@ function renderBell(variant: "desktop" | "mobile" = "desktop") {
 describe("NotificationBellButton", () => {
   beforeEach(() => {
     mocks.navigate.mockReset()
-    mocks.notifications.mockReturnValue({
-      notifications: [],
-      unreadCount: 0,
-      isLoading: false,
-      isFetchingNextPage: false,
-      hasNextPage: false,
-      fetchNextPage: vi.fn(),
-      markAllAsRead: vi.fn(),
-    })
+    mocks.notifications.mockReturnValue(defaultNotificationsMock())
   })
 
   it("shows the default notifications label when there are no unread items", () => {
@@ -77,15 +85,9 @@ describe("NotificationBellButton", () => {
   })
 
   it("shows an unread badge and opens the empty panel", async () => {
-    mocks.notifications.mockReturnValue({
-      notifications: [],
-      unreadCount: 2,
-      isLoading: false,
-      isFetchingNextPage: false,
-      hasNextPage: false,
-      fetchNextPage: vi.fn(),
-      markAllAsRead: vi.fn(),
-    })
+    mocks.notifications.mockReturnValue(
+      defaultNotificationsMock({ unreadCount: 2 }),
+    )
 
     const { user } = renderBell()
 
@@ -99,17 +101,15 @@ describe("NotificationBellButton", () => {
     expect(screen.getByText("No notifications yet")).toBeVisible()
   })
 
-  it("marks notifications read when the panel opens", async () => {
-    const markAllAsRead = vi.fn().mockResolvedValue(undefined)
-    mocks.notifications.mockReturnValue({
-      notifications: [notification()],
-      unreadCount: 1,
-      isLoading: false,
-      isFetchingNextPage: false,
-      hasNextPage: false,
-      fetchNextPage: vi.fn(),
-      markAllAsRead,
-    })
+  it("marks the panel as open when notifications are viewed", async () => {
+    const setNotificationsPanelOpen = vi.fn()
+    mocks.notifications.mockReturnValue(
+      defaultNotificationsMock({
+        notifications: [notification()],
+        unreadCount: 1,
+        setNotificationsPanelOpen,
+      }),
+    )
 
     const { user } = renderBell()
 
@@ -117,22 +117,20 @@ describe("NotificationBellButton", () => {
       screen.getByRole("button", { name: "1 unread notifications" }),
     )
 
-    await waitFor(() => expect(markAllAsRead).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(setNotificationsPanelOpen).toHaveBeenCalledWith(true),
+    )
     expect(
       screen.getByText("Bangkapi Residence is now ฿13k/month."),
     ).toBeVisible()
   })
 
   it("navigates when a notification with a link is clicked", async () => {
-    mocks.notifications.mockReturnValue({
-      notifications: [notification()],
-      unreadCount: 0,
-      isLoading: false,
-      isFetchingNextPage: false,
-      hasNextPage: false,
-      fetchNextPage: vi.fn(),
-      markAllAsRead: vi.fn(),
-    })
+    mocks.notifications.mockReturnValue(
+      defaultNotificationsMock({
+        notifications: [notification()],
+      }),
+    )
 
     const { user } = renderBell()
 
@@ -142,5 +140,42 @@ describe("NotificationBellButton", () => {
     )
 
     expect(mocks.navigate).toHaveBeenCalledWith("/profile?tab=saved")
+  })
+
+  it("marks the panel closed when the close button is used", async () => {
+    const setNotificationsPanelOpen = vi.fn()
+    mocks.notifications.mockReturnValue(
+      defaultNotificationsMock({
+        notifications: [notification({ isRead: true })],
+        setNotificationsPanelOpen,
+      }),
+    )
+
+    const { user } = renderBell()
+
+    await user.click(screen.getByRole("button", { name: "Notifications" }))
+    await user.click(screen.getByRole("button", { name: "Close notifications" }))
+
+    expect(setNotificationsPanelOpen).toHaveBeenCalledWith(false)
+  })
+
+  it("does not call setNotificationsPanelOpen(false) when opening the panel", async () => {
+    const setNotificationsPanelOpen = vi.fn()
+    mocks.notifications.mockReturnValue(
+      defaultNotificationsMock({
+        notifications: [notification()],
+        unreadCount: 1,
+        setNotificationsPanelOpen,
+      }),
+    )
+
+    const { user } = renderBell()
+
+    await user.click(
+      screen.getByRole("button", { name: "1 unread notifications" }),
+    )
+
+    expect(setNotificationsPanelOpen).toHaveBeenCalledWith(true)
+    expect(setNotificationsPanelOpen).not.toHaveBeenCalledWith(false)
   })
 })
