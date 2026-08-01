@@ -25,6 +25,8 @@
     "db:backup:verify": "node scripts/verify-database-backup.js",
     "db:restore:drill": "node scripts/restore-database-drill.js",
     "dev": "nodemon index.js",
+    "dev:worker": "nodemon worker.js",
+    "worker": "node worker.js",
     "migrate:agent-profile-is-online": "node scripts/migrate-agent-profile-is-online.js",
     "sync:lister-review-indexes": "node scripts/sync-lister-review-indexes.js"
   },
@@ -35,6 +37,7 @@
   "dependencies": {
     "@turf/buffer": "^7.3.5",
     "bcrypt": "^6.0.0",
+    "bullmq": "^5.81.3",
     "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",

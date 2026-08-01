@@ -48,6 +48,9 @@ const notificationTypes: NotificationType[] = [
   "SAVED_LISTING_PRICE_CHANGED",
   "SAVED_LISTING_BECAME_UNAVAILABLE",
   "SAVED_LISTING_AVAILABLE_AGAIN",
+  "FOLLOWED_BUILDING_PRICE_DROPPED",
+  "FOLLOWED_BUILDING_NEW_LISTING",
+  "FOLLOWED_BUILDING_AVAILABLE_AGAIN",
   "REVIEW_RECEIVED",
   "REVIEW_REPLY_RECEIVED",
   "REVIEW_REMOVED",
@@ -113,6 +116,18 @@ const notificationDisplay = {
   },
   SAVED_LISTING_AVAILABLE_AGAIN: {
     icon: Heart,
+    tone: "text-emerald-600 bg-emerald-50",
+  },
+  FOLLOWED_BUILDING_PRICE_DROPPED: {
+    icon: Building2,
+    tone: "text-emerald-600 bg-emerald-50",
+  },
+  FOLLOWED_BUILDING_NEW_LISTING: {
+    icon: Building2,
+    tone: "text-blue-600 bg-blue-50",
+  },
+  FOLLOWED_BUILDING_AVAILABLE_AGAIN: {
+    icon: Building2,
     tone: "text-emerald-600 bg-emerald-50",
   },
   REVIEW_RECEIVED: {

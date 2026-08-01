@@ -1,0 +1,21 @@
+export const BUILDING_FOLLOWER_CHANGE_TYPES = Object.freeze({
+  PRICE_DROPPED: "PRICE_DROPPED",
+  NEW_LISTING: "NEW_LISTING",
+  AVAILABLE_AGAIN: "AVAILABLE_AGAIN",
+});
+
+export const BUILDING_FOLLOWERS_NOTIFY_JOB_NAME =
+  "building.followers.notify";
+
+export const BUILDING_FOLLOWERS_NOTIFY_DEBOUNCE_MS = Number.parseInt(
+  process.env.BUILDING_FOLLOWERS_NOTIFY_DEBOUNCE_MS ?? "",
+  10,
+) || 5 * 60 * 1000;
+
+export const BUILDING_FOLLOWERS_MIN_PRICE_DROP_BAHT = 100;
+
+export const BUILDING_FOLLOWERS_PAGE_SIZE = 200;
+
+export const BUILDING_FOLLOWERS_MAX_LISTINGS_PER_JOB = 100;
+
+export const BUILDING_FOLLOWERS_DEDUPE_PREFIX = "followed-building";

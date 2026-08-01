@@ -7,10 +7,27 @@ import {
 import Building from "../building.model.js";
 import Listing from "../../listing/listing.model.js";
 import { LISTING_VISIBILITIES } from "../../listing/listing.constants.js";
+import { maybeEnqueueBuildingFollowerPriceDrop } from "../../building-follow-notify/services/enqueue-building-followers-notify.service.js";
+
+const computeRentSummary = (listings) => {
+    const rents = listings
+        .map((listing) => listing.rent)
+        .filter((rent) => typeof rent === "number" && Number.isFinite(rent) && rent > 0);
+
+    if (rents.length === 0) {
+        return { minRent: null, maxRent: null };
+    }
+
+    return {
+        minRent: Math.min(...rents),
+        maxRent: Math.max(...rents),
+    };
+};
 
 export const updateBuildingRentSummaryService = async (
     buildingId,
-    session = null
+    session = null,
+    { logger = null } = {},
 ) => {
     validateNullableObject(session, "session");
 
@@ -18,37 +35,38 @@ export const updateBuildingRentSummaryService = async (
         asObjectId: true,
     });
 
-    const pipeline = [
-        {
-            $match: {
-                buildingId: validatedBuildingId,
-                isDeleted: false,
-                visibility: LISTING_VISIBILITIES.PUBLIC,
-            },
-        },
-        {
-            $group: {
-                _id: "$buildingId",
-                minRent: { $min: "$rent" },
-                maxRent: { $max: "$rent" },
-            },
-        },
-    ];
-
-    let aggregateQuery = Listing.aggregate(pipeline);
+    let existingBuildingQuery = Building.findById(validatedBuildingId).select(
+        "minRent name",
+    );
 
     if (session) {
-        aggregateQuery = aggregateQuery.session(session);
+        existingBuildingQuery = existingBuildingQuery.session(session);
     }
 
-    const [summary] = await aggregateQuery;
+    const existingBuilding = await existingBuildingQuery;
+    const previousMinRent = existingBuilding?.minRent ?? null;
+
+    // Use find() instead of aggregate() so transactional listing updates are
+    // visible when this runs inside the same MongoDB session.
+    let listingsQuery = Listing.find({
+        buildingId: validatedBuildingId,
+        isDeleted: false,
+        visibility: LISTING_VISIBILITIES.PUBLIC,
+    }).select("rent");
+
+    if (session) {
+        listingsQuery = listingsQuery.session(session);
+    }
+
+    const listings = await listingsQuery.lean();
+    const { minRent, maxRent } = computeRentSummary(listings);
 
     let query = Building.findByIdAndUpdate(
         validatedBuildingId,
         {
             $set: {
-                minRent: summary?.minRent ?? null,
-                maxRent: summary?.maxRent ?? null,
+                minRent,
+                maxRent,
             },
         },
         {
@@ -61,5 +79,19 @@ export const updateBuildingRentSummaryService = async (
         query = query.session(session);
     }
 
-    return query;
+    const updatedBuilding = await query;
+    const currentMinRent = updatedBuilding?.minRent ?? null;
+
+    if (!session?.inTransaction?.()) {
+        await maybeEnqueueBuildingFollowerPriceDrop({
+            buildingId: validatedBuildingId,
+            buildingName: updatedBuilding?.name ?? existingBuilding?.name ?? null,
+            oldMinRent: previousMinRent,
+            newMinRent: currentMinRent,
+            occurredAt: new Date(),
+            logger,
+        });
+    }
+
+    return updatedBuilding;
 };

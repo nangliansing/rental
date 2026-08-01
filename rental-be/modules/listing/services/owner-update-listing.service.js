@@ -6,12 +6,17 @@ import {
 } from "../../../shared/validators/index.js";
 
 import { AppError } from "../../../shared/errors/app-error.js";
+import Building from "../../building/building.model.js";
 import { updateBuildingRentSummaryService } from "../../building/services/index.js";
+import {
+  maybeEnqueueBuildingFollowerAvailableAgain,
+  maybeEnqueueBuildingFollowerPriceDrop,
+} from "../../building-follow-notify/services/enqueue-building-followers-notify.service.js";
 import { buildOwnerUpdateListingRecord } from "../mappers/index.js";
 import Listing from "../listing.model.js";
 import { serializeListingDocumentForApi } from "../utils/index.js";
 
-const updateOwnerListing = async ({ listingId, actorId, body, session }) => {
+const updateOwnerListing = async ({ listingId, actorId, body, session, logger }) => {
   const ownerListingFilter = {
     _id: listingId,
     listedBy: actorId,
@@ -54,11 +59,77 @@ const updateOwnerListing = async ({ listingId, actorId, body, session }) => {
     throw new AppError("Listing not found", 404, "LISTING_NOT_FOUND");
   }
 
+  let previousMinRent = null;
+  let currentMinRent = null;
+  let buildingName = null;
+
   if (Object.hasOwn(update, "rent") || Object.hasOwn(update, "visibility")) {
-    await updateBuildingRentSummaryService(listing.buildingId, session);
+    const building = await Building.findById(listing.buildingId)
+      .select("minRent name")
+      .session(session ?? null)
+      .lean();
+
+    previousMinRent = building?.minRent ?? null;
+    buildingName = building?.name ?? null;
+
+    const updatedBuilding = await updateBuildingRentSummaryService(
+      listing.buildingId,
+      session,
+      { logger },
+    );
+
+    currentMinRent = updatedBuilding?.minRent ?? null;
+    buildingName = updatedBuilding?.name ?? buildingName;
+  } else {
+    const building = await Building.findById(listing.buildingId)
+      .select("name")
+      .session(session ?? null)
+      .lean();
+
+    buildingName = building?.name ?? null;
   }
 
-  return serializeListingDocumentForApi(listing);
+  return {
+    listing: serializeListingDocumentForApi(listing),
+    sideEffects: {
+      existingListing,
+      updatedListing: listing,
+      buildingName,
+      previousMinRent,
+      currentMinRent,
+    },
+  };
+};
+
+const runOwnerUpdateSideEffects = async (sideEffects, { logger } = {}) => {
+  if (!sideEffects) return;
+
+  const {
+    existingListing,
+    updatedListing,
+    buildingName,
+    previousMinRent,
+    currentMinRent,
+  } = sideEffects;
+
+  await maybeEnqueueBuildingFollowerAvailableAgain({
+    before: existingListing,
+    after: updatedListing,
+    buildingName,
+    occurredAt: new Date(),
+    logger,
+  });
+
+  if (previousMinRent != null || currentMinRent != null) {
+    await maybeEnqueueBuildingFollowerPriceDrop({
+      buildingId: updatedListing.buildingId,
+      buildingName,
+      oldMinRent: previousMinRent,
+      newMinRent: currentMinRent,
+      occurredAt: new Date(),
+      logger,
+    });
+  }
 };
 
 export const ownerUpdateListingService = async ({
@@ -66,6 +137,7 @@ export const ownerUpdateListingService = async ({
   body,
   actorId,
   session = null,
+  logger = null,
 }) => {
   validateNullableObject(session, "session");
 
@@ -73,27 +145,41 @@ export const ownerUpdateListingService = async ({
   const validatedActorId = validateMongooseId(actorId, "actorId");
 
   if (session) {
-    return updateOwnerListing({
+    const { listing, sideEffects } = await updateOwnerListing({
       listingId: validatedListingId,
       actorId: validatedActorId,
       body,
       session,
+      logger,
     });
+
+    if (!session.inTransaction?.()) {
+      await runOwnerUpdateSideEffects(sideEffects, { logger });
+    }
+
+    return listing;
   }
 
   const transactionSession = await mongoose.startSession();
 
   try {
     let listing;
+    let sideEffects;
 
     await transactionSession.withTransaction(async () => {
-      listing = await updateOwnerListing({
+      const result = await updateOwnerListing({
         listingId: validatedListingId,
         actorId: validatedActorId,
         body,
         session: transactionSession,
+        logger,
       });
+
+      listing = result.listing;
+      sideEffects = result.sideEffects;
     });
+
+    await runOwnerUpdateSideEffects(sideEffects, { logger });
 
     return listing;
   } finally {

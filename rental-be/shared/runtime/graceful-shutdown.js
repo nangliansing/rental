@@ -26,6 +26,7 @@ const throwRejectedCleanup = (results) => {
 
 export const createGracefulShutdown = ({
   closeDatabase,
+  closeQueueResources = async () => {},
   closeRateLimitStore,
   closeSocketServer,
   logger = console,
@@ -65,6 +66,7 @@ export const createGracefulShutdown = ({
         const dependencyResults = await Promise.allSettled([
           closeDatabase(),
           closeRateLimitStore(),
+          closeQueueResources(),
         ]);
         throwRejectedCleanup([...transportResults, ...dependencyResults]);
 
