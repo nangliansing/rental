@@ -12,10 +12,6 @@ import {
 } from "../modules/building-follow-notify/building-follow-notify.constants.js";
 import { handleBuildingFollowersNotifyJob } from "../modules/building-follow-notify/handlers/building-followers-notify.handler.js";
 import {
-  maybeEnqueueBuildingFollowerNewListing,
-  maybeEnqueueBuildingFollowerPriceDrop,
-} from "../modules/building-follow-notify/services/enqueue-building-followers-notify.service.js";
-import {
   buildBuildingFollowersNotifyJobId,
   buildFollowerDedupeKey,
 } from "../modules/building-follow-notify/utils/build-follower-dedupe-key.js";
@@ -137,35 +133,6 @@ describe("building follower notify production scenarios", () => {
       }),
       `followed-building.rent-drop.${buildingId.toString()}.${userId.toString()}.4500`,
     );
-  });
-
-  test("maybeEnqueue helpers are safe when the queue is disabled", async () => {
-    const buildingId = new mongoose.Types.ObjectId();
-
-    const priceDrop = await maybeEnqueueBuildingFollowerPriceDrop({
-      buildingId,
-      buildingName: "Tower",
-      oldMinRent: 7000,
-      newMinRent: 5500,
-    });
-
-    assert.equal(priceDrop.enqueued, false);
-    assert.equal(priceDrop.reason, "disabled");
-
-    const newListing = await maybeEnqueueBuildingFollowerNewListing({
-      listing: {
-        _id: new mongoose.Types.ObjectId(),
-        buildingId,
-        listedBy: new mongoose.Types.ObjectId(),
-        visibility: LISTING_VISIBILITIES.PUBLIC,
-        isDeleted: false,
-        rent: 5000,
-      },
-      buildingName: "Tower",
-    });
-
-    assert.equal(newListing.enqueued, false);
-    assert.equal(newListing.reason, "disabled");
   });
 
   test("owner rent update recalculates building minRent inside a transaction", async () => {

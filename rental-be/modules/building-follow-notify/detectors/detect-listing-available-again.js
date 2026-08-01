@@ -10,7 +10,7 @@ export const detectListingAvailableAgain = ({
   before,
   after,
   referenceDate = new Date(),
-}) => {
+} = {}) => {
   if (!before || !after) {
     return null;
   }

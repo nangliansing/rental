@@ -25,6 +25,9 @@ export {
 } from "./handlers/registry.js";
 export {
   handleSystemPingJob,
+  handleBuildingFollowerAvailableAgainJob,
+  handleBuildingFollowerNewListingJob,
+  handleBuildingFollowerPriceDropJob,
   handleBuildingFollowersNotifyJob,
   registerDefaultJobHandlers,
 } from "./handlers/index.js";
