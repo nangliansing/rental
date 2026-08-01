@@ -127,6 +127,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }, MARK_READ_SYNC_DEBOUNCE_MS)
   }, [markAllAsRead])
 
+  const scheduleMarkReadSyncRef = useRef(scheduleMarkReadSync)
+  scheduleMarkReadSyncRef.current = scheduleMarkReadSync
+
   const addNotification = useCallback((notification: NotificationItem) => {
     let parsedNotification = parseNotificationItem(notification)
     const isVisible = isVisibleNotification(parsedNotification)
@@ -146,9 +149,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     )
 
     if (isPanelOpenRef.current && isVisible) {
-      scheduleMarkReadSync()
+      scheduleMarkReadSyncRef.current()
     }
-  }, [queryClient, scheduleMarkReadSync])
+  }, [queryClient])
+
+  const addNotificationRef = useRef(addNotification)
+  addNotificationRef.current = addNotification
 
   const clearNotifications = useCallback(() => {
     queryClient.removeQueries({ queryKey: NOTIFICATIONS_QUERY_KEY })
@@ -237,10 +243,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setConnectionStatus("error")
     })
 
-    socket.on("notification:new", addNotification)
+    const handleNotification = (notification: NotificationItem) => {
+      addNotificationRef.current(notification)
+    }
+
+    socket.on("notification:new", handleNotification)
 
     return () => {
-      socket.off("notification:new", addNotification)
+      socket.off("notification:new", handleNotification)
       socket.disconnect()
 
       if (socketRef.current === socket) {
@@ -248,7 +258,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [
-    addNotification,
     queryClient,
     shouldUseNotifications,
     user?._id,
