@@ -1,3 +1,4 @@
+export { BuildingUnfollowButton } from "./BuildingUnfollowButton"
 export { BuildingFollowControl } from "./BuildingFollowControl"
 export { BuildingFollowerAvatarStack } from "./BuildingFollowerAvatarStack"
 export { BuildingFollowerListItem } from "./BuildingFollowerListItem"

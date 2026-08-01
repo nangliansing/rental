@@ -4,6 +4,7 @@ import { createSearchBuilding } from "@/test/fixtures/listings"
 
 import {
   getFollowedBuildingAddress,
+  getFollowedBuildingId,
   getFollowedBuildingLabel,
   getFollowedBuildingPath,
   isRenderableFollowedBuilding,
@@ -29,6 +30,7 @@ describe("followedBuildingDisplay", () => {
     expect(getFollowedBuildingLabel(follow)).toBe("Bangkapi Residence")
     expect(getFollowedBuildingAddress(follow)).toBe("Bang Kapi, Bangkok")
     expect(getFollowedBuildingPath(follow)).toBe("/buildings/building-1")
+    expect(getFollowedBuildingId(follow)).toBe("building-1")
 
     expect(
       getFollowedBuildingLabel({

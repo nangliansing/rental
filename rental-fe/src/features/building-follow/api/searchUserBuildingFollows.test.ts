@@ -85,6 +85,7 @@ describe("searchUserBuildingFollows", () => {
 
     expect(result.data.followings).toHaveLength(1)
     expect(result.data.followings[0]?.building?.name).toBe("Bangkapi Residence")
+    expect(result.data.followings[0]?.building).not.toHaveProperty("isFollowing")
     expect(result.pagination).toEqual({
       page: 1,
       limit: 20,

@@ -103,6 +103,54 @@ describe("useBuildingFollowingFromCache", () => {
     expect(result.current).toBe(true)
   })
 
+  it("ignores followings-list snapshots that omit viewer follow state", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const buildingKey = queryKeys.buildings.detail("building-1")
+    const followsKey = queryKeys.buildingFollows.list({ userId: "user-1", limit: 20 })
+
+    queryClient.setQueryData(buildingKey, {
+      _id: "building-1",
+      name: "Baron Zotel Bangkok",
+      buildingType: "Apartment",
+      isFollowing: true,
+    })
+    queryClient.setQueryData(followsKey, {
+      pages: [
+        {
+          data: {
+            followings: [
+              {
+                _id: "follow-1",
+                buildingId: "building-1",
+                building: {
+                  _id: "building-1",
+                  name: "Baron Zotel Bangkok",
+                  buildingType: "Apartment",
+                  isFollowing: false,
+                },
+              },
+            ],
+          },
+          pagination: { page: 1, limit: 20, total: 1 },
+        },
+      ],
+      pageParams: [1],
+    })
+
+    const { result } = renderHook(
+      () =>
+        useBuildingFollowingFromCache({
+          buildingId: "building-1",
+          fallbackIsFollowing: false,
+        }),
+      { wrapper: createWrapper(queryClient) },
+    )
+
+    expect(result.current).toBe(true)
+  })
+
   it("updates when fallback changes before cache data exists", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },

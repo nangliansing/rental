@@ -18,8 +18,10 @@ import type { BuildingFollow } from "./createBuildingFollow"
 
 export { normalizePositiveInteger }
 
+export type FollowedBuildingSummary = Omit<SearchListingsBuilding, "isFollowing">
+
 export type SearchBuildingFollow = Omit<BuildingFollow, "userId"> & {
-  building: SearchListingsBuilding | null
+  building: FollowedBuildingSummary | null
 }
 
 export type SearchUserBuildingFollowsResponse = {
@@ -126,6 +128,20 @@ export const parseBuildingFollowResponse = (value: unknown) => {
   return parseBuildingFollow(body.data)
 }
 
+export const parseFollowedBuildingSummary = (
+  value: unknown,
+): FollowedBuildingSummary => {
+  const { isFollowing: _ignored, ...building } = parseSearchListingsBuilding(
+    value,
+    {
+      errorMessage: "Building follow response is missing building data.",
+      errorCode: "INVALID_BUILDING_FOLLOW_RESPONSE",
+    },
+  )
+
+  return building
+}
+
 export const parseSearchBuildingFollow = (
   value: unknown,
 ): SearchBuildingFollow => {
@@ -149,11 +165,7 @@ export const parseSearchBuildingFollow = (
     building:
       follow.building === null || follow.building === undefined
         ? null
-        : parseSearchListingsBuilding(follow.building, {
-            errorMessage:
-              "Building follow response is missing building data.",
-            errorCode: "INVALID_BUILDING_FOLLOW_RESPONSE",
-          }),
+        : parseFollowedBuildingSummary(follow.building),
   }
 }
 

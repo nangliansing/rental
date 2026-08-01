@@ -42,8 +42,18 @@ export function getFollowedBuildingAddress(
 export function getFollowedBuildingPath(
   follow: SearchBuildingFollow | null | undefined,
 ): string | null {
-  const buildingId = follow?.building?._id ?? follow?.buildingId
+  const buildingId = getFollowedBuildingId(follow)
   return getBuildingDetailPath(buildingId)
+}
+
+export function getFollowedBuildingId(
+  follow: SearchBuildingFollow | null | undefined,
+): string | null {
+  const buildingId = follow?.building?._id ?? follow?.buildingId
+  if (typeof buildingId !== "string") return null
+
+  const trimmed = buildingId.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 export function isRenderableFollowedBuilding(
