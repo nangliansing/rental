@@ -18,7 +18,19 @@ export const reverseGeocodeQueryKey = (lat: number, lng: number) =>
   queryKeys.geocode.reverse(lat, lng)
 
 const shouldRetryReverseGeocode = (failureCount: number, error: unknown) => {
-  if (error instanceof ApiError && error.status < 500) {
+  if (error instanceof ApiError) {
+    if (
+      error.code === "GEOCODE_NOT_FOUND" ||
+      error.code === "RATE_LIMIT_EXCEEDED" ||
+      error.code === "GEOCODE_NOT_CONFIGURED"
+    ) {
+      return false
+    }
+
+    if (error.code === "GEOCODE_UNAVAILABLE") {
+      return failureCount === 0
+    }
+
     return false
   }
 
