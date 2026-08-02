@@ -90,11 +90,17 @@ export async function installNeighbourhoodExploreRoute(page: Page) {
 }
 
 export async function waitForNeighbourhoodExploreModal(page: Page) {
-  await page
-    .getByRole("dialog", { name: "Explore neighbourhood" })
-    .waitFor({ state: "visible", timeout: 20_000 })
+  const exploreDialog = page.getByRole("dialog", {
+    name: "Explore neighbourhood",
+  })
+
+  await exploreDialog.waitFor({ state: "visible", timeout: 30_000 })
   await page.getByText("Loading nearby places...").waitFor({
     state: "hidden",
-    timeout: 20_000,
+    timeout: 30_000,
+  })
+  await exploreDialog.getByRole("tab").first().waitFor({
+    state: "visible",
+    timeout: 30_000,
   })
 }

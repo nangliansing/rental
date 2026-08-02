@@ -132,12 +132,12 @@ test.describe("Map search smoke", () => {
       page.getByRole("button", { name: /Search within 1\s?km/i }),
     ).toHaveCount(0)
 
-    const radiusToggle = page
-      .getByRole("button", { name: /Search.*1\s?km/i })
-      .first()
-    await radiusToggle.scrollIntoViewIfNeeded()
-    await radiusToggle.waitFor({ state: "visible", timeout: 30_000 })
-    await radiusToggle.click()
+    await expect(async () => {
+      const radiusToggle = page
+        .getByRole("button", { name: /Search.*1\s?km/i })
+        .first()
+      await radiusToggle.click({ timeout: 5_000 })
+    }).toPass({ timeout: 30_000 })
 
     await page.getByRole("button", { name: "500 m", exact: true }).click()
 
