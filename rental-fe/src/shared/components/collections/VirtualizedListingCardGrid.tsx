@@ -3,7 +3,6 @@ import type { CSSProperties, ReactNode, RefObject } from "react"
 import {
   useVirtualizer,
   useWindowVirtualizer,
-  type Virtualizer,
 } from "@tanstack/react-virtual"
 
 import { cn } from "@/lib/utils"
@@ -36,10 +35,18 @@ type VirtualizedListingCardGridBodyProps<T> = Omit<
   "rootRef"
 >
 
-type SharedVirtualizer = Pick<
-  Virtualizer<HTMLElement, Element>,
-  "getTotalSize" | "getVirtualItems" | "measureElement" | "options"
->
+type SharedVirtualizer = {
+  getTotalSize: () => number
+  getVirtualItems: () => Array<{
+    index: number
+    start: number
+    key: string | number | bigint
+  }>
+  measureElement: (element: Element | null) => void
+  options: {
+    scrollMargin: number
+  }
+}
 
 function useListingGridRows<T>(
   items: readonly T[],
