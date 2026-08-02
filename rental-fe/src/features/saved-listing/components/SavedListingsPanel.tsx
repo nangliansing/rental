@@ -94,6 +94,17 @@ export function SavedListingsPanel({
         <ListingCardGrid
           columns={layout === "drawer" ? "two" : "responsive"}
           rootRef={rootRef}
+          items={savedListings}
+          getItemKey={(savedListing) => savedListing._id}
+          renderItem={(savedListing) => (
+            <SavedListingGridCard
+              savedListing={savedListing}
+              isDeleting={deletingSavedListingId === savedListing._id}
+              showUnsaveButton
+              onUnsave={handleUnsave}
+              onOpen={setSelectedListingId}
+            />
+          )}
           hasNextPage={Boolean(savedListingsQuery.hasNextPage)}
           isFetchingNextPage={savedListingsQuery.isFetchingNextPage}
           isFetchNextPageError={savedListingsQuery.isFetchNextPageError}
@@ -101,18 +112,7 @@ export function SavedListingsPanel({
           endMessage={
             layout === "drawer" ? "No more saved listings" : "No more saved rooms"
           }
-        >
-          {savedListings.map((savedListing) => (
-            <SavedListingGridCard
-              key={savedListing._id}
-              savedListing={savedListing}
-              isDeleting={deletingSavedListingId === savedListing._id}
-              showUnsaveButton
-              onUnsave={handleUnsave}
-              onOpen={setSelectedListingId}
-            />
-          ))}
-        </ListingCardGrid>
+        />
       </div>
 
       <ListingDetailModal

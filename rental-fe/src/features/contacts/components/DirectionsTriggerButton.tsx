@@ -1,4 +1,4 @@
-import { Send } from "lucide-react"
+import { Locate } from "lucide-react"
 
 import { FOOTER_ICON_PROPS } from "../utils/contactPresentation"
 import { getDirectionsTriggerLabel } from "../utils/directionsDisplay"
@@ -20,7 +20,7 @@ export function DirectionsTriggerButton({
       ariaLabel={getDirectionsTriggerLabel(destinationLabel)}
       isOpen={isOpen}
       onClick={onClick}
-      icon={<Send aria-hidden="true" {...FOOTER_ICON_PROPS} />}
+      icon={<Locate aria-hidden="true" {...FOOTER_ICON_PROPS} />}
     />
   )
 }

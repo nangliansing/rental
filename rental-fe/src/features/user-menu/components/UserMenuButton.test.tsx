@@ -5,18 +5,30 @@ import { describe, expect, it, vi } from "vitest"
 
 import { UserMenuButton } from "./UserMenuButton"
 
+const sampleProfilePhoto = {
+  publicId: "users/jane",
+  secureUrl: "https://example.com/jane.jpg",
+  resourceType: "image" as const,
+  position: 0,
+  alt: "Jane Doe profile photo",
+  isCover: false,
+}
+
+const authUser = {
+  _id: "user-1",
+  name: "Jane Doe",
+  email: "jane@example.com",
+  authProvider: "GOOGLE" as const,
+  role: "USER" as const,
+  status: "ACTIVE" as const,
+  profilePhoto: null,
+  createdAt: "2026-07-20T00:00:00.000Z",
+  updatedAt: "2026-07-21T00:00:00.000Z",
+}
+
 vi.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({
-    user: {
-      _id: "user-1",
-      name: "Jane Doe",
-      email: "jane@example.com",
-      authProvider: "GOOGLE",
-      role: "USER",
-      status: "ACTIVE",
-      createdAt: "2026-07-20T00:00:00.000Z",
-      updatedAt: "2026-07-21T00:00:00.000Z",
-    },
+    user: authUser,
     isAuthenticated: true,
     isLoading: false,
   }),
@@ -103,5 +115,21 @@ describe("UserMenuButton", () => {
     expect(screen.getByRole("region", { name: "Account profile" })).toContainElement(
       screen.getByRole("button", { name: "Account actions" }),
     )
+  })
+
+  it("shows the user's profile photo in the navigation avatar when available", () => {
+    authUser.profilePhoto = sampleProfilePhoto
+
+    render(
+      <MemoryRouter>
+        <UserMenuButton variant="desktop" />
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.getByRole("img", { name: "Jane Doe profile photo" }),
+    ).toBeInTheDocument()
+
+    authUser.profilePhoto = null
   })
 })

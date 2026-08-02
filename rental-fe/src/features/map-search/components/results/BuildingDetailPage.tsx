@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { ChevronLeft, SearchX } from "lucide-react"
 import type React from "react"
 
@@ -40,6 +40,17 @@ export function BuildingDetailPage({
 }: BuildingDetailPageProps) {
   const listingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const preview = useListingGridPreview()
+  const handleListingActivate = useCallback(
+    (
+      listing: Parameters<typeof preview.openPreview>[0],
+      trigger: HTMLButtonElement,
+    ) => {
+      listingTriggerRef.current = trigger
+      preview.openPreview(listing)
+    },
+    [preview.openPreview],
+  )
+
   const { user } = useAuth()
   const exploreNeighbourhood = useBuildingDetailSession()
   const {
@@ -159,25 +170,22 @@ export function BuildingDetailPage({
               columns="two"
               className={RESULTS_PANEL_LISTING_GRID_CLASS}
               rootRef={scrollRootRef}
+              items={listings}
+              getItemKey={(listing) => listing._id}
+              renderItem={(listing) => (
+                <ListingGridCard
+                  listing={listing}
+                  showBuildingName={false}
+                  onActivate={handleListingActivate}
+                />
+              )}
               hasNextPage={Boolean(listingsQuery.hasNextPage)}
               isFetchingNextPage={listingsQuery.isFetchingNextPage}
               isFetchNextPageError={listingsQuery.isFetchNextPageError}
               onFetchNextPage={() => void listingsQuery.fetchNextPage()}
               endMessage="No more listings"
               testId="building-listing-grid"
-            >
-              {listings.map((listing) => (
-                <ListingGridCard
-                  key={listing._id}
-                  listing={listing}
-                  showBuildingName={false}
-                  onActivate={(item, trigger) => {
-                    listingTriggerRef.current = trigger
-                    preview.openPreview(item)
-                  }}
-                />
-              ))}
-            </ListingCardGrid>
+            />
           </>
         )}
       </div>

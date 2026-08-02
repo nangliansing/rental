@@ -107,6 +107,7 @@ export function DesktopPlaceSearchCombobox({
 
         <Button
           size="icon"
+          variant="ghost"
           onClick={onSearch}
           aria-label={searchMode === "places" ? "Search place" : "Search lister"}
         >

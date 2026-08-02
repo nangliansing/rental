@@ -1,13 +1,12 @@
+import { memo, useMemo, type MouseEvent } from "react"
 import { Link } from "react-router-dom"
 
-import {
-  ListingCoverImage,
-} from "./ListingPresentationPrimitives"
+import { ListingAvailabilityDisplay } from "./ListingAvailabilityDisplay"
+import { ListingGridCoverImage } from "./ListingGridCoverImage"
 import {
   ListingGridCardBadge,
   ListingGridCardOverlayContent,
 } from "./grid-preview"
-import { ListingAvailabilityDisplay } from "./ListingAvailabilityDisplay"
 import { listingGridCardSurfaceClassName } from "./ListingGridCardPrimitives"
 import type { ListingGridCardListing } from "./listingGridCardTypes"
 import { LISTING_GRID_CARD_AVAILABILITY_VARIANT } from "../utils/listingGridAvailabilityVariant"
@@ -28,18 +27,35 @@ type ListingGridCardProps = {
   ) => void
 }
 
-export function ListingGridCard({
+function getListingGridCoverPhoto(listing: ListingGridCardListing) {
+  const [coverPhoto] = getSortedListingPhotos(listing.media)
+  return coverPhoto ?? null
+}
+
+function getListingGridCoverAlt(
+  photo: ReturnType<typeof getListingGridCoverPhoto>,
+) {
+  const alt = typeof photo?.alt === "string" ? photo.alt.trim() : ""
+  return alt || "Listing photo"
+}
+
+function ListingGridCardComponent({
   listing,
   overlayDensity = "compact",
   showBuildingName = true,
   onActivate,
 }: ListingGridCardProps) {
-  const [coverPhoto] = getSortedListingPhotos(listing.media)
+  const coverPhoto = useMemo(
+    () => getListingGridCoverPhoto(listing),
+    [listing.media],
+  )
+  const coverAlt = getListingGridCoverAlt(coverPhoto)
+
   const content = (
     <>
-      <ListingCoverImage
-        photo={coverPhoto}
-        className="transition duration-200 group-hover:scale-[1.03]"
+      <ListingGridCoverImage
+        src={coverPhoto?.secureUrl}
+        alt={coverAlt}
         fallbackClassName="text-slate-300"
       />
 
@@ -58,12 +74,16 @@ export function ListingGridCard({
   )
 
   if (onActivate) {
+    const handleActivate = (event: MouseEvent<HTMLButtonElement>) => {
+      onActivate(listing, event.currentTarget)
+    }
+
     return (
       <button
         type="button"
         className={listingGridCardSurfaceClassName}
         aria-label={`Open listing ${formatCompactMoney(listing.rent)}`}
-        onClick={(event) => onActivate(listing, event.currentTarget)}
+        onClick={handleActivate}
       >
         {content}
       </button>
@@ -80,3 +100,20 @@ export function ListingGridCard({
     </Link>
   )
 }
+
+function listingGridCardPropsAreEqual(
+  previous: ListingGridCardProps,
+  next: ListingGridCardProps,
+) {
+  return (
+    previous.listing === next.listing &&
+    previous.overlayDensity === next.overlayDensity &&
+    previous.showBuildingName === next.showBuildingName &&
+    previous.onActivate === next.onActivate
+  )
+}
+
+export const ListingGridCard = memo(
+  ListingGridCardComponent,
+  listingGridCardPropsAreEqual,
+)

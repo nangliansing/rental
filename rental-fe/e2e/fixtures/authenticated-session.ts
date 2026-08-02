@@ -2,6 +2,7 @@ import type { Page, Route } from "@playwright/test"
 
 import {
   buildSmokeOwnerListings,
+  buildSmokeOwnerListingsOfCount,
   searchSmokeOwnerListings,
   toSmokeOwnerListingAgentProfile,
 } from "./owner-listings-session"
@@ -72,7 +73,7 @@ export const smokeSavedListing = {
     buildingName: "Bangkapi Residence",
     coverPhoto: {
       publicId: "test/listing-cover",
-      secureUrl: "https://example.com/listing.jpg",
+      secureUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       resourceType: "image",
       position: 0,
       alt: "Bright rental room",
@@ -102,7 +103,7 @@ export const smokeSavedListing = {
     media: [
       {
         publicId: "test/listing-cover",
-        secureUrl: "https://example.com/listing.jpg",
+        secureUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
         resourceType: "image",
         position: 0,
         alt: "Bright rental room",
@@ -161,6 +162,7 @@ export type AuthenticatedSessionMockOptions = {
   hasAgentProfile?: boolean
   withPendingPost?: boolean
   role?: "USER" | "ADMIN" | "OWNER"
+  ownerListingCount?: number
 }
 
 function buildSeedPendingPost(): SmokePendingPost {
@@ -335,11 +337,24 @@ export async function installAuthenticatedSessionMocks(
   let nextPendingPostId = ownerPendingPosts.length + 1
   let isSessionActive = true
 
-  const getSmokeOwnerListings = () =>
-    buildSmokeOwnerListings({
+  const getSmokeOwnerListings = () => {
+    const listingInput = {
       listedBy: smokeAuthUser._id,
       agentProfile: toSmokeOwnerListingAgentProfile(createdAgentProfile),
-    })
+    }
+
+    if (
+      options.ownerListingCount != null &&
+      options.ownerListingCount > buildSmokeOwnerListings(listingInput).length
+    ) {
+      return buildSmokeOwnerListingsOfCount(
+        options.ownerListingCount,
+        listingInput,
+      )
+    }
+
+    return buildSmokeOwnerListings(listingInput)
+  }
 
   const getSmokeOwnerListingById = (listingId: string) =>
     getSmokeOwnerListings().find((listing) => listing._id === listingId) ?? null
@@ -350,6 +365,20 @@ export async function installAuthenticatedSessionMocks(
       listingSummary: {
         ...createdAgentProfile.listingSummary,
         pendingCount: ownerPendingPosts.length,
+      },
+    }
+  }
+
+  if (options.ownerListingCount != null && options.ownerListingCount > 5) {
+    const publicListingCount = getSmokeOwnerListings().filter(
+      (listing) => listing.visibility === "PUBLIC",
+    ).length
+
+    createdAgentProfile = {
+      ...createdAgentProfile,
+      listingSummary: {
+        ...createdAgentProfile.listingSummary,
+        activeCount: publicListingCount,
       },
     }
   }
@@ -554,7 +583,7 @@ export async function installAuthenticatedSessionMocks(
     )
   })
 
-  await page.route("**/api/v1/listings/listing-smoke-1", async (route) => {
+  await page.route("**/api/v1/listings/*", async (route) => {
     if (!isAuthorized(route)) {
       await route.fulfill(jsonRoute({ success: false }, 401))
       return
@@ -565,7 +594,14 @@ export async function installAuthenticatedSessionMocks(
       return
     }
 
-    const listing = getSmokeOwnerListingById("listing-smoke-1")
+    const listingId = route.request().url().split("/listings/")[1]?.split("?")[0]
+
+    if (!listingId || listingId.includes("?")) {
+      await route.continue()
+      return
+    }
+
+    const listing = getSmokeOwnerListingById(listingId)
 
     if (!listing) {
       await route.fulfill(

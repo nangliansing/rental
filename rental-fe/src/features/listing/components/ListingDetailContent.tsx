@@ -3,7 +3,6 @@ import { useCallback, useMemo } from "react"
 import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
 import { useNeighbourhoodExploreDialogContext } from "@/features/buildings/neighbourhood-explore"
 import { useSearchListingsInBuilding } from "@/features/map-search/api/useSearchListingsInBuilding"
-import type { SearchListing } from "@/features/map-search/types"
 import { ListingCardGrid } from "@/shared/components/collections/ListingCardGrid"
 import { ListingCollectionSkeleton } from "@/shared/components/collections/ListingCollectionState"
 import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
@@ -230,16 +229,16 @@ function MoreListingsInBuilding({
         isFetchNextPageError={listingsQuery.isFetchNextPageError}
         onFetchNextPage={() => void listingsQuery.fetchNextPage()}
         endMessage="No more rooms"
-      >
-        {listings.map((listing: SearchListing) => (
+        items={listings}
+        getItemKey={(listing) => listing._id}
+        renderItem={(listing) => (
           <ListingGridCard
-            key={listing._id}
             listing={listing}
             showBuildingName={false}
             onActivate={preview.openPreview}
           />
-        ))}
-      </ListingCardGrid>
+        )}
+      />
 
       {previewPortalProps && (
         <ListingGridPreviewPortal

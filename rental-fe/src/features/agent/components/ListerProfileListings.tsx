@@ -75,15 +75,15 @@ export function ListerProfileListings({
         isFetchNextPageError={isFetchNextPageError}
         onFetchNextPage={onFetchNextPage}
         endMessage="No more listings"
-      >
-        {listings.map((listing) => (
+        items={listings}
+        getItemKey={(listing) => listing._id}
+        renderItem={(listing) => (
           <ListingGridCard
-            key={listing._id}
             listing={listing}
             onActivate={preview.openPreview}
           />
-        ))}
-      </ListingCardGrid>
+        )}
+      />
 
       <ListingGridPreviewPortal
         preview={preview}

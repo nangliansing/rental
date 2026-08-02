@@ -6,10 +6,19 @@ import { describe, expect, it, vi } from "vitest"
 import {
   createSearchBuilding,
   createSearchListing,
+  listingPhoto,
 } from "@/test/fixtures/listings"
 
 import { LISTING_GRID_AVAILABLE_NOW_INDICATOR_CLASS_NAME } from "./grid-preview"
 import { ListingGridCard } from "./ListingGridCard"
+
+const coverImageSpy = vi.fn(({ alt }: { alt: string }) => (
+  <div role="img" aria-label={alt} data-testid="grid-cover-image" />
+))
+
+vi.mock("./ListingGridCoverImage", () => ({
+  ListingGridCoverImage: (props: { alt: string }) => coverImageSpy(props),
+}))
 
 describe("ListingGridCard", () => {
   it("renders a defensive, accessible link card with shared presentation", () => {
@@ -179,5 +188,60 @@ describe("ListingGridCard", () => {
 
     expect(screen.getByText(/^Dep /)).toBeInTheDocument()
     expect(screen.getByText("Flexible")).toBeInTheDocument()
+  })
+
+  it("uses the lightweight grid cover image instead of progressive delivery", () => {
+    coverImageSpy.mockClear()
+
+    render(
+      <MemoryRouter>
+        <ListingGridCard listing={createSearchListing()} />
+      </MemoryRouter>,
+    )
+
+    expect(coverImageSpy).toHaveBeenCalledOnce()
+    expect(screen.getByTestId("grid-cover-image")).toHaveAttribute(
+      "aria-label",
+      "Bright rental room",
+    )
+    expect(
+      screen.queryByTestId("progressive-cover-placeholder"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("avoids rerendering when memoized props stay stable", () => {
+    coverImageSpy.mockClear()
+
+    const listing = createSearchListing({
+      media: [listingPhoto],
+    })
+    const onActivate = vi.fn()
+
+    const { rerender } = render(
+      <ListingGridCard listing={listing} onActivate={onActivate} />,
+    )
+
+    expect(coverImageSpy).toHaveBeenCalledOnce()
+
+    rerender(<ListingGridCard listing={listing} onActivate={onActivate} />)
+
+    expect(coverImageSpy).toHaveBeenCalledOnce()
+  })
+
+  it("hides the building name when showBuildingName is false", () => {
+    render(
+      <MemoryRouter>
+        <ListingGridCard
+          listing={{
+            ...createSearchListing(),
+            building: createSearchBuilding(),
+          }}
+          showBuildingName={false}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText("Bangkapi Residence")).not.toBeInTheDocument()
+    expect(screen.getByText("1 bed · 36 sqm")).toBeInTheDocument()
   })
 })

@@ -1,7 +1,7 @@
 import { CalendarClock } from "lucide-react"
 
 import type { PendingPost } from "@/features/pending-post"
-import { ListingCoverImage } from "@/features/listing/components/ListingPresentationPrimitives"
+import { ListingGridCoverImage } from "@/features/listing/components/ListingGridCoverImage"
 import {
   formatBedroom,
   formatCompactMoney,
@@ -46,10 +46,9 @@ export function MyProfilePendingCard({ post, onOpen }: MyProfilePendingCardProps
       aria-label={`Open ${status.label.toLowerCase()} submission ${buildingName}`}
       onClick={onOpen}
     >
-      <ListingCoverImage
-        photo={coverPhoto}
-        altFallback={buildingName}
-        className="transition duration-200 group-hover:scale-[1.03]"
+      <ListingGridCoverImage
+        src={coverPhoto?.secureUrl}
+        alt={buildingName || "Pending submission photo"}
         fallbackClassName="text-slate-300"
       />
 
