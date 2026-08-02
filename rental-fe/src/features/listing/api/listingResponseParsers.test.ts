@@ -106,4 +106,47 @@ describe("listingResponseParsers", () => {
 
     expect(parsed.availableAt).toBeNull()
   })
+
+  it("parseSearchListing keeps privateNote optional for owner detail responses", () => {
+    const withoutNote = parseSearchListing({
+      _id: "listing-1",
+      listedBy: "agent-1",
+      buildingId: "building-1",
+      building: {
+        _id: "building-1",
+        name: "Sample Residence",
+        location: { coordinates: [100.5, 13.7] },
+      },
+    })
+
+    expect(withoutNote.privateNote).toBeUndefined()
+
+    const withNote = parseSearchListing({
+      _id: "listing-1",
+      listedBy: "agent-1",
+      buildingId: "building-1",
+      privateNote: "  Call before viewing  ",
+      building: {
+        _id: "building-1",
+        name: "Sample Residence",
+        location: { coordinates: [100.5, 13.7] },
+      },
+    })
+
+    expect(withNote.privateNote).toBe("  Call before viewing  ")
+
+    const clearedNote = parseSearchListing({
+      _id: "listing-1",
+      listedBy: "agent-1",
+      buildingId: "building-1",
+      privateNote: null,
+      building: {
+        _id: "building-1",
+        name: "Sample Residence",
+        location: { coordinates: [100.5, 13.7] },
+      },
+    })
+
+    expect(clearedNote.privateNote).toBeNull()
+  })
 })

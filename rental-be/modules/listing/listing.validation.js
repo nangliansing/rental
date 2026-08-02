@@ -211,6 +211,10 @@ export const validateDescription = (input) => {
   return validateOptionalString(input, "description", 3000);
 };
 
+export const validatePrivateNote = (input) => {
+  return validateOptionalString(input, "privateNote", 3000);
+};
+
 export const validateAvailableAt = (input) => {
   return validateNullableDateAtStartOfDay(input, "availableAt");
 };

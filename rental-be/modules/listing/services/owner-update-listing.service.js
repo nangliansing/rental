@@ -23,7 +23,7 @@ const updateOwnerListing = async ({ listingId, actorId, body, session, logger })
     isDeleted: false,
   };
 
-  let existingQuery = Listing.findOne(ownerListingFilter);
+  let existingQuery = Listing.findOne(ownerListingFilter).select("+privateNote");
 
   if (session) {
     existingQuery = existingQuery.session(session);

@@ -21,6 +21,7 @@ import {
   validateFacilities,
   validateMedia,
   validateDescription,
+  validatePrivateNote,
   validateAvailableAt,
   validateListedBy,
   validateBuildingId,
@@ -61,6 +62,7 @@ export const buildCreateListingRecord = (body, actorId) => {
     facilities: validateFacilities(body.facilities),
     media: validateMedia(body.media),
     description: validateDescription(body.description),
+    privateNote: validatePrivateNote(body.privateNote),
     availableAt: validateAvailableAt(body.availableAt),
 
     listedBy: validateListedBy(actorId),

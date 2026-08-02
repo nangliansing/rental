@@ -15,6 +15,16 @@ export const isListingLike = (value) =>
       (Object.hasOwn(value, "listedBy") || Object.hasOwn(value, "visibility")),
   );
 
+export const isListingOwnedByViewer = (listing, viewerUserId) => {
+  if (!isListingLike(listing) || viewerUserId == null) {
+    return false;
+  }
+
+  const listedBy = listing.listedBy?._id ?? listing.listedBy;
+
+  return String(listedBy) === String(viewerUserId);
+};
+
 export const serializeAvailableAtForApi = (value) => {
   if (value == null) {
     return null;
@@ -29,20 +39,35 @@ export const serializeAvailableAtForApi = (value) => {
   return date.toISOString();
 };
 
-export const serializeListingForApi = (listing) => {
+const redactPrivateNote = (listing) => {
+  if (!Object.hasOwn(listing, "privateNote")) {
+    return listing;
+  }
+
+  const { privateNote, ...rest } = listing;
+  return rest;
+};
+
+export const serializeListingForApi = (listing, options = {}) => {
   if (!isListingLike(listing)) {
     return listing;
   }
 
-  return {
+  let serialized = {
     ...listing,
     availableAt: serializeAvailableAtForApi(
       Object.hasOwn(listing, "availableAt") ? listing.availableAt : null,
     ),
   };
+
+  if (!options.includePrivateNote) {
+    serialized = redactPrivateNote(serialized);
+  }
+
+  return serialized;
 };
 
-export const serializeListingDocumentForApi = (listing) => {
+export const serializeListingDocumentForApi = (listing, options = {}) => {
   if (listing == null) {
     return listing;
   }
@@ -51,20 +76,20 @@ export const serializeListingDocumentForApi = (listing) => {
     ? listing.toObject({ depopulate: true })
     : listing;
 
-  return serializeListingForApi(plain);
+  return serializeListingForApi(plain, options);
 };
 
-export const serializeListingPayloadForApi = (payload) => {
+export const serializeListingPayloadForApi = (payload, options = {}) => {
   if (payload == null) {
     return payload;
   }
 
   if (Array.isArray(payload)) {
-    return payload.map(serializeListingPayloadForApi);
+    return payload.map((item) => serializeListingPayloadForApi(item, options));
   }
 
   if (isListingLike(payload)) {
-    return serializeListingForApi(payload);
+    return serializeListingForApi(payload, options);
   }
 
   if (typeof payload !== "object") {
@@ -79,7 +104,7 @@ export const serializeListingPayloadForApi = (payload) => {
       continue;
     }
 
-    const serialized = serializeListingPayloadForApi(payload[key]);
+    const serialized = serializeListingPayloadForApi(payload[key], options);
 
     if (serialized !== payload[key]) {
       result[key] = serialized;

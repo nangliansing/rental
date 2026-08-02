@@ -288,6 +288,9 @@ const parseSearchListingFields = (
     isSavedByMe: readBoolean(listing.isSavedByMe),
     availableAt: parseAvailableAtFromApi(listing.availableAt),
     description: readString(listing.description),
+    privateNote: Object.hasOwn(listing, "privateNote")
+      ? readNullableString(listing.privateNote)
+      : undefined,
     listedBy,
     buildingId,
     createdAt: readString(listing.createdAt),

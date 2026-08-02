@@ -4,7 +4,7 @@ import { validateNullableObject } from "../../../shared/validators/index.js";
 
 import Listing from "../../listing/listing.model.js";
 import { enrichListingWithBuildingFollowState } from "../../building-follow/utils/index.js";
-import { serializeListingPayloadForApi } from "../../listing/utils/index.js";
+import { serializeListingPayloadForApi, isListingOwnedByViewer } from "../../listing/utils/index.js";
 import { buildSearchListingByIdParams } from "../params/index.js";
 import { buildSearchListingByIdPipeline } from "../pipelines/index.js";
 import { normalizeOptionalViewerId } from "./normalize-optional-viewer-id.js";
@@ -42,7 +42,15 @@ export const searchListingByIdService = async ({
             session,
         });
 
-    return serializeListingPayloadForApi({
-        listing: listingWithBuildingFollowState,
-    });
+    const includePrivateNote = isListingOwnedByViewer(
+        listingWithBuildingFollowState,
+        normalizedViewerUserId,
+    );
+
+    return serializeListingPayloadForApi(
+        {
+            listing: listingWithBuildingFollowState,
+        },
+        { includePrivateNote },
+    );
 };
