@@ -59,7 +59,7 @@ test.describe("Neighbourhood explore smoke", () => {
       }),
     ).toBeVisible({ timeout: 30_000 })
 
-    await openNeighbourhoodExplore(page)
+    await openNeighbourhoodExplore(page, mobilePanel)
 
     const exploreDialog = page.getByRole("dialog", {
       name: "Explore neighbourhood",

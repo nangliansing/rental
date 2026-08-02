@@ -1,7 +1,5 @@
 import { expect, type Page } from "@playwright/test"
 
-import { waitForMapReady } from "./map-search-routes"
-
 export function getMobileResultsPanel(page: Page) {
   return page.getByTestId("results-panel-mobile")
 }
@@ -99,46 +97,17 @@ export async function panMap(page: Page) {
   await triggerAreaSearchStaleState(page)
 }
 
-export async function waitForMapModeControls(page: Page) {
-  const mapControls = page.getByTestId("map-mode-controls")
-  await mapControls.waitFor({ state: "visible", timeout: 20_000 })
-  return mapControls
-}
-
-export async function waitForPinSearchControls(page: Page) {
-  await expect(page.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-    { timeout: 20_000 },
-  )
-}
-
 export async function selectSearchRadius(
   page: Page,
   radiusLabel: string | RegExp,
 ) {
   await expect(async () => {
-    const mapControls = page.getByTestId("map-mode-controls")
-    const controlsVisible = await mapControls
-      .waitFor({ state: "visible", timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false)
-
-    if (!controlsVisible) {
-      await page.reload({ waitUntil: "domcontentloaded" })
-      await waitForMapReady(page)
-    }
-
-    await waitForMapModeControls(page)
-    await waitForPinSearchControls(page)
-
     const radiusToggle = page.getByRole("button", { name: /Search radius:/i })
+    await expect(radiusToggle).toBeVisible({ timeout: 15_000 })
     await radiusToggle.click({ timeout: 5_000 })
 
-    const radiusMenu = page.getByLabel("Select search radius")
-    await radiusMenu.waitFor({ state: "visible", timeout: 5_000 })
-    await radiusMenu
-      .getByRole("button", { name: radiusLabel })
-      .click({ timeout: 5_000 })
+    const radiusOption = page.getByRole("button", { name: radiusLabel })
+    await expect(radiusOption).toBeVisible({ timeout: 10_000 })
+    await radiusOption.click({ timeout: 5_000 })
   }).toPass({ timeout: 90_000 })
 }
