@@ -44,7 +44,7 @@ describe("progressive image integration", () => {
   })
 
   describe("grid card to listing detail flow", () => {
-    it("uses a lightweight grid cover while the carousel keeps progressive blur", async () => {
+    it("uses progressive blur on the grid cover and in the detail carousel", async () => {
       render(
         <MemoryRouter>
           <ListingGridCard
@@ -58,9 +58,7 @@ describe("progressive image integration", () => {
       const gridImage = screen.getByRole("img", { name: "Bright rental room" })
       expect(gridImage.tagName).toBe("IMG")
       expect(gridImage).toHaveAttribute("loading", "lazy")
-      expect(
-        screen.queryByTestId("progressive-cover-placeholder"),
-      ).not.toBeInTheDocument()
+      expect(screen.getByTestId("progressive-cover-placeholder")).toBeInTheDocument()
 
       cleanup()
 

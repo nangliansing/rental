@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { ListingGridCoverImage } from "./ListingGridCoverImage"
 
 describe("ListingGridCoverImage", () => {
-  it("renders a lazy optimized image for Cloudinary sources", () => {
+  it("renders a blurred placeholder and lazy full image for Cloudinary sources", () => {
     render(
       <ListingGridCoverImage
         src="https://res.cloudinary.com/demo/image/upload/v123/listing/room.jpg"
@@ -12,15 +12,19 @@ describe("ListingGridCoverImage", () => {
       />,
     )
 
+    expect(screen.getByTestId("progressive-cover-placeholder")).toHaveAttribute(
+      "src",
+      expect.stringContaining("e_blur:200"),
+    )
+
     const image = screen.getByRole("img", { name: "Grid room" })
-    expect(image.tagName).toBe("IMG")
     expect(image).toHaveAttribute("loading", "lazy")
     expect(image).toHaveAttribute("decoding", "async")
     expect(image).toHaveAttribute("fetchpriority", "low")
     expect(image.getAttribute("src")).toContain("w_640")
   })
 
-  it("passes through non-Cloudinary sources without progressive delivery", () => {
+  it("passes through non-Cloudinary sources without a blur placeholder", () => {
     render(
       <ListingGridCoverImage
         src="https://example.com/room.jpg"
@@ -28,6 +32,9 @@ describe("ListingGridCoverImage", () => {
       />,
     )
 
+    expect(
+      screen.queryByTestId("progressive-cover-placeholder"),
+    ).not.toBeInTheDocument()
     expect(screen.getByRole("img", { name: "External room" })).toHaveAttribute(
       "src",
       "https://example.com/room.jpg",
