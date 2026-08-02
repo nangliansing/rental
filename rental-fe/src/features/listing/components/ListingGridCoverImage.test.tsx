@@ -1,10 +1,14 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { ListingGridCoverImage } from "./ListingGridCoverImage"
+import {
+  LISTING_GRID_COVER_BLUR_TEST_ID,
+  LISTING_GRID_COVER_TEST_ID,
+  ListingGridCoverImage,
+} from "./ListingGridCoverImage"
 
 describe("ListingGridCoverImage", () => {
-  it("renders a blurred placeholder and lazy full image for Cloudinary sources", () => {
+  it("shows a blurred LQIP and lazy full image for Cloudinary sources", () => {
     render(
       <ListingGridCoverImage
         src="https://res.cloudinary.com/demo/image/upload/v123/listing/room.jpg"
@@ -12,19 +16,49 @@ describe("ListingGridCoverImage", () => {
       />,
     )
 
-    expect(screen.getByTestId("progressive-cover-placeholder")).toHaveAttribute(
-      "src",
-      expect.stringContaining("e_blur:200"),
+    expect(screen.getByTestId(LISTING_GRID_COVER_TEST_ID)).toHaveClass(
+      "relative",
+      "h-full",
+      "w-full",
+      "bg-slate-200",
     )
 
+    const blur = screen.getByTestId(LISTING_GRID_COVER_BLUR_TEST_ID)
+    expect(blur).toHaveAttribute("aria-hidden", "true")
+    expect(blur).toHaveClass("blur-xl", "scale-110", "bg-cover")
+    expect(blur.style.backgroundImage).toContain("w_32")
+    expect(blur.style.backgroundImage).toContain("e_blur:200")
+
     const image = screen.getByRole("img", { name: "Grid room" })
+    expect(image).toHaveClass("opacity-0")
     expect(image).toHaveAttribute("loading", "lazy")
     expect(image).toHaveAttribute("decoding", "async")
     expect(image).toHaveAttribute("fetchpriority", "low")
-    expect(image.getAttribute("src")).toContain("w_640")
+    expect(image.getAttribute("src")).toContain("w_480")
+    expect(image.getAttribute("srcset")).toContain("w_240")
+    expect(image.getAttribute("sizes")).toBe("(min-width: 640px) 33vw, 50vw")
   })
 
-  it("passes through non-Cloudinary sources without a blur placeholder", () => {
+  it("reveals the sharp cover and removes the blur after load", async () => {
+    render(
+      <ListingGridCoverImage
+        src="https://res.cloudinary.com/demo/image/upload/v123/listing/room.jpg"
+        alt="Grid room"
+      />,
+    )
+
+    const image = screen.getByRole("img", { name: "Grid room" })
+    fireEvent.load(image)
+
+    await waitFor(() => {
+      expect(image).toHaveClass("opacity-100")
+    })
+    expect(
+      screen.queryByTestId(LISTING_GRID_COVER_BLUR_TEST_ID),
+    ).not.toBeInTheDocument()
+  })
+
+  it("passes through non-Cloudinary sources without a blur layer", () => {
     render(
       <ListingGridCoverImage
         src="https://example.com/room.jpg"
@@ -33,12 +67,29 @@ describe("ListingGridCoverImage", () => {
     )
 
     expect(
-      screen.queryByTestId("progressive-cover-placeholder"),
+      screen.queryByTestId(LISTING_GRID_COVER_BLUR_TEST_ID),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("img", { name: "External room" })).toHaveAttribute(
-      "src",
-      "https://example.com/room.jpg",
+
+    const image = screen.getByRole("img", { name: "External room" })
+    expect(image).toHaveAttribute("src", "https://example.com/room.jpg")
+    expect(image.getAttribute("srcset")).toBeNull()
+  })
+
+  it("uses a dominant color placeholder instead of a blur request", () => {
+    render(
+      <ListingGridCoverImage
+        src="https://res.cloudinary.com/demo/image/upload/v123/listing/room.jpg"
+        alt="Grid room"
+        placeholderColor="#334155"
+      />,
     )
+
+    expect(screen.getByTestId(LISTING_GRID_COVER_TEST_ID)).toHaveStyle({
+      backgroundColor: "#334155",
+    })
+    expect(
+      screen.queryByTestId(LISTING_GRID_COVER_BLUR_TEST_ID),
+    ).not.toBeInTheDocument()
   })
 
   it("trims whitespace-only sources and renders the accessible fallback", () => {
@@ -89,7 +140,7 @@ describe("ListingGridCoverImage", () => {
     )
 
     expect(screen.getByRole("img", { name: "Styled room" })).toHaveClass(
-      "opacity-90",
+      "opacity-0",
       "object-cover",
     )
   })

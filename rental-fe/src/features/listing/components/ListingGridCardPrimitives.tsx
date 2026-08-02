@@ -84,7 +84,7 @@ export function ListingGridCardFinePrint({
 }
 
 export const listingGridCardCornerBadgeClassName =
-  "inline-flex h-7 items-center truncate rounded-full border border-white/35 bg-slate-950/45 px-2 text-[11px] font-semibold leading-none text-white shadow-sm backdrop-blur-md"
+  "inline-flex h-7 items-center truncate rounded-full border border-white/35 bg-slate-950/60 px-2 text-[11px] font-semibold leading-none text-white shadow-sm"
 
 export const listingGridCardCornerBadgeLeftClassName =
   "absolute left-2 top-2 z-10 max-w-[calc(100%-4rem)]"

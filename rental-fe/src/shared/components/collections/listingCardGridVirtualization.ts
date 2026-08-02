@@ -2,6 +2,9 @@ export const LISTING_CARD_GRID_GAP_CLASS = "gap-0.5 md:gap-1"
 
 export const LISTING_CARD_GRID_VIRTUALIZATION_THRESHOLD = 24
 
+/** Extra rows rendered above/below the viewport for scroll smoothness. */
+export const LISTING_CARD_GRID_OVERSCAN = 1
+
 export const LISTING_CARD_GRID_RESPONSIVE_BREAKPOINT_PX = 640
 
 export const LISTING_CARD_GRID_GAP_PX = {

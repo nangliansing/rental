@@ -55,12 +55,14 @@ async function expectLazyCoverImages(scope: Page | Locator) {
 
 async function expectDefensiveGridCovers(scope: Page | Locator) {
   const lazyImages = scope.locator('img[loading="lazy"]')
-  const placeholders = scope.getByTestId("progressive-cover-placeholder")
+  const gridCovers = scope.getByTestId("listing-grid-cover")
+  const gridBlurs = scope.getByTestId("listing-grid-cover-blur")
 
   await expect(async () => {
     const hasLazyImage = (await lazyImages.count()) > 0
-    const hasPlaceholder = (await placeholders.count()) > 0
-    expect(hasLazyImage || hasPlaceholder).toBe(true)
+    const hasGridCover = (await gridCovers.count()) > 0
+    const hasGridBlur = (await gridBlurs.count()) > 0
+    expect(hasLazyImage || hasGridCover || hasGridBlur).toBe(true)
   }).toPass({ timeout: 15_000 })
 }
 
