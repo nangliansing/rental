@@ -96,22 +96,3 @@ export async function waitForSearchThisArea(page: Page) {
 export async function panMap(page: Page) {
   await triggerAreaSearchStaleState(page)
 }
-
-export async function selectSearchRadius(
-  page: Page,
-  radiusLabel: string | RegExp,
-) {
-  const mapControls = page.getByTestId("map-mode-controls")
-
-  await expect(async () => {
-    await expect(mapControls).toBeVisible({ timeout: 15_000 })
-
-    const radiusToggle = page.getByRole("button", { name: /Search radius:/i })
-    await expect(radiusToggle).toBeVisible({ timeout: 10_000 })
-    await radiusToggle.click({ timeout: 5_000 })
-
-    const radiusOption = page.getByRole("button", { name: radiusLabel })
-    await expect(radiusOption).toBeVisible({ timeout: 10_000 })
-    await radiusOption.click({ timeout: 5_000 })
-  }).toPass({ timeout: 90_000 })
-}

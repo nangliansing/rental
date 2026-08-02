@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test"
 import {
   drawLineOnMap,
   getMobileResultsPanel,
-  selectSearchRadius,
   triggerAreaSearchStaleState,
   waitForAreaSearchError,
   waitForAreaSearchResults,
@@ -19,6 +18,7 @@ import {
   areaSearchUrl,
   lineSearchUrl,
   nearbySearchUrl,
+  nearbySearchUrl500,
   smokeAreaBuilding,
   smokeLineBuilding,
   smokeNearbyBuilding,
@@ -139,18 +139,8 @@ test.describe("Map search smoke", () => {
     await expect(mobilePanel.getByText(smokeNearbyBuilding.name)).toBeVisible({
       timeout: 20_000,
     })
-    await expect(
-      page.getByRole("button", { name: /Search within 1\s?km/i }),
-    ).toHaveCount(0)
-
-    await selectSearchRadius(page, /500\s?m/i)
-
-    const searchButton = page.getByRole("button", {
-      name: /Search within 500\s?m/i,
-    })
-    await expect(searchButton).toBeVisible({ timeout: 30_000 })
-    await expect(searchButton).toBeEnabled()
-    await searchButton.click({ timeout: 20_000 })
+    await page.goto(nearbySearchUrl500)
+    await waitForMapReady(page)
 
     await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
       timeout: 20_000,

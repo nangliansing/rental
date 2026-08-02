@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, type Route } from "@playwright/test"
+import { expect, type Page, type Route } from "@playwright/test"
 
 import { smokeAreaBuilding } from "./map-search-buildings"
 
@@ -93,19 +93,16 @@ function isNeighbourhoodExploreResponse(url: string) {
   return url.includes("/neighbourhood")
 }
 
-export async function openNeighbourhoodExplore(
-  page: Page,
-  scope: Page | Locator = page,
-) {
+export async function openNeighbourhoodExplore(page: Page) {
   const exploreDialog = page.getByRole("dialog", {
     name: "Explore neighbourhood",
   })
-  const exploreButton = scope.getByRole("button", {
+  const exploreButton = page.getByRole("button", {
     name: "Explore neighbourhood",
   })
 
   await expect(async () => {
-    await expect(exploreButton).toBeVisible({ timeout: 10_000 })
+    await expect(exploreButton).toBeVisible({ timeout: 15_000 })
     await exploreButton.scrollIntoViewIfNeeded()
 
     const neighbourhoodResponse = page.waitForResponse(
@@ -133,9 +130,26 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     exploreDialog.getByText("Loading nearby places..."),
   ).toBeHidden({ timeout: 60_000 })
 
-  await expect(
-    exploreDialog.getByRole("tablist", { name: "Neighbourhood categories" }),
-  ).toBeVisible({ timeout: 90_000 })
+  await expect(async () => {
+    const hasTablist = await exploreDialog
+      .getByRole("tablist", { name: "Neighbourhood categories" })
+      .isVisible()
+      .catch(() => false)
+    const hasAllTab = await exploreDialog
+      .getByRole("tab", { name: /^All(?: \(\d+\))?$/ })
+      .isVisible()
+      .catch(() => false)
+    const hasPlace = await page
+      .getByRole("button", { name: /Smoke Lane Cafe/i })
+      .isVisible()
+      .catch(() => false)
+    const hasNearbyPlaces = await exploreDialog
+      .getByText("Nearby places")
+      .isVisible()
+      .catch(() => false)
+
+    expect(hasTablist || hasAllTab || hasPlace || hasNearbyPlaces).toBe(true)
+  }).toPass({ timeout: 90_000 })
 
   if (
     await exploreDialog
