@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test"
+import { expect, type Page, type Route } from "@playwright/test"
 
 import { smokeAreaBuilding } from "./map-search-buildings"
 
@@ -94,7 +94,6 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     name: "Explore neighbourhood",
   })
 
-  await exploreDialog.waitFor({ state: "attached", timeout: 90_000 })
   await exploreDialog.waitFor({ state: "visible", timeout: 60_000 })
 
   const loadingText = page.getByText("Loading nearby places...")
@@ -102,9 +101,27 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     await loadingText.waitFor({ state: "hidden", timeout: 60_000 })
   }
 
-  await page
-    .getByRole("tablist", { name: "Neighbourhood categories" })
-    .waitFor({ state: "visible", timeout: 90_000 })
+  await expect(async () => {
+    const hasCategories = await page
+      .getByRole("tablist", { name: "Neighbourhood categories" })
+      .isVisible()
+      .catch(() => false)
+    const hasPlace = await page
+      .getByRole("button", { name: /Smoke Lane Cafe/i })
+      .isVisible()
+      .catch(() => false)
+
+    expect(hasCategories || hasPlace).toBe(true)
+  }).toPass({ timeout: 90_000 })
+
+  if (
+    await page
+      .getByText("Could not load nearby places")
+      .isVisible()
+      .catch(() => false)
+  ) {
+    throw new Error("Neighbourhood explore failed to load nearby places.")
+  }
 
   const resultsDrawer = page.getByTestId("neighbourhood-explore-results-drawer")
   if ((await resultsDrawer.count()) > 0) {

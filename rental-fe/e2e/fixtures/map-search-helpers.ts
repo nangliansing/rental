@@ -119,12 +119,10 @@ export async function selectSearchRadius(
   page: Page,
   radiusLabel: string | RegExp,
 ) {
-  const mapControls = await waitForPinSearchControls(page)
+  await waitForPinSearchControls(page)
 
   await expect(async () => {
-    const radiusToggle = mapControls.getByRole("button", {
-      name: /Search radius:/i,
-    })
+    const radiusToggle = page.getByRole("button", { name: /Search radius:/i })
     await radiusToggle.click({ timeout: 5_000 })
 
     const radiusMenu = page.getByLabel("Select search radius")
@@ -132,5 +130,5 @@ export async function selectSearchRadius(
     await radiusMenu
       .getByRole("button", { name: radiusLabel })
       .click({ timeout: 5_000 })
-  }).toPass({ timeout: 60_000 })
+  }).toPass({ timeout: 30_000 })
 }
