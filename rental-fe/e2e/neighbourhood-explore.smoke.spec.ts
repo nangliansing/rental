@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test"
 
 import {
   installNeighbourhoodExploreRoute,
+  openNeighbourhoodExplore,
   waitForNeighbourhoodExploreModal,
 } from "./fixtures/neighbourhood-explore"
 import {
@@ -58,19 +59,11 @@ test.describe("Neighbourhood explore smoke", () => {
       }),
     ).toBeVisible({ timeout: 30_000 })
 
+    await openNeighbourhoodExplore(page)
+
     const exploreDialog = page.getByRole("dialog", {
       name: "Explore neighbourhood",
     })
-    const exploreButton = mobilePanel.getByRole("button", {
-      name: "Explore neighbourhood",
-    })
-    await expect(exploreButton).toBeVisible({ timeout: 30_000 })
-    await exploreButton.scrollIntoViewIfNeeded()
-    await expect(async () => {
-      await exploreButton.click({ timeout: 5_000 })
-      await exploreDialog.waitFor({ state: "visible", timeout: 10_000 })
-    }).toPass({ timeout: 90_000 })
-
     await waitForNeighbourhoodExploreModal(page)
 
     await page.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ }).click()

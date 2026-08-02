@@ -89,6 +89,22 @@ export async function installNeighbourhoodExploreRoute(page: Page) {
   )
 }
 
+export async function openNeighbourhoodExplore(page: Page) {
+  const exploreDialog = page.getByRole("dialog", {
+    name: "Explore neighbourhood",
+  })
+  const exploreButton = page.getByRole("button", {
+    name: "Explore neighbourhood",
+  })
+
+  await expect(async () => {
+    await expect(exploreButton).toBeVisible({ timeout: 5_000 })
+    await exploreButton.scrollIntoViewIfNeeded()
+    await exploreButton.click({ timeout: 5_000 })
+    await exploreDialog.waitFor({ state: "visible", timeout: 10_000 })
+  }).toPass({ timeout: 60_000 })
+}
+
 export async function waitForNeighbourhoodExploreModal(page: Page) {
   const exploreDialog = page.getByRole("dialog", {
     name: "Explore neighbourhood",

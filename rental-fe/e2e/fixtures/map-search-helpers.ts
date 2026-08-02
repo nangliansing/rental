@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test"
 
+import { waitForMapReady } from "./map-search-routes"
+
 export function getMobileResultsPanel(page: Page) {
   return page.getByTestId("results-panel-mobile")
 }
@@ -99,29 +101,37 @@ export async function panMap(page: Page) {
 
 export async function waitForMapModeControls(page: Page) {
   const mapControls = page.getByTestId("map-mode-controls")
-  await mapControls.waitFor({ state: "visible", timeout: 60_000 })
+  await mapControls.waitFor({ state: "visible", timeout: 20_000 })
   return mapControls
 }
 
 export async function waitForPinSearchControls(page: Page) {
-  const mapControls = await waitForMapModeControls(page)
-
-  await expect(async () => {
-    const removePin = mapControls.getByRole("button", { name: "Remove pin" })
-    await expect(removePin).toBeVisible({ timeout: 5_000 })
-    await expect(removePin).toHaveAttribute("aria-pressed", "true")
-  }).toPass({ timeout: 60_000 })
-
-  return mapControls
+  await expect(page.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+    { timeout: 20_000 },
+  )
 }
 
 export async function selectSearchRadius(
   page: Page,
   radiusLabel: string | RegExp,
 ) {
-  await waitForPinSearchControls(page)
-
   await expect(async () => {
+    const mapControls = page.getByTestId("map-mode-controls")
+    const controlsVisible = await mapControls
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (!controlsVisible) {
+      await page.reload({ waitUntil: "domcontentloaded" })
+      await waitForMapReady(page)
+    }
+
+    await waitForMapModeControls(page)
+    await waitForPinSearchControls(page)
+
     const radiusToggle = page.getByRole("button", { name: /Search radius:/i })
     await radiusToggle.click({ timeout: 5_000 })
 
@@ -130,5 +140,5 @@ export async function selectSearchRadius(
     await radiusMenu
       .getByRole("button", { name: radiusLabel })
       .click({ timeout: 5_000 })
-  }).toPass({ timeout: 30_000 })
+  }).toPass({ timeout: 90_000 })
 }

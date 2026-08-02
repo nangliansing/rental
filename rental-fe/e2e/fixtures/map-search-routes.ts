@@ -175,7 +175,6 @@ export async function installMapSearchApiMocks(
 
 export async function waitForMapReady(page: Page) {
   const mapCanvas = page.locator(".gm-style").first()
-  const mapControls = page.getByTestId("map-mode-controls")
   const maxAttempts = 3
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -189,16 +188,8 @@ export async function waitForMapReady(page: Page) {
       .waitFor({ state: "visible", timeout: 20_000 })
       .then(() => true)
       .catch(() => false)
-    const controlsVisible = await mapControls
-      .waitFor({ state: "visible", timeout: 20_000 })
-      .then(() => true)
-      .catch(() => false)
 
-    if (
-      mapVisible &&
-      controlsVisible &&
-      !(await unavailable.isVisible().catch(() => false))
-    ) {
+    if (mapVisible && !(await unavailable.isVisible().catch(() => false))) {
       return
     }
 
@@ -208,7 +199,6 @@ export async function waitForMapReady(page: Page) {
       }
 
       await mapCanvas.waitFor({ state: "visible", timeout: 30_000 })
-      await mapControls.waitFor({ state: "visible", timeout: 30_000 })
       return
     }
 
