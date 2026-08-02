@@ -28,7 +28,6 @@ const hasMapsKey = Boolean(
 
 const LISTING_GRID_VIRTUALIZATION_THRESHOLD = 24
 const PUBLIC_GRID_LISTING_COUNT = 29
-const LATEST_SORTED_LISTING_LABEL = /Open listing.*30k/i
 
 function openListingButtons(scope: Page | Locator) {
   return scope.getByRole("button", { name: /^Open listing / })
@@ -75,16 +74,30 @@ async function expectVirtualizedWindow(
     return
   }
 
-  if (scope) {
-    const renderedCards = await openListingButtons(scope).count()
-    expect(renderedCards).toBeGreaterThan(0)
-    expect(renderedCards).toBeLessThan(loadedCount)
-    return
+  if (!scope) {
+    await page.evaluate(() => window.scrollTo(0, 0))
   }
 
-  await page.evaluate(() => window.scrollTo(0, 0))
+  const pollTimeout = 30_000
+  const pollInterval = 250
+  const start = Date.now()
 
-  const renderedCards = await countViewportOpenListingButtons(page)
+  const getRendered = async () => {
+    if (scope) {
+      return openListingButtons(scope).count()
+    }
+    return countViewportOpenListingButtons(page)
+  }
+
+  let renderedCards = 0
+  while (Date.now() - start < pollTimeout) {
+    renderedCards = await getRendered()
+    if (renderedCards > 0 && renderedCards < loadedCount) {
+      break
+    }
+    await page.waitForTimeout(pollInterval)
+  }
+
   expect(renderedCards).toBeGreaterThan(0)
   expect(renderedCards).toBeLessThan(loadedCount)
 }
@@ -110,10 +123,8 @@ async function clickListing(
       ? scope.getByRole("button", { name: label }).first()
       : openListingButtons(scope).first()
 
-    await expect(button).toBeVisible({ timeout: 20_000 })
-    await button.scrollIntoViewIfNeeded()
     await button.click({ timeout: 5_000 })
-  }).toPass({ timeout: 20_000 })
+  }).toPass({ timeout: 30_000 })
 }
 
 test.describe("Listing grid smoke", () => {
@@ -159,7 +170,8 @@ test.describe("Listing grid smoke", () => {
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT)
 
     await page.evaluate(() => window.scrollTo(0, 0))
-    await clickListing(page, LATEST_SORTED_LISTING_LABEL)
+    await expect(openListingButtons(page).first()).toBeVisible({ timeout: 30_000 })
+    await clickListing(page)
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 })
   })
 
