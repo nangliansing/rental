@@ -125,7 +125,7 @@ describe("SavedListingGridCard", () => {
     expect(screen.getByText("Listing unavailable")).toBeInTheDocument()
   })
 
-  it("uses the lightweight lazy grid cover for available saved listings", () => {
+  it("uses the lazy grid cover for available saved listings", () => {
     render(
       <SavedListingGridCard
         savedListing={createSavedListing()}

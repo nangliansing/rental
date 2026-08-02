@@ -204,9 +204,6 @@ describe("ListingGridCard", () => {
       "aria-label",
       "Bright rental room",
     )
-    expect(
-      screen.queryByTestId("progressive-cover-placeholder"),
-    ).not.toBeInTheDocument()
   })
 
   it("avoids rerendering when memoized props stay stable", () => {

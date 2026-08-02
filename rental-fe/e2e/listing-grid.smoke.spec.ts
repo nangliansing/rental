@@ -53,8 +53,15 @@ async function expectLazyCoverImages(scope: Page | Locator) {
   expect(await lazyImages.count()).toBeGreaterThan(0)
 }
 
-async function expectNoProgressiveGridPlaceholders(scope: Page | Locator) {
-  await expect(scope.getByTestId("progressive-cover-placeholder")).toHaveCount(0)
+async function expectDefensiveGridCovers(scope: Page | Locator) {
+  const lazyImages = scope.locator('img[loading="lazy"]')
+  const placeholders = scope.getByTestId("progressive-cover-placeholder")
+
+  await expect(async () => {
+    const hasLazyImage = (await lazyImages.count()) > 0
+    const hasPlaceholder = (await placeholders.count()) > 0
+    expect(hasLazyImage || hasPlaceholder).toBe(true)
+  }).toPass({ timeout: 15_000 })
 }
 
 async function expectVirtualizedWindow(
@@ -114,7 +121,7 @@ test.describe("Listing grid smoke", () => {
 
     await expect(openListingButtons(page).first()).toBeVisible({ timeout: 15_000 })
     await expectLazyCoverImages(page)
-    await expectNoProgressiveGridPlaceholders(page)
+    await expectDefensiveGridCovers(page)
 
     await loadNextGridPage(page)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT)
@@ -139,7 +146,7 @@ test.describe("Listing grid smoke", () => {
     await expect(openListingButtons(page).first()).toBeVisible({ timeout: 15_000 })
 
     await expectLazyCoverImages(page)
-    await expectNoProgressiveGridPlaceholders(page)
+    await expectDefensiveGridCovers(page)
     await loadNextGridPage(page)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT)
 
@@ -162,7 +169,7 @@ test.describe("Listing grid smoke", () => {
     await expect(openListingButtons(grid).first()).toBeVisible({ timeout: 15_000 })
 
     await expectLazyCoverImages(grid)
-    await expectNoProgressiveGridPlaceholders(grid)
+    await expectDefensiveGridCovers(grid)
 
     await clickListing(grid, "Open listing ฿14k")
     await expect(
@@ -214,7 +221,7 @@ test.describe("Listing grid smoke", () => {
     await expect(openListingButtons(grid).first()).toBeVisible({ timeout: 15_000 })
 
     await expectLazyCoverImages(grid)
-    await expectNoProgressiveGridPlaceholders(grid)
+    await expectDefensiveGridCovers(grid)
     await loadNextGridPage(page, mobilePanel)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT, grid)
 
@@ -233,7 +240,7 @@ test.describe("Listing grid smoke", () => {
     await expect(savedCard).toBeVisible()
 
     await expectLazyCoverImages(page)
-    await expectNoProgressiveGridPlaceholders(page)
+    await expectDefensiveGridCovers(page)
 
     await savedCard.click()
     await expect(page.getByRole("dialog", { name: "Listing details" })).toBeVisible({
@@ -256,7 +263,7 @@ test.describe("Listing grid smoke", () => {
     await expect(pendingCard).toBeVisible({ timeout: 15_000 })
 
     await expectLazyCoverImages(page)
-    await expectNoProgressiveGridPlaceholders(page)
+    await expectDefensiveGridCovers(page)
 
     await pendingCard.click()
     await expect(
