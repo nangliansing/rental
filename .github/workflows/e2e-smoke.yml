@@ -27,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
-      VITE_GOOGLE_MAPS_MAP_ID: ${{ secrets.VITE_GOOGLE_MAPS_MAP_ID }}
+      VITE_GOOGLE_MAPS_API_KEY: test-google-maps-api-key
+      VITE_GOOGLE_MAPS_MAP_ID: test-google-maps-map-id
 
     steps:
       - name: Check out repository
@@ -74,6 +74,10 @@ jobs:
       - name: Install Playwright Chromium
         if: steps.changes.outputs.frontend == 'true'
         run: npx playwright install chromium --with-deps
+
+      - name: Build frontend for Playwright
+        if: steps.changes.outputs.frontend == 'true'
+        run: npm run build
 
       - name: Run browser smoke tests
         if: steps.changes.outputs.frontend == 'true'

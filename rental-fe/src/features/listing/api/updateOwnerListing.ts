@@ -15,7 +15,7 @@ export type UpdateOwnerListingInput = ListingFormSubmitValues
 
 export type UpdatedOwnerListing = Omit<
   ListingFormValues,
-  "media" | "description" | "availabilityMode" | "availableFromDate"
+  "media" | "description" | "privateNote" | "availabilityMode" | "availableFromDate"
 > & {
   _id: string
   media: ListingMedia[]
