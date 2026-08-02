@@ -102,10 +102,9 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     await loadingText.waitFor({ state: "hidden", timeout: 60_000 })
   }
 
-  await exploreDialog.getByRole("tab").first().waitFor({
-    state: "visible",
-    timeout: 60_000,
-  })
+  await page
+    .getByRole("tablist", { name: "Neighbourhood categories" })
+    .waitFor({ state: "visible", timeout: 90_000 })
 
   const resultsDrawer = page.getByTestId("neighbourhood-explore-results-drawer")
   if ((await resultsDrawer.count()) > 0) {

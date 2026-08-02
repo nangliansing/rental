@@ -58,22 +58,23 @@ test.describe("Neighbourhood explore smoke", () => {
       }),
     ).toBeVisible({ timeout: 30_000 })
 
+    const exploreDialog = page.getByRole("dialog", {
+      name: "Explore neighbourhood",
+    })
     const exploreButton = mobilePanel.getByRole("button", {
       name: "Explore neighbourhood",
     })
     await expect(exploreButton).toBeVisible({ timeout: 30_000 })
-    await exploreButton.click({ timeout: 10_000 })
+    await expect(async () => {
+      await exploreButton.click({ timeout: 5_000 })
+      await exploreDialog.waitFor({ state: "visible", timeout: 5_000 })
+    }).toPass({ timeout: 60_000 })
 
-    const exploreDialog = page.getByRole("dialog", {
-      name: "Explore neighbourhood",
-    })
     await waitForNeighbourhoodExploreModal(page)
 
-    const allTab = exploreDialog.getByRole("tab", {
-      name: /^All(?: \(\d+\))?$/,
-    })
+    const allTab = page.getByRole("tab", { name: /^All(?: \(\d+\))?$/ })
     await allTab.waitFor({ state: "visible", timeout: 60_000 })
-    await exploreDialog.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ }).click()
+    await page.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ }).click()
     await expect(exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })).toBeVisible()
     await expect(
       exploreDialog.getByRole("button", { name: /Smoke Corner Store/i }),

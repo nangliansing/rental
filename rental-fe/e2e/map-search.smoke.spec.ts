@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test"
 import {
   drawLineOnMap,
   getMobileResultsPanel,
+  selectSearchRadius,
   triggerAreaSearchStaleState,
   waitForAreaSearchError,
   waitForAreaSearchResults,
@@ -142,20 +143,7 @@ test.describe("Map search smoke", () => {
       page.getByRole("button", { name: /Search within 1\s?km/i }),
     ).toHaveCount(0)
 
-    const radiusToggle = page
-      .getByRole("button", {
-        name: /Search radius: 1\s?km|Search within 1\s?km/i,
-      })
-      .first()
-    await radiusToggle.waitFor({ state: "visible", timeout: 30_000 })
-    await radiusToggle.click({ timeout: 20_000 })
-
-    const radiusMenu = page.getByLabel("Select search radius")
-    await radiusMenu.waitFor({ state: "visible", timeout: 30_000 })
-
-    const radius500 = radiusMenu.getByRole("button", { name: /500\s?m/i })
-    await radius500.waitFor({ state: "visible", timeout: 30_000 })
-    await radius500.click({ timeout: 20_000 })
+    await selectSearchRadius(page, /500\s?m/i)
 
     const searchButton = page.getByRole("button", {
       name: /Search within 500\s?m/i,

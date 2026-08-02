@@ -96,3 +96,41 @@ export async function waitForSearchThisArea(page: Page) {
 export async function panMap(page: Page) {
   await triggerAreaSearchStaleState(page)
 }
+
+export async function waitForMapModeControls(page: Page) {
+  const mapControls = page.getByTestId("map-mode-controls")
+  await mapControls.waitFor({ state: "visible", timeout: 60_000 })
+  return mapControls
+}
+
+export async function waitForPinSearchControls(page: Page) {
+  const mapControls = await waitForMapModeControls(page)
+
+  await expect(async () => {
+    const removePin = mapControls.getByRole("button", { name: "Remove pin" })
+    await expect(removePin).toBeVisible({ timeout: 5_000 })
+    await expect(removePin).toHaveAttribute("aria-pressed", "true")
+  }).toPass({ timeout: 60_000 })
+
+  return mapControls
+}
+
+export async function selectSearchRadius(
+  page: Page,
+  radiusLabel: string | RegExp,
+) {
+  const mapControls = await waitForPinSearchControls(page)
+
+  await expect(async () => {
+    const radiusToggle = mapControls.getByRole("button", {
+      name: /Search radius:/i,
+    })
+    await radiusToggle.click({ timeout: 5_000 })
+
+    const radiusMenu = page.getByLabel("Select search radius")
+    await radiusMenu.waitFor({ state: "visible", timeout: 5_000 })
+    await radiusMenu
+      .getByRole("button", { name: radiusLabel })
+      .click({ timeout: 5_000 })
+  }).toPass({ timeout: 60_000 })
+}
