@@ -89,6 +89,10 @@ export async function installNeighbourhoodExploreRoute(page: Page) {
   )
 }
 
+function isNeighbourhoodExploreResponse(url: string) {
+  return url.includes("/neighbourhood")
+}
+
 export async function openNeighbourhoodExplore(
   page: Page,
   scope: Page | Locator = page,
@@ -103,8 +107,18 @@ export async function openNeighbourhoodExplore(
   await expect(async () => {
     await expect(exploreButton).toBeVisible({ timeout: 10_000 })
     await exploreButton.scrollIntoViewIfNeeded()
+
+    const neighbourhoodResponse = page.waitForResponse(
+      (response) =>
+        isNeighbourhoodExploreResponse(response.url()) &&
+        response.request().method() === "GET" &&
+        response.ok(),
+      { timeout: 60_000 },
+    )
+
     await exploreButton.click({ timeout: 5_000 })
     await exploreDialog.waitFor({ state: "visible", timeout: 15_000 })
+    await neighbourhoodResponse
   }).toPass({ timeout: 90_000 })
 }
 
@@ -115,26 +129,16 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
 
   await exploreDialog.waitFor({ state: "visible", timeout: 60_000 })
 
-  const loadingText = page.getByText("Loading nearby places...")
-  if (await loadingText.isVisible().catch(() => false)) {
-    await loadingText.waitFor({ state: "hidden", timeout: 60_000 })
-  }
+  await expect(
+    exploreDialog.getByText("Loading nearby places..."),
+  ).toBeHidden({ timeout: 60_000 })
 
-  await expect(async () => {
-    const hasCategories = await page
-      .getByRole("tablist", { name: "Neighbourhood categories" })
-      .isVisible()
-      .catch(() => false)
-    const hasPlace = await page
-      .getByRole("button", { name: /Smoke Lane Cafe/i })
-      .isVisible()
-      .catch(() => false)
-
-    expect(hasCategories || hasPlace).toBe(true)
-  }).toPass({ timeout: 90_000 })
+  await expect(
+    exploreDialog.getByRole("tablist", { name: "Neighbourhood categories" }),
+  ).toBeVisible({ timeout: 90_000 })
 
   if (
-    await page
+    await exploreDialog
       .getByText("Could not load nearby places")
       .isVisible()
       .catch(() => false)
@@ -142,7 +146,9 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     throw new Error("Neighbourhood explore failed to load nearby places.")
   }
 
-  const resultsDrawer = page.getByTestId("neighbourhood-explore-results-drawer")
+  const resultsDrawer = exploreDialog.getByTestId(
+    "neighbourhood-explore-results-drawer",
+  )
   if ((await resultsDrawer.count()) > 0) {
     await resultsDrawer.waitFor({ state: "visible", timeout: 30_000 })
   }
