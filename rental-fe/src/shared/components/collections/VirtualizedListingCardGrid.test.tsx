@@ -3,6 +3,7 @@ import { createRef } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VirtualizedListingCardGrid } from "./VirtualizedListingCardGrid"
+import { LISTING_CARD_GRID_OVERSCAN } from "./listingCardGridVirtualization"
 
 const mocks = vi.hoisted(() => ({
   measureElement: vi.fn(),
@@ -142,7 +143,7 @@ describe("VirtualizedListingCardGrid", () => {
 
     expect(lastCall.scrollMargin).toBe(320)
     expect(lastCall.count).toBeGreaterThan(0)
-    expect(lastCall.overscan).toBe(2)
+    expect(lastCall.overscan).toBe(LISTING_CARD_GRID_OVERSCAN)
   })
 
   it("positions window-scrolled rows using the virtualizer scroll margin", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  LISTING_CARD_GRID_OVERSCAN,
   LISTING_CARD_GRID_RESPONSIVE_BREAKPOINT_PX,
   LISTING_CARD_GRID_VIRTUALIZATION_THRESHOLD,
   estimateListingGridRowHeightPx,
@@ -12,6 +13,10 @@ import {
 describe("listingCardGridVirtualization constants", () => {
   it("uses a stable threshold aligned with one listing page plus buffer", () => {
     expect(LISTING_CARD_GRID_VIRTUALIZATION_THRESHOLD).toBe(24)
+  })
+
+  it("keeps virtualizer overscan minimal for lighter scroll work", () => {
+    expect(LISTING_CARD_GRID_OVERSCAN).toBe(1)
   })
 
   it("matches the responsive sm breakpoint used by the grid layout", () => {

@@ -99,6 +99,9 @@ describe("listing grid stack integration", () => {
     })
     expect(screen.getAllByRole("button", { name: /Open listing/ }).length).toBeGreaterThan(0)
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(
+      document.querySelectorAll('[data-testid="progressive-cover-placeholder"]'),
+    ).toHaveLength(0)
   })
 
   it("opens the shared preview without mounting a modal per card", async () => {

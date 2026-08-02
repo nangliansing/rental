@@ -12,6 +12,7 @@ import {
   estimateListingGridRowHeightPx,
   getListingGridRowKey,
   groupListingGridRows,
+  LISTING_CARD_GRID_OVERSCAN,
   type ListingCardGridColumns,
 } from "./listingCardGridVirtualization"
 import { useListingGridColumnCount } from "./useListingGridColumnCount"
@@ -194,7 +195,7 @@ function WindowVirtualizedListingCardGrid<T>({
     getItemKey: (index) =>
       getListingGridRowKey(rows[index] ?? [], index, getItemKey),
     measureElement: (element) => element.getBoundingClientRect().height,
-    overscan: 2,
+    overscan: LISTING_CARD_GRID_OVERSCAN,
     scrollMargin,
   })
 
@@ -242,7 +243,7 @@ function ElementVirtualizedListingCardGrid<T>({
     getItemKey: (index) =>
       getListingGridRowKey(rows[index] ?? [], index, getItemKey),
     measureElement: (element) => element.getBoundingClientRect().height,
-    overscan: 2,
+    overscan: LISTING_CARD_GRID_OVERSCAN,
   })
 
   return (
