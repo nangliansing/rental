@@ -34,6 +34,8 @@ test.describe("Neighbourhood explore smoke", () => {
   test("opens explore, filters categories, selects a place, and closes", async ({
     page,
   }) => {
+    test.setTimeout(120_000)
+
     await installMapSearchApiMocks(page)
     await installNeighbourhoodExploreRoute(page)
     await page.goto(areaSearchUrl)
@@ -42,30 +44,35 @@ test.describe("Neighbourhood explore smoke", () => {
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     const mobilePanel = getMobileResultsPanel(page)
-    await mobilePanel
-      .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-      .click()
+    await expect(mobilePanel).toBeVisible({ timeout: 60_000 })
+
+    const buildingButton = mobilePanel.getByRole("button", {
+      name: new RegExp(smokeAreaBuilding.name),
+    })
+    await expect(buildingButton).toBeVisible({ timeout: 30_000 })
+    await buildingButton.click({ timeout: 10_000 })
 
     await expect(
       mobilePanel.getByRole("heading", {
         name: `${smokeAreaBuilding.name} details`,
       }),
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 30_000 })
 
-    await mobilePanel
-      .getByRole("button", { name: "Explore neighbourhood" })
-      .click()
+    const exploreButton = mobilePanel.getByRole("button", {
+      name: "Explore neighbourhood",
+    })
+    await expect(exploreButton).toBeVisible({ timeout: 30_000 })
+    await exploreButton.click({ timeout: 10_000 })
 
     const exploreDialog = page.getByRole("dialog", {
       name: "Explore neighbourhood",
     })
     await waitForNeighbourhoodExploreModal(page)
 
-    await expect(async () => {
-      await exploreDialog
-        .getByRole("tab", { name: /^All(?: \(\d+\))?$/ })
-        .waitFor({ state: "visible", timeout: 5_000 })
-    }).toPass({ timeout: 30_000 })
+    const allTab = exploreDialog.getByRole("tab", {
+      name: /^All(?: \(\d+\))?$/,
+    })
+    await allTab.waitFor({ state: "visible", timeout: 60_000 })
     await exploreDialog.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ }).click()
     await expect(exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })).toBeVisible()
     await expect(

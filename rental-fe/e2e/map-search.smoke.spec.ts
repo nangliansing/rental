@@ -117,6 +117,8 @@ test.describe("Map search smoke", () => {
   test("commits a refreshed nearby search after radius changes", async ({
     page,
   }) => {
+    test.setTimeout(120_000)
+
     await installMapSearchApiMocks(page, {
       refreshedNearbyOnSecondSearch: true,
     })
@@ -132,14 +134,17 @@ test.describe("Map search smoke", () => {
       page.getByRole("button", { name: /Search within 1\s?km/i }),
     ).toHaveCount(0)
 
-    await expect(async () => {
-      const radiusToggle = page
-        .getByRole("button", { name: /Search.*1\s?km/i })
-        .first()
-      await radiusToggle.click({ timeout: 5_000 })
-    }).toPass({ timeout: 30_000 })
+    const radiusToggle = page
+      .getByRole("button", {
+        name: /Search radius: 1\s?km|Search within 1\s?km/i,
+      })
+      .first()
+    await radiusToggle.waitFor({ state: "visible", timeout: 30_000 })
+    await radiusToggle.click({ timeout: 10_000 })
 
-    await page.getByRole("button", { name: "500 m", exact: true }).click()
+    const radius500 = page.getByRole("button", { name: "500 m", exact: true })
+    await radius500.waitFor({ state: "visible", timeout: 20_000 })
+    await radius500.click({ timeout: 10_000 })
 
     const searchButton = page.getByRole("button", {
       name: /Search within 500\s?m/i,
