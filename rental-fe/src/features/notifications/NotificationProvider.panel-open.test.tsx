@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from "react"
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -115,7 +115,7 @@ function NotificationsProbe() {
 
   return (
     <div>
-      <output aria-label="Unread count">{unreadCount}</output>
+      <output aria-label="Badge unread count">{unreadCount}</output>
       <button type="button" onClick={() => setNotificationsPanelOpen(true)}>
         Open panel
       </button>
@@ -127,19 +127,6 @@ function NotificationsProbe() {
         onClick={() => addNotification(notification("live-notification"))}
       >
         Push live notification
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          addNotification(
-            notification("live-notification-2", {
-              type: "FOLLOWED_BUILDING_NEW_LISTING",
-              title: "New listing",
-            }),
-          )
-        }
-      >
-        Push second live notification
       </button>
       <button
         type="button"
@@ -158,8 +145,27 @@ function NotificationsProbe() {
 }
 
 function renderNotificationsProbe(items: NotificationItem[]) {
-  const page = notificationsPage(items)
-  mocks.getMyNotifications.mockResolvedValue(page)
+  let notifications = [...items]
+
+  const buildPage = () => notificationsPage(notifications)
+
+  mocks.getMyNotifications.mockImplementation(async () => buildPage())
+
+  mocks.markMyNotificationsRead.mockImplementation(async () => {
+    notifications = notifications.map((item) => ({
+      ...item,
+      isRead: true,
+      readAt: item.readAt ?? "2026-07-22T01:00:00.000Z",
+    }))
+
+    return {
+      success: true,
+      data: {
+        matchedCount: notifications.length,
+        modifiedCount: notifications.length,
+      },
+    }
+  })
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -170,7 +176,7 @@ function renderNotificationsProbe(items: NotificationItem[]) {
 
   queryClient.setQueryData<NotificationsInfiniteData>(
     queryKeys.notifications.me,
-    infiniteNotificationsData(items),
+    infiniteNotificationsData(notifications),
   )
 
   function Wrapper({ children }: PropsWithChildren) {
@@ -188,94 +194,83 @@ function renderNotificationsProbe(items: NotificationItem[]) {
   }
 }
 
-describe("NotificationProvider panel-open scenarios", () => {
+describe("NotificationProvider panel scenarios", () => {
   beforeEach(() => {
     mocks.getMyNotifications.mockReset()
     mocks.markMyNotificationsRead.mockReset()
-    mocks.markMyNotificationsRead.mockResolvedValue({
-      success: true,
-      data: { matchedCount: 1, modifiedCount: 1 },
-    })
   })
 
-  it("does not call read-all when opening the panel with zero unread", async () => {
-    const { user } = renderNotificationsProbe([
-      notification("notification-1", { isRead: true }),
-    ])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Open panel" }))
-    await waitFor(() =>
-      expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled(),
-    )
-  })
-
-  it("calls read-all once when opening the panel with unread notifications", async () => {
+  it("does not call read-all when opening the panel", async () => {
     const { user } = renderNotificationsProbe([notification("notification-1")])
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
+      expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("1"),
     )
 
     await user.click(screen.getByRole("button", { name: "Open panel" }))
+
+    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
+  })
+
+  it("hides the badge while the panel is open", async () => {
+    const { user } = renderNotificationsProbe([notification("notification-1")])
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("1"),
+    )
+
+    await user.click(screen.getByRole("button", { name: "Open panel" }))
+
+    expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("0")
+  })
+
+  it("calls read-all once when closing the panel with unread notifications", async () => {
+    const { user } = renderNotificationsProbe([notification("notification-1")])
+
+    await user.click(screen.getByRole("button", { name: "Open panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
 
     await waitFor(() =>
       expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
     )
   })
 
-  it("clears unread count optimistically before read-all resolves", async () => {
-    let resolveReadAll: ((value: unknown) => void) | undefined
-    mocks.markMyNotificationsRead.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveReadAll = resolve
-        }),
-    )
-
-    const { user } = renderNotificationsProbe([notification("notification-1")])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
-    )
+  it("does not call read-all when closing an empty panel", async () => {
+    const { user } = renderNotificationsProbe([
+      notification("notification-1", { isRead: true }),
+    ])
 
     await user.click(screen.getByRole("button", { name: "Open panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
 
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await act(async () => {
-      resolveReadAll?.({
-        success: true,
-        data: { matchedCount: 1, modifiedCount: 1 },
-      })
-    })
+    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
   })
 
-  it("does not loop read-all requests when the API returns 429", async () => {
+  it("clears the badge after closing the panel", async () => {
+    const { user } = renderNotificationsProbe([notification("notification-1")])
+
+    await user.click(screen.getByRole("button", { name: "Open panel" }))
+    expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("0")
+
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("0"),
+    )
+  })
+
+  it("does not loop read-all requests when the API returns 429 on close", async () => {
     mocks.markMyNotificationsRead.mockRejectedValue(
       Object.assign(new Error("Too Many Requests"), { status: 429 }),
     )
 
     const { user } = renderNotificationsProbe([notification("notification-1")])
 
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
-    )
-
     await user.click(screen.getByRole("button", { name: "Open panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
 
     await waitFor(() =>
       expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
-    )
-
-    await waitFor(
-      () => expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-      { timeout: 1_000 },
     )
 
     await new Promise((resolve) => setTimeout(resolve, 300))
@@ -283,215 +278,98 @@ describe("NotificationProvider panel-open scenarios", () => {
     expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1)
   })
 
-  it("dedupes concurrent read-all requests into one in-flight call", async () => {
-    let resolveReadAll: ((value: unknown) => void) | undefined
-    mocks.markMyNotificationsRead.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveReadAll = resolve
-        }),
-    )
-
+  it("does not call read-all for live notifications while the panel stays open", async () => {
     const { user } = renderNotificationsProbe([notification("notification-1")])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
-    )
 
     await user.click(screen.getByRole("button", { name: "Open panel" }))
     await user.click(screen.getByRole("button", { name: "Push live notification" }))
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 600))
-    })
-
-    expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1)
-
-    await act(async () => {
-      resolveReadAll?.({
-        success: true,
-        data: { matchedCount: 1, modifiedCount: 1 },
-      })
-    })
+    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
   })
 
-  it("marks live notifications as read while the panel is open without raising unread count", async () => {
+  it("syncs live notifications on close after they arrived while the panel was open", async () => {
     const { queryClient, user } = renderNotificationsProbe([
       notification("notification-1", { isRead: true }),
     ])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Open panel" }))
-    await user.click(screen.getByRole("button", { name: "Push live notification" }))
-
-    const cached = queryClient.getQueryData<NotificationsInfiniteData>(
-      queryKeys.notifications.me,
-    )
-
-    expect(screen.getByLabelText("Unread count")).toHaveTextContent("0")
-    expect(cached?.pages[0].data[0]).toMatchObject({
-      _id: "live-notification",
-      isRead: true,
-    })
-  })
-
-  it("debounces read-all sync for rapid live notifications while the panel is open", async () => {
-    const { user } = renderNotificationsProbe([
-      notification("notification-1", { isRead: true }),
-    ])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Open panel" }))
-    await user.click(screen.getByRole("button", { name: "Push live notification" }))
-    await user.click(
-      screen.getByRole("button", { name: "Push second live notification" }),
-    )
-
-    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
-
-    await waitFor(
-      () => expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
-      { timeout: 1_000 },
-    )
-
-    await new Promise((resolve) => setTimeout(resolve, 700))
-
-    expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1)
-  })
-
-  it("cancels pending debounced sync when the panel closes", async () => {
-    const { user } = renderNotificationsProbe([
-      notification("notification-1", { isRead: true }),
-    ])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
 
     await user.click(screen.getByRole("button", { name: "Open panel" }))
     await user.click(screen.getByRole("button", { name: "Push live notification" }))
     await user.click(screen.getByRole("button", { name: "Close panel" }))
 
-    await new Promise((resolve) => setTimeout(resolve, 700))
-
-    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
-  })
-
-  it("increments unread count for live notifications while the panel is closed", async () => {
-    const { user } = renderNotificationsProbe([
-      notification("notification-1", { isRead: true }),
-    ])
-
     await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
+      expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
     )
-
-    await user.click(screen.getByRole("button", { name: "Push live notification" }))
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
-    )
-  })
-
-  it("keeps unread count stable when live notifications arrive during a 429 read-all response", async () => {
-    mocks.markMyNotificationsRead.mockRejectedValue(
-      Object.assign(new Error("Too Many Requests"), { status: 429 }),
-    )
-
-    const { user } = renderNotificationsProbe([notification("notification-1")])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Open panel" }))
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Push live notification" }))
-    await user.click(
-      screen.getByRole("button", { name: "Push second live notification" }),
-    )
-
-    expect(screen.getByLabelText("Unread count")).toHaveTextContent("0")
-
-    await waitFor(
-      () => expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(2),
-      { timeout: 1_000 },
-    )
-  })
-
-  it("ignores expired live notifications while the panel is open", async () => {
-    const { queryClient, user } = renderNotificationsProbe([
-      notification("notification-1", { isRead: true }),
-    ])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Open panel" }))
-    await user.click(
-      screen.getByRole("button", { name: "Push expired notification" }),
-    )
-
-    const cached = queryClient.getQueryData<NotificationsInfiniteData>(
-      queryKeys.notifications.me,
-    )
-
-    expect(cached?.pages[0].data).toHaveLength(1)
-    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
-  })
-
-  it("does not increment unread count when the same live notification is pushed twice while open", async () => {
-    const { queryClient, user } = renderNotificationsProbe([
-      notification("notification-1", { isRead: true }),
-    ])
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
-    )
-
-    await user.click(screen.getByRole("button", { name: "Open panel" }))
-    await user.click(screen.getByRole("button", { name: "Push live notification" }))
-    await user.click(screen.getByRole("button", { name: "Push live notification" }))
 
     const cached = queryClient.getQueryData<NotificationsInfiniteData>(
       queryKeys.notifications.me,
     )
 
     expect(cached?.pages[0].unreadCount).toBe(0)
-    expect(cached?.pages[0].data.filter((item) => item._id === "live-notification")).toHaveLength(1)
+    expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("0")
   })
 
-  it("marks newly unread notifications read when the panel is reopened", async () => {
+  it("increments the badge for live notifications while the panel is closed", async () => {
     const { user } = renderNotificationsProbe([
       notification("notification-1", { isRead: true }),
     ])
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
+      expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("0"),
     )
 
     await user.click(screen.getByRole("button", { name: "Push live notification" }))
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("1"),
+      expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("1"),
     )
+  })
+
+  it("does not call read-all twice when setNotificationsPanelOpen(false) is repeated", async () => {
+    const { user } = renderNotificationsProbe([notification("notification-1")])
 
     await user.click(screen.getByRole("button", { name: "Open panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Unread count")).toHaveTextContent("0"),
+      expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
     )
-    expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls read-all again after a new unread arrives in a later panel session", async () => {
+    const { user } = renderNotificationsProbe([
+      notification("notification-1", { isRead: true }),
+    ])
+
+    await user.click(screen.getByRole("button", { name: "Push live notification" }))
+    await user.click(screen.getByRole("button", { name: "Open panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
+
+    await waitFor(() =>
+      expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
+    )
+
+    await user.click(screen.getByRole("button", { name: "Push live notification" }))
+    await user.click(screen.getByRole("button", { name: "Open panel" }))
+    await user.click(screen.getByRole("button", { name: "Close panel" }))
+
+    await waitFor(() =>
+      expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(2),
+    )
+  })
+
+  it("ignores expired live notifications", async () => {
+    const { queryClient, user } = renderNotificationsProbe([
+      notification("notification-1", { isRead: true }),
+    ])
+
+    await user.click(screen.getByRole("button", { name: "Push expired notification" }))
+
+    const cached = queryClient.getQueryData<NotificationsInfiniteData>(
+      queryKeys.notifications.me,
+    )
+
+    expect(cached?.pages[0].data).toHaveLength(1)
+    expect(screen.getByLabelText("Badge unread count")).toHaveTextContent("0")
   })
 })
