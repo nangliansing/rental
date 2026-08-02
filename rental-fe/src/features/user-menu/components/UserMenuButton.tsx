@@ -36,6 +36,7 @@ export function UserMenuButton({ variant }: UserMenuButtonProps) {
       >
         <Avatar
           displayName={displayName}
+          photo={user?.profilePhoto}
           colorKey={user?._id}
           size="xs"
         />

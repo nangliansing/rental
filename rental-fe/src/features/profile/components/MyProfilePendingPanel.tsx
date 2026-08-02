@@ -1,5 +1,5 @@
 import { Clock3 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import type { PendingPost } from "@/features/pending-post"
 import { useSearchOwnerPendingPosts } from "@/features/pending-post"
@@ -31,6 +31,9 @@ export function MyProfilePendingPanel({
   onPendingPostDeleted,
 }: MyProfilePendingPanelProps) {
   const [selectedPost, setSelectedPost] = useState<PendingPost | null>(null)
+  const handleOpenPost = useCallback((post: PendingPost) => {
+    setSelectedPost(post)
+  }, [])
   const pendingPostsQuery = useSearchOwnerPendingPosts({
     status: OWNER_PENDING_STATUS_BY_PROFILE_FILTER[filter],
   })
@@ -81,15 +84,15 @@ export function MyProfilePendingPanel({
         isFetchNextPageError={pendingPostsQuery.isFetchNextPageError}
         onFetchNextPage={() => void pendingPostsQuery.fetchNextPage()}
         endMessage="No more submissions"
-      >
-        {pendingPosts.map((post) => (
+        items={pendingPosts}
+        getItemKey={(post) => post._id}
+        renderItem={(post) => (
           <MyProfilePendingCard
-            key={post._id}
             post={post}
-            onOpen={() => setSelectedPost(post)}
+            onOpen={() => handleOpenPost(post)}
           />
-        ))}
-      </ListingCardGrid>
+        )}
+      />
 
       <PendingPostDetailOverlay
         key={selectedPost?._id ?? "empty"}

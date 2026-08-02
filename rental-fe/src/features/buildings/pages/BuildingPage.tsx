@@ -200,22 +200,22 @@ function BuildingPageContent({ building }: { building: BuildingDetails }) {
             <ListingCardGrid
               columns="two"
               className={RESULTS_PANEL_LISTING_GRID_CLASS}
+              items={listings}
+              getItemKey={(listing) => listing._id}
+              renderItem={(listing) => (
+                <ListingGridCard
+                  listing={listing}
+                  showBuildingName={false}
+                  onActivate={preview.openPreview}
+                />
+              )}
               hasNextPage={Boolean(listingsQuery.hasNextPage)}
               isFetchingNextPage={listingsQuery.isFetchingNextPage}
               isFetchNextPageError={listingsQuery.isFetchNextPageError}
               onFetchNextPage={() => void listingsQuery.fetchNextPage()}
               endMessage="No more listings"
               testId="building-listing-grid"
-            >
-              {listings.map((listing) => (
-                <ListingGridCard
-                  key={listing._id}
-                  listing={listing}
-                  showBuildingName={false}
-                  onActivate={(item) => preview.openPreview(item)}
-                />
-              ))}
-            </ListingCardGrid>
+            />
           )}
         </section>
       </div>

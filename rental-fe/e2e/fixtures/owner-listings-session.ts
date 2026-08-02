@@ -1,3 +1,6 @@
+export const SMOKE_LISTING_COVER_URL =
+  "https://res.cloudinary.com/demo/image/upload/sample.jpg"
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000
 
@@ -151,7 +154,7 @@ function createSmokeOwnerListing({
     media: [
       {
         publicId: `test/${_id}`,
-        secureUrl: "https://example.com/listing.jpg",
+        secureUrl: SMOKE_LISTING_COVER_URL,
         resourceType: "image",
         position: 0,
         alt: description,
@@ -168,6 +171,35 @@ function createSmokeOwnerListing({
     building: smokeOwnerListingBuilding,
     agentProfile,
   }
+}
+
+export function buildSmokeOwnerListingsOfCount(
+  count: number,
+  input: BuildSmokeOwnerListingsInput,
+): SmokeOwnerListing[] {
+  const base = buildSmokeOwnerListings(input)
+
+  if (count <= 0) return []
+  if (count <= base.length) return base.slice(0, count)
+
+  const extra: SmokeOwnerListing[] = []
+
+  for (let index = base.length; index < count; index += 1) {
+    extra.push(
+      createSmokeOwnerListing({
+        _id: `listing-smoke-grid-${index + 1}`,
+        visibility: "PUBLIC",
+        availableAt: null,
+        rent: 18_000 + (index - base.length) * 500,
+        description: `Grid stress listing ${index + 1}`,
+        createdAt: new Date(2026, 6, 1 + index).toISOString(),
+        listedBy: input.listedBy,
+        agentProfile: input.agentProfile,
+      }),
+    )
+  }
+
+  return [...base, ...extra]
 }
 
 export function buildSmokeOwnerListings({

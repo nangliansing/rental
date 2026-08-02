@@ -124,4 +124,20 @@ describe("SavedListingGridCard", () => {
 
     expect(screen.getByText("Listing unavailable")).toBeInTheDocument()
   })
+
+  it("uses the lightweight lazy grid cover for available saved listings", () => {
+    render(
+      <SavedListingGridCard
+        savedListing={createSavedListing()}
+        onOpen={vi.fn()}
+      />,
+    )
+
+    const image = screen.getByRole("img", { name: "Bright rental room" })
+    expect(image.tagName).toBe("IMG")
+    expect(image).toHaveAttribute("loading", "lazy")
+    expect(
+      screen.queryByTestId("progressive-cover-placeholder"),
+    ).not.toBeInTheDocument()
+  })
 })

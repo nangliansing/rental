@@ -1,11 +1,11 @@
 import { Heart } from "lucide-react"
-import type { MouseEvent } from "react"
+import { memo, type MouseEvent } from "react"
 
 import {
-  ListingCoverImage,
   ListingPrice,
   ListingRoomSummary,
 } from "@/features/listing/components/ListingPresentationPrimitives"
+import { ListingGridCoverImage } from "@/features/listing/components/ListingGridCoverImage"
 import {
   ListingGridCardMetaText,
   ListingGridCardOverlay,
@@ -21,7 +21,6 @@ import {
   getSavedListingBuildingName,
   getSavedListingCover,
   getSavedListingTitle,
-  isSavedListingAvailable,
 } from "../utils/savedListingDisplay"
 
 type SavedListingGridCardProps = {
@@ -32,7 +31,7 @@ type SavedListingGridCardProps = {
   onOpen: (listingId: string) => void
 }
 
-export function SavedListingGridCard({
+export const SavedListingGridCard = memo(function SavedListingGridCard({
   savedListing,
   isDeleting = false,
   showUnsaveButton = false,
@@ -41,7 +40,6 @@ export function SavedListingGridCard({
 }: SavedListingGridCardProps) {
   const liveListing = getLiveSavedListing(savedListing)
   const coverPhoto = getSavedListingCover(savedListing)
-  const isAvailable = isSavedListingAvailable(savedListing)
 
   const handleUnsave = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
@@ -51,13 +49,9 @@ export function SavedListingGridCard({
 
   const visualContent = (
     <>
-      <ListingCoverImage
-        photo={coverPhoto}
-        altFallback="Saved listing photo"
-        className={cn(
-          "transition duration-200",
-          isAvailable && "group-hover:scale-[1.03]",
-        )}
+      <ListingGridCoverImage
+        src={coverPhoto?.secureUrl}
+        alt={coverPhoto?.alt?.trim() || "Saved listing photo"}
         fallbackClassName="text-slate-300"
       />
 
@@ -135,4 +129,4 @@ export function SavedListingGridCard({
       {unsaveButton}
     </div>
   )
-}
+})

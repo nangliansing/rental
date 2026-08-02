@@ -76,20 +76,20 @@ export function MyProfileListingsPanel({
     return (
         <ProfileTabPanel>
             <ListingCardGrid
-                hasNextPage={Boolean(listingsQuery.hasNextPage)}
-                isFetchingNextPage={listingsQuery.isFetchingNextPage}
-                isFetchNextPageError={listingsQuery.isFetchNextPageError}
-                onFetchNextPage={() => void listingsQuery.fetchNextPage()}
-                endMessage="No more listings"
-            >
-                {listings.map((listing) => (
-                    <ListingGridCard
-                        key={listing._id}
-                        listing={listing}
-                        onActivate={preview.openPreview}
-                    />
-                ))}
-            </ListingCardGrid>
+              hasNextPage={Boolean(listingsQuery.hasNextPage)}
+              isFetchingNextPage={listingsQuery.isFetchingNextPage}
+              isFetchNextPageError={listingsQuery.isFetchNextPageError}
+              onFetchNextPage={() => void listingsQuery.fetchNextPage()}
+              endMessage="No more listings"
+              items={listings}
+              getItemKey={(listing) => listing._id}
+              renderItem={(listing) => (
+                <ListingGridCard
+                  listing={listing}
+                  onActivate={preview.openPreview}
+                />
+              )}
+            />
 
             <ListingGridPreviewPortal
                 preview={preview}
