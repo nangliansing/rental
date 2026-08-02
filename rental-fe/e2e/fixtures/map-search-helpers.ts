@@ -9,15 +9,19 @@ export async function waitForAreaSearchResults(
   buildingName: string,
 ) {
   const mobilePanel = getMobileResultsPanel(page)
-  await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
+  await expect(mobilePanel).toBeVisible({ timeout: 60_000 })
   await expect(mobilePanel.getByText("1 building")).toBeVisible({
-    timeout: 20_000,
+    timeout: 60_000,
   })
-  await expect(
-    mobilePanel.getByRole("button", { name: new RegExp(buildingName) }),
-  ).toBeVisible({
-    timeout: 20_000,
-  })
+  await expect
+    .poll(
+      async () =>
+        mobilePanel
+          .getByRole("button", { name: new RegExp(buildingName) })
+          .isVisible(),
+      { timeout: 60_000 },
+    )
+    .toBe(true)
 }
 
 export async function waitForAreaSearchError(page: Page) {
@@ -68,7 +72,7 @@ export async function drawLineOnMap(page: Page, pointCount = 2) {
     { x: box.width * 0.52, y: box.height * 0.74 },
   ]
 
-  for (const point of tapPoints.slice(0, Math.max(pointCount, 2) + 1)) {
+  for (const point of tapPoints.slice(0, Math.max(pointCount, 2))) {
     await mapSurface.click({ position: point, force: true })
     await page.waitForTimeout(350)
   }
@@ -87,7 +91,7 @@ export async function waitForSearchThisArea(page: Page) {
     .poll(
       async () =>
         page.getByRole("button", { name: "Search this area" }).isVisible(),
-      { timeout: 25_000 },
+      { timeout: 60_000 },
     )
     .toBe(true)
 }

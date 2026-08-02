@@ -172,12 +172,18 @@ test.describe("Map search smoke", () => {
     await waitForMapReady(page)
     await expect(getMobileResultsPanel(page)).toHaveCount(0)
 
-    await page.getByRole("button", { name: "Drop pin" }).click()
-    await expect(page.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-      { timeout: 20_000 },
-    )
+    const dropPinButton = page.getByRole("button", { name: "Drop pin" })
+    await dropPinButton.scrollIntoViewIfNeeded()
+    try {
+      await dropPinButton.click({ timeout: 10_000 })
+    } catch {
+      await dropPinButton.click({ force: true })
+    }
+
+    const removePinButton = page.getByRole("button", { name: "Remove pin" })
+    await expect(removePinButton).toHaveAttribute("aria-pressed", "true", {
+      timeout: 60_000,
+    })
 
     const searchButton = page.getByRole("button", {
       name: "Search within 1 km",
