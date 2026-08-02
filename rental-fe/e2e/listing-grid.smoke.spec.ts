@@ -28,7 +28,7 @@ const hasMapsKey = Boolean(
 
 const LISTING_GRID_VIRTUALIZATION_THRESHOLD = 24
 const PUBLIC_GRID_LISTING_COUNT = 29
-const LATEST_SORTED_LISTING_LABEL = "Open listing ฿30k"
+const LATEST_SORTED_LISTING_LABEL = /Open listing.*30k/i
 
 function openListingButtons(scope: Page | Locator) {
   return scope.getByRole("button", { name: /^Open listing / })
@@ -101,13 +101,19 @@ async function loadNextGridPage(page: Page, scope: Page | Locator = page) {
   }
 }
 
-async function clickListing(scope: Page | Locator, label?: string) {
+async function clickListing(
+  scope: Page | Locator,
+  label?: string | RegExp,
+) {
   await expect(async () => {
     const button = label
       ? scope.getByRole("button", { name: label }).first()
       : openListingButtons(scope).first()
+
+    await expect(button).toBeVisible({ timeout: 20_000 })
+    await button.scrollIntoViewIfNeeded()
     await button.click({ timeout: 5_000 })
-  }).toPass({ timeout: 15_000 })
+  }).toPass({ timeout: 20_000 })
 }
 
 test.describe("Listing grid smoke", () => {

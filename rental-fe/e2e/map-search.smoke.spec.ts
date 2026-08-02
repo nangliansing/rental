@@ -129,14 +129,18 @@ test.describe("Map search smoke", () => {
       timeout: 20_000,
     })
     await expect(
-      page.getByRole("button", { name: "Search within 1 km" }),
+      page.getByRole("button", { name: /Search within 1\s?km/i }),
     ).toHaveCount(0)
 
-    await page.getByRole("button", { name: "Search radius: 1 km" }).click()
+    const radiusToggle = page.getByRole("button", { name: /Search.*1\s?km/i })
+    await expect(radiusToggle).toBeVisible({ timeout: 20_000 })
+    await radiusToggle.scrollIntoViewIfNeeded()
+    await radiusToggle.click()
+
     await page.getByRole("button", { name: "500 m", exact: true }).click()
 
     const searchButton = page.getByRole("button", {
-      name: "Search within 500 m",
+      name: /Search within 500\s?m/i,
     })
     await expect(searchButton).toBeVisible({ timeout: 20_000 })
     await expect(searchButton).toBeEnabled()

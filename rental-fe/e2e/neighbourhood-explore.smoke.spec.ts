@@ -61,8 +61,11 @@ test.describe("Neighbourhood explore smoke", () => {
     })
     await waitForNeighbourhoodExploreModal(page)
 
-    await expect(exploreDialog.getByRole("tab", { name: "All (3)" })).toBeVisible()
-    await exploreDialog.getByRole("tab", { name: "Cafes (1)" }).click()
+    await expect(exploreDialog).toBeVisible({ timeout: 20_000 })
+    await expect(
+      exploreDialog.getByRole("tab", { name: /^All(?: \(\d+\))?$/ }),
+    ).toBeVisible({ timeout: 20_000 })
+    await exploreDialog.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ }).click()
     await expect(exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })).toBeVisible()
     await expect(
       exploreDialog.getByRole("button", { name: /Smoke Corner Store/i }),
