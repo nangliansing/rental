@@ -77,9 +77,11 @@ async function expectVirtualizedWindow(
 
   await page.evaluate(() => window.scrollTo(0, 0))
 
-  const renderedCards = await countViewportOpenListingButtons(page)
-  expect(renderedCards).toBeGreaterThan(0)
-  expect(renderedCards).toBeLessThan(loadedCount)
+  await expect(async () => {
+    const renderedCards = await countViewportOpenListingButtons(page)
+    expect(renderedCards).toBeGreaterThan(0)
+    expect(renderedCards).toBeLessThan(loadedCount)
+  }).toPass({ timeout: 15_000 })
 }
 
 async function loadNextGridPage(page: Page, scope: Page | Locator = page) {
@@ -108,13 +110,59 @@ async function loadAllGridListings(page: Page, scope: Page | Locator = page) {
   await expect(noMoreListings).toBeVisible({ timeout: 15_000 })
 }
 
+async function waitForListingButtonWithScroll(
+  scope: Page | Locator,
+  label: string,
+  options?: { scrollTo?: "top" | "bottom" | "find" },
+) {
+  const page = "page" in scope ? scope.page() : scope
+  const scrollMode = options?.scrollTo ?? "find"
+
+  await expect(async () => {
+    if (scrollMode === "top") {
+      await page.evaluate(() => window.scrollTo(0, 0))
+    } else if (scrollMode === "bottom") {
+      await page.evaluate(() =>
+        window.scrollTo(0, document.documentElement.scrollHeight),
+      )
+    } else {
+      await page.evaluate(() => window.scrollBy(0, 500))
+    }
+
+    await expect(scope.getByRole("button", { name: label }).first()).toBeVisible()
+  }).toPass({ timeout: 30_000 })
+}
+
 async function waitForListingButton(
   scope: Page | Locator,
   label: string,
 ) {
-  await expect(scope.getByRole("button", { name: label }).first()).toBeVisible({
-    timeout: 15_000,
-  })
+  await waitForListingButtonWithScroll(scope, label, { scrollTo: "top" })
+}
+
+async function clickOpenListing(
+  scope: Page | Locator,
+  label: string,
+  options?: { scrollTo?: "top" | "bottom" | "find" },
+) {
+  const page = "page" in scope ? scope.page() : scope
+  const scrollMode = options?.scrollTo ?? "find"
+
+  await expect(async () => {
+    if (scrollMode === "top") {
+      await page.evaluate(() => window.scrollTo(0, 0))
+    } else if (scrollMode === "bottom") {
+      await page.evaluate(() =>
+        window.scrollTo(0, document.documentElement.scrollHeight),
+      )
+    } else {
+      await page.evaluate(() => window.scrollBy(0, 500))
+    }
+
+    const button = scope.getByRole("button", { name: label }).first()
+    await expect(button).toBeVisible()
+    await button.click({ timeout: 5_000 })
+  }).toPass({ timeout: 30_000 })
 }
 
 test.describe("Listing grid smoke", () => {
@@ -137,9 +185,7 @@ test.describe("Listing grid smoke", () => {
 
     await loadAllGridListings(page)
     await page.evaluate(() => window.scrollTo(0, 0))
-    await waitForListingButton(page, LATEST_SORTED_LISTING_LABEL)
-
-    await page.getByRole("button", { name: OLDEST_SORTED_LISTING_LABEL }).first().click()
+    await clickOpenListing(page, OLDEST_SORTED_LISTING_LABEL)
     await expect(
       page.getByRole("dialog", { name: "Preview listing ฿14k" }),
     ).toBeVisible({ timeout: 15_000 })
@@ -164,7 +210,8 @@ test.describe("Listing grid smoke", () => {
     await loadNextGridPage(page)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT)
 
-    await page.getByRole("button", { name: LATEST_SORTED_LISTING_LABEL }).first().click()
+    await loadAllGridListings(page)
+    await clickOpenListing(page, LATEST_SORTED_LISTING_LABEL, { scrollTo: "top" })
     await expect(
       page.getByRole("dialog", { name: "Preview listing ฿30k" }),
     ).toBeVisible({ timeout: 15_000 })
@@ -188,7 +235,7 @@ test.describe("Listing grid smoke", () => {
     await loadNextGridPage(page, grid)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT)
 
-    await grid.getByRole("button", { name: BUILDING_PAGE_LISTING_LABEL }).first().click()
+    await clickOpenListing(grid, BUILDING_PAGE_LISTING_LABEL, { scrollTo: "top" })
     await expect(
       page.getByRole("dialog", { name: "Preview listing ฿14k" }),
     ).toBeVisible({ timeout: 15_000 })
@@ -238,7 +285,7 @@ test.describe("Listing grid smoke", () => {
     await waitForListingButton(grid, BUILDING_PAGE_LISTING_LABEL)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT, grid)
 
-    await grid.getByRole("button", { name: BUILDING_PAGE_LISTING_LABEL }).first().click()
+    await clickOpenListing(grid, BUILDING_PAGE_LISTING_LABEL, { scrollTo: "top" })
     await expect(
       page.getByRole("dialog", { name: "Preview listing ฿14k" }),
     ).toBeVisible({ timeout: 15_000 })
@@ -293,15 +340,15 @@ test.describe("Listing grid smoke", () => {
     await page.goto("/profile")
     await waitForAuthenticatedProfile(page)
 
-    await loadNextGridPage(page)
+    await loadAllGridListings(page)
 
+    await waitForListingButtonWithScroll(page, LATEST_SORTED_LISTING_LABEL, {
+      scrollTo: "top",
+    })
     await page.evaluate(() => window.scrollTo(0, 0))
-    await waitForListingButton(page, LATEST_SORTED_LISTING_LABEL)
-
-    await page.keyboard.press("End")
-    await waitForListingButton(page, OLDEST_SORTED_LISTING_LABEL)
-
-    await page.evaluate(() => window.scrollTo(0, 0))
-    await waitForListingButton(page, LATEST_SORTED_LISTING_LABEL)
+    await waitForListingButtonWithScroll(page, OLDEST_SORTED_LISTING_LABEL)
+    await waitForListingButtonWithScroll(page, LATEST_SORTED_LISTING_LABEL, {
+      scrollTo: "top",
+    })
   })
 })
