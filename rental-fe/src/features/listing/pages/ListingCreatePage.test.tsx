@@ -14,8 +14,13 @@ const gateMocks = vi.hoisted(() => ({
   gate: vi.fn(),
 }))
 
+const useReverseGeocodeMock = vi.hoisted(() => vi.fn())
+
 vi.mock("@/features/buildings/api")
 vi.mock("@/features/pending-post")
+vi.mock("@/features/geocode/api", () => ({
+  useReverseGeocode: useReverseGeocodeMock,
+}))
 vi.mock("@/features/profile/hooks/useMyProfileGate", () => ({
   useMyProfileGate: () => gateMocks.gate(),
 }))
@@ -125,6 +130,11 @@ function renderWithClient(
 describe("ListingCreatePage", () => {
   beforeEach(() => {
     setGate()
+    useReverseGeocodeMock.mockReturnValue({
+      formattedAddress: null,
+      isFetching: false,
+      isNotFound: false,
+    })
     vi.mocked(useCreatePendingPost).mockReturnValue({
       mutateAsync: vi.fn(),
     } as never)
@@ -241,5 +251,27 @@ describe("ListingCreatePage", () => {
     expect(
       screen.getByRole("button", { name: "Complete building" }),
     ).toBeInTheDocument()
+  })
+
+  it("requests reverse geocode only for the new-building create step", () => {
+    renderWithClient(<ListingCreatePage />, {
+      route: "/listings/new?lat=13.7&lng=100.5",
+    })
+
+    expect(useReverseGeocodeMock).toHaveBeenCalledWith({
+      lat: 13.7,
+      lng: 100.5,
+      enabled: true,
+    })
+  })
+
+  it("does not request reverse geocode for an existing building listing", () => {
+    renderWithClient(<ListingCreatePage />)
+
+    expect(useReverseGeocodeMock).toHaveBeenCalledWith({
+      lat: null,
+      lng: null,
+      enabled: false,
+    })
   })
 })

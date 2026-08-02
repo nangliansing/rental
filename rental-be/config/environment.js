@@ -323,6 +323,19 @@ export const validateEnvironment = (env = process.env) => {
         100000,
         issues,
       ),
+      geocodeMax: parseInteger(env, "RATE_LIMIT_GEOCODE_MAX", 30, 1, 100000, issues),
+    },
+    geocode: {
+      enabled: parseBoolean(env, "GEOCODE_ENABLED", nodeEnv !== "test", issues),
+      googleMapsApiKey: readString(env, "GOOGLE_MAPS_API_KEY"),
+      cacheTtlDays: parseInteger(
+        env,
+        "GEOCODE_CACHE_TTL_DAYS",
+        30,
+        1,
+        365,
+        issues,
+      ),
     },
     neighbourhood: {
       overpassEnabled: parseBoolean(
@@ -415,6 +428,14 @@ export const validateEnvironment = (env = process.env) => {
     issues.push("REDIS_URL is required when QUEUE_ENABLED=true");
   }
 
+  if (
+    config.geocode.enabled &&
+    config.isProduction &&
+    !config.geocode.googleMapsApiKey
+  ) {
+    issues.push("GOOGLE_MAPS_API_KEY is required when GEOCODE_ENABLED=true");
+  }
+
   if (issues.length > 0) {
     throw new EnvironmentValidationError(issues);
   }
@@ -432,6 +453,7 @@ export const validateEnvironment = (env = process.env) => {
     logging: Object.freeze(config.logging),
     metrics: Object.freeze(config.metrics),
     rateLimit: Object.freeze(config.rateLimit),
+    geocode: Object.freeze(config.geocode),
     neighbourhood: Object.freeze(config.neighbourhood),
     queue: Object.freeze(config.queue),
   });

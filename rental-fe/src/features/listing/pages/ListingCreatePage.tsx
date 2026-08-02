@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom"
 import { CheckCircle2, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useReverseGeocode } from "@/features/geocode/api"
 import {
   type PendingPost,
   useCreatePendingPost,
@@ -55,14 +56,23 @@ export function ListingCreatePage() {
   const hasInvalidLocationParams =
     hasLocationParams && !isExistingBuilding && !selectedLocation
   const canCreateListing = Boolean(gate.profile)
+  const [step, setStep] = useState<CreateListingStep>(
+    isExistingBuilding ? "listing" : "building",
+  )
   const buildingQuery = useBuildingById({
     buildingId: buildingId ?? undefined,
     enabled: isExistingBuilding && canCreateListing,
   })
+  const reverseGeocodeQuery = useReverseGeocode({
+    lat: selectedLocation?.coordinates[1] ?? null,
+    lng: selectedLocation?.coordinates[0] ?? null,
+    enabled:
+      canCreateListing &&
+      !isExistingBuilding &&
+      step === "building" &&
+      selectedLocation !== null,
+  })
 
-  const [step, setStep] = useState<CreateListingStep>(
-    isExistingBuilding ? "listing" : "building",
-  )
   const [buildingDraft, setBuildingDraft] = useState<BuildingFormValues | null>(
     null,
   );
@@ -193,6 +203,25 @@ export function ListingCreatePage() {
                     Lat {formatCoordinate(selectedLocation.coordinates[1])}, Lng{" "}
                     {formatCoordinate(selectedLocation.coordinates[0])}
                   </p>
+                  {reverseGeocodeQuery.isFetching && (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                      <LoaderIcon className="h-3.5 w-3.5" />
+                      Looking up address from map location...
+                    </p>
+                  )}
+                  {reverseGeocodeQuery.isNotFound && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      No address was found for this location. Enter one manually.
+                    </p>
+                  )}
+                  {reverseGeocodeQuery.isError &&
+                    !reverseGeocodeQuery.isNotFound && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        {reverseGeocodeQuery.error instanceof Error
+                          ? reverseGeocodeQuery.error.message
+                          : "Address lookup is unavailable. Enter one manually."}
+                      </p>
+                    )}
                 </div>
               </div>
             )}
@@ -201,6 +230,7 @@ export function ListingCreatePage() {
               submitLabel="Continue to listing"
               submitDisabled={!selectedLocation}
               defaultValues={buildingDraft ?? undefined}
+              suggestedAddress={reverseGeocodeQuery.formattedAddress}
               onSubmit={(values) => {
                 if (!selectedLocation) return
 

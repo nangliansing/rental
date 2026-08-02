@@ -102,4 +102,66 @@ describe("BuildingForm", () => {
     expect(screen.getByRole("group", { name: "Security" })).toBeInTheDocument()
     expect(screen.queryByText(/permission to add this building/i)).not.toBeInTheDocument()
   })
+
+  it("fills an empty create address from suggestedAddress without overwriting user input", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <BuildingForm
+        defaultValues={{
+          name: "Riverside Place",
+          buildingType: "Apartment",
+        }}
+        suggestedAddress={null}
+      />,
+    )
+
+    const address = screen.getByRole("textbox", { name: "Address" })
+    expect(address).toHaveValue("")
+
+    rerender(
+      <BuildingForm
+        defaultValues={{
+          name: "Riverside Place",
+          buildingType: "Apartment",
+        }}
+        suggestedAddress="123 Sukhumvit Rd, Bangkok, Thailand"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(address).toHaveValue("123 Sukhumvit Rd, Bangkok, Thailand"),
+    )
+
+    await user.clear(address)
+    await user.type(address, "Custom address")
+    rerender(
+      <BuildingForm
+        defaultValues={{
+          name: "Riverside Place",
+          buildingType: "Apartment",
+        }}
+        suggestedAddress="Different address"
+      />,
+    )
+
+    expect(address).toHaveValue("Custom address")
+  })
+
+  it("does not apply suggestedAddress in edit mode", async () => {
+    render(
+      <BuildingForm
+        mode="edit"
+        defaultValues={{
+          name: "Riverside Place",
+          buildingType: "Apartment",
+          facilities: [],
+          security: [],
+          address: "",
+        }}
+        suggestedAddress="123 Sukhumvit Rd, Bangkok, Thailand"
+      />,
+    )
+
+    expect(screen.getByRole("textbox", { name: "Address" })).toHaveValue("")
+  })
 })

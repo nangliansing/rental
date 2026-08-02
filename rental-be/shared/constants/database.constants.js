@@ -16,6 +16,7 @@ export const MODEL_NAMES = Object.freeze({
   ReviewReport: "ReviewReport",
   AuthIdentity: "AuthIdentity",
   NeighbourhoodCache: "NeighbourhoodCache",
+  GeocodeCache: "GeocodeCache",
 });
 
 export const COLLECTION_NAMES = Object.freeze({
@@ -35,4 +36,5 @@ export const COLLECTION_NAMES = Object.freeze({
   ReviewReports: "review_reports",
   AuthIdentities: "auth_identities",
   NeighbourhoodCaches: "neighbourhood_caches",
+  GeocodeCaches: "geocode_caches",
 });

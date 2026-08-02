@@ -70,6 +70,7 @@ const roots = {
   adminSuspensionDetails: key("admin-suspension"),
   adminPlatformAdmins: key("admin-platform-admins"),
   adminUserDetails: key("admin-user"),
+  geocode: key("geocode"),
 } as const
 
 export const queryKeys = {
@@ -302,5 +303,11 @@ export const queryKeys = {
       detail: (userId: string | undefined) =>
         childKey(roots.adminUserDetails, userId),
     },
+  },
+  geocode: {
+    all: roots.geocode,
+    invalid: childKey(roots.geocode, "invalid"),
+    reverse: (lat: number, lng: number) =>
+      childKey(roots.geocode, "reverse", lat, lng),
   },
 } as const

@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { FormField } from "@/components/ui/form-field"
@@ -43,6 +43,7 @@ const initialValues: BuildingFormValues = {
 type BuildingFormProps = {
   mode?: BuildingFormMode
   defaultValues?: Partial<BuildingFormValues>
+  suggestedAddress?: string | null
   submitLabel?: string
   helperText?: string
   submitDisabled?: boolean
@@ -109,6 +110,7 @@ function buildChangedBuildingValues(
 export function BuildingForm({
   mode = "create",
   defaultValues,
+  suggestedAddress = null,
   submitLabel,
   helperText = "Please make sure you have permission to add this building and that the details are accurate.",
   submitDisabled = false,
@@ -121,6 +123,22 @@ export function BuildingForm({
   const [values, setValues] = useState<BuildingFormValues>(savedValues)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
+
+  useEffect(() => {
+    if (mode !== "create") return
+
+    const nextAddress = suggestedAddress?.trim()
+    if (!nextAddress) return
+
+    setValues((currentValues) =>
+      currentValues.address.trim()
+        ? currentValues
+        : {
+            ...currentValues,
+            address: nextAddress,
+          },
+    )
+  }, [mode, suggestedAddress])
 
   const normalizedInitialValues = useMemo(
     () => normalizeBuildingValues(savedValues),
