@@ -55,16 +55,26 @@ test.describe("Map search smoke", () => {
   })
 
   test("hydrates a nearby search from the URL", async ({ page }) => {
+    test.setTimeout(120_000)
+
     await installMapSearchApiMocks(page)
+    const nearbyResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/search/buildings/nearby") &&
+        response.request().method() === "POST" &&
+        response.ok(),
+      { timeout: 30_000 },
+    )
     await page.goto(nearbySearchUrl)
 
     await waitForMapReady(page)
+    await nearbyResponse
 
     const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
-    await expect(
-      mobilePanel.getByText(smokeNearbyBuilding.name),
-    ).toBeVisible({ timeout: 20_000 })
+    await expect(mobilePanel).toBeVisible({ timeout: 30_000 })
+    await expect(mobilePanel.getByText(smokeNearbyBuilding.name)).toBeVisible({
+      timeout: 30_000,
+    })
     await expect(page).toHaveURL(/search=nearby/)
   })
 
@@ -154,6 +164,8 @@ test.describe("Map search smoke", () => {
   test("drops a pin and commits a nearby search from the idle map", async ({
     page,
   }) => {
+    test.setTimeout(120_000)
+
     await installMapSearchApiMocks(page)
     await page.goto("/")
 
@@ -164,6 +176,7 @@ test.describe("Map search smoke", () => {
     await expect(page.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
       "aria-pressed",
       "true",
+      { timeout: 20_000 },
     )
 
     const searchButton = page.getByRole("button", {

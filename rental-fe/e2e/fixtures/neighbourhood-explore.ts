@@ -124,11 +124,18 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     name: "Explore neighbourhood",
   })
 
-  await exploreDialog.waitFor({ state: "visible", timeout: 60_000 })
+  await expect(exploreDialog).toBeVisible({ timeout: 30_000 })
 
-  await expect(
-    exploreDialog.getByText("Loading nearby places..."),
-  ).toBeHidden({ timeout: 60_000 })
+  const loadingLocator = exploreDialog.getByText("Loading nearby places...")
+  const resultsDrawer = exploreDialog.getByTestId(
+    "neighbourhood-explore-results-drawer",
+  )
+
+  try {
+    await expect(resultsDrawer).toBeVisible({ timeout: 30_000 })
+  } catch {
+    await expect(loadingLocator).toHaveCount(0, { timeout: 30_000 })
+  }
 
   await expect(async () => {
     const hasTablist = await exploreDialog
@@ -149,7 +156,7 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
       .catch(() => false)
 
     expect(hasTablist || hasAllTab || hasPlace || hasNearbyPlaces).toBe(true)
-  }).toPass({ timeout: 90_000 })
+  }).toPass({ timeout: 30_000 })
 
   if (
     await exploreDialog
@@ -160,10 +167,5 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     throw new Error("Neighbourhood explore failed to load nearby places.")
   }
 
-  const resultsDrawer = exploreDialog.getByTestId(
-    "neighbourhood-explore-results-drawer",
-  )
-  if ((await resultsDrawer.count()) > 0) {
-    await resultsDrawer.waitFor({ state: "visible", timeout: 30_000 })
-  }
+  return exploreDialog
 }
