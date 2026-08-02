@@ -1,6 +1,10 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode, RefObject } from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
+import {
+  useVirtualizer,
+  useWindowVirtualizer,
+  type Virtualizer,
+} from "@tanstack/react-virtual"
 
 import { cn } from "@/lib/utils"
 
@@ -17,12 +21,6 @@ function getListingGridColumnClass(columns: ListingCardGridColumns) {
   return columns === "responsive" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"
 }
 
-function resolveScrollElement(rootRef?: RefObject<HTMLElement | null>) {
-  if (typeof document === "undefined") return null
-
-  return rootRef?.current ?? document.documentElement
-}
-
 type VirtualizedListingCardGridProps<T> = {
   items: readonly T[]
   renderItem: (item: T) => ReactNode
@@ -33,19 +31,21 @@ type VirtualizedListingCardGridProps<T> = {
   testId?: string
 }
 
-export function VirtualizedListingCardGrid<T>({
-  items,
-  renderItem,
-  getItemKey,
-  columns = "responsive",
-  className,
-  rootRef,
-  testId,
-}: VirtualizedListingCardGridProps<T>) {
-  "use no memo"
+type VirtualizedListingCardGridBodyProps<T> = Omit<
+  VirtualizedListingCardGridProps<T>,
+  "rootRef"
+>
 
-  const listRef = useRef<HTMLDivElement | null>(null)
-  const [scrollMargin, setScrollMargin] = useState(0)
+type SharedVirtualizer = Pick<
+  Virtualizer<HTMLElement, Element>,
+  "getTotalSize" | "getVirtualItems" | "measureElement" | "options"
+>
+
+function useListingGridRows<T>(
+  items: readonly T[],
+  columns: ListingCardGridColumns,
+  listRef: RefObject<HTMLDivElement | null>,
+) {
   const [containerWidth, setContainerWidth] = useState(0)
   const columnCount = useListingGridColumnCount(columns, listRef)
 
@@ -56,45 +56,48 @@ export function VirtualizedListingCardGrid<T>({
 
   useLayoutEffect(() => {
     const list = listRef.current
-    const scrollRoot = resolveScrollElement(rootRef)
-    if (!list || !scrollRoot) return
+    if (!list) return
 
-    const measureLayout = () => {
+    const measureWidth = () => {
       setContainerWidth(list.clientWidth)
-
-      const nextMargin =
-        list.getBoundingClientRect().top -
-        scrollRoot.getBoundingClientRect().top +
-        scrollRoot.scrollTop
-
-      setScrollMargin((current) =>
-        Math.abs(current - nextMargin) < 1 ? current : nextMargin,
-      )
     }
 
-    measureLayout()
+    measureWidth()
 
-    const observer = new ResizeObserver(measureLayout)
+    const observer = new ResizeObserver(measureWidth)
     observer.observe(list)
-    observer.observe(scrollRoot)
 
     return () => observer.disconnect()
-  }, [rootRef, rows.length])
+  }, [listRef, rows.length])
 
-  // TanStack Virtual owns imperative measurements; keep hook methods untouched.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => resolveScrollElement(rootRef),
-    estimateSize: () =>
-      estimateListingGridRowHeightPx(containerWidth, columnCount),
-    getItemKey: (index) =>
-      getListingGridRowKey(rows[index] ?? [], index, getItemKey),
-    measureElement: (element) => element.getBoundingClientRect().height,
-    overscan: 2,
-    scrollMargin,
-  })
+  return {
+    rows,
+    columnCount,
+    containerWidth,
+  }
+}
 
+function VirtualizedListingCardGridBody<T>({
+  listRef,
+  virtualizer,
+  scrollMargin,
+  rows,
+  columns,
+  className,
+  testId,
+  renderItem,
+  getItemKey,
+}: {
+  listRef: RefObject<HTMLDivElement | null>
+  virtualizer: SharedVirtualizer
+  scrollMargin: number
+  rows: readonly (readonly T[])[]
+  columns: ListingCardGridColumns
+  className?: string
+  testId?: string
+  renderItem: (item: T) => ReactNode
+  getItemKey: (item: T) => string
+}) {
   if (rows.length === 0) {
     return null
   }
@@ -136,4 +139,127 @@ export function VirtualizedListingCardGrid<T>({
       })}
     </div>
   )
+}
+
+function WindowVirtualizedListingCardGrid<T>({
+  items,
+  renderItem,
+  getItemKey,
+  columns = "responsive",
+  className,
+  testId,
+}: VirtualizedListingCardGridBodyProps<T>) {
+  "use no memo"
+
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+  const { rows, columnCount, containerWidth } = useListingGridRows(
+    items,
+    columns,
+    listRef,
+  )
+
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list) return
+
+    const measureScrollMargin = () => {
+      setScrollMargin((current) => {
+        const nextMargin = list.offsetTop
+        return Math.abs(current - nextMargin) < 1 ? current : nextMargin
+      })
+    }
+
+    measureScrollMargin()
+
+    const observer = new ResizeObserver(measureScrollMargin)
+    observer.observe(list)
+
+    return () => observer.disconnect()
+  }, [rows.length])
+
+  // TanStack Virtual owns imperative measurements; keep hook methods untouched.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () =>
+      estimateListingGridRowHeightPx(containerWidth, columnCount),
+    getItemKey: (index) =>
+      getListingGridRowKey(rows[index] ?? [], index, getItemKey),
+    measureElement: (element) => element.getBoundingClientRect().height,
+    overscan: 2,
+    scrollMargin,
+  })
+
+  return (
+    <VirtualizedListingCardGridBody
+      listRef={listRef}
+      virtualizer={virtualizer}
+      scrollMargin={virtualizer.options.scrollMargin}
+      rows={rows}
+      columns={columns}
+      className={className}
+      testId={testId}
+      renderItem={renderItem}
+      getItemKey={getItemKey}
+    />
+  )
+}
+
+function ElementVirtualizedListingCardGrid<T>({
+  items,
+  renderItem,
+  getItemKey,
+  columns = "responsive",
+  className,
+  testId,
+  rootRef,
+}: VirtualizedListingCardGridBodyProps<T> & {
+  rootRef: RefObject<HTMLElement | null>
+}) {
+  "use no memo"
+
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const { rows, columnCount, containerWidth } = useListingGridRows(
+    items,
+    columns,
+    listRef,
+  )
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => rootRef.current,
+    estimateSize: () =>
+      estimateListingGridRowHeightPx(containerWidth, columnCount),
+    getItemKey: (index) =>
+      getListingGridRowKey(rows[index] ?? [], index, getItemKey),
+    measureElement: (element) => element.getBoundingClientRect().height,
+    overscan: 2,
+  })
+
+  return (
+    <VirtualizedListingCardGridBody
+      listRef={listRef}
+      virtualizer={virtualizer}
+      scrollMargin={0}
+      rows={rows}
+      columns={columns}
+      className={className}
+      testId={testId}
+      renderItem={renderItem}
+      getItemKey={getItemKey}
+    />
+  )
+}
+
+export function VirtualizedListingCardGrid<T>({
+  rootRef,
+  ...props
+}: VirtualizedListingCardGridProps<T>) {
+  if (rootRef) {
+    return <ElementVirtualizedListingCardGrid {...props} rootRef={rootRef} />
+  }
+
+  return <WindowVirtualizedListingCardGrid {...props} />
 }

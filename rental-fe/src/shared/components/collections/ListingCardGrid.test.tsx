@@ -21,9 +21,11 @@ class IntersectionObserverMock implements IntersectionObserver {
   }
 }
 
-const virtualizedGridSpy = vi.fn(({ testId }: { testId?: string }) => (
-  <div data-testid={testId ?? "virtualized-listing-grid"}>virtualized</div>
-))
+const virtualizedGridSpy = vi.fn(
+  ({ testId }: { testId?: string; rootRef?: unknown }) => (
+    <div data-testid={testId ?? "virtualized-listing-grid"}>virtualized</div>
+  ),
+)
 
 vi.mock("./VirtualizedListingCardGrid", () => ({
   VirtualizedListingCardGrid: (props: { testId?: string }) =>
@@ -105,6 +107,23 @@ describe("ListingCardGrid", () => {
       expect(virtualizedGridSpy).toHaveBeenCalledOnce()
       expect(screen.getByTestId("listing-grid")).toHaveTextContent("virtualized")
       expect(screen.queryByTestId("static-grid")).not.toBeInTheDocument()
+    })
+
+    it("forwards rootRef to the virtualized renderer for panel scroll containers", () => {
+      const rootRef = { current: document.createElement("div") }
+
+      render(
+        <ListingCardGrid
+          rootRef={rootRef}
+          items={createItems(LISTING_CARD_GRID_VIRTUALIZATION_THRESHOLD)}
+          getItemKey={(item) => item._id}
+          renderItem={(item) => <article>{item.label}</article>}
+        />,
+      )
+
+      expect(virtualizedGridSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ rootRef }),
+      )
     })
 
     it("respects a custom virtualizeFrom override", () => {

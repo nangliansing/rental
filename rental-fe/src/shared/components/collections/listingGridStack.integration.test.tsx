@@ -35,6 +35,13 @@ vi.mock("@tanstack/react-virtual", () => ({
     getTotalSize: () => 300,
     getVirtualItems: () => [{ index: 0, start: 0, key: "row-0" }],
     measureElement: vi.fn(),
+    options: { scrollMargin: 0 },
+  }),
+  useWindowVirtualizer: () => ({
+    getTotalSize: () => 300,
+    getVirtualItems: () => [{ index: 0, start: 0, key: "row-0" }],
+    measureElement: vi.fn(),
+    options: { scrollMargin: 0 },
   }),
 }))
 
