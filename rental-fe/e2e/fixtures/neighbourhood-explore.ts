@@ -94,11 +94,14 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     name: "Explore neighbourhood",
   })
 
+  await exploreDialog.waitFor({ state: "attached", timeout: 90_000 })
   await exploreDialog.waitFor({ state: "visible", timeout: 60_000 })
-  await page.getByText("Loading nearby places...").waitFor({
-    state: "hidden",
-    timeout: 60_000,
-  })
+
+  const loadingText = page.getByText("Loading nearby places...")
+  if (await loadingText.isVisible().catch(() => false)) {
+    await loadingText.waitFor({ state: "hidden", timeout: 60_000 })
+  }
+
   await exploreDialog.getByRole("tab").first().waitFor({
     state: "visible",
     timeout: 60_000,

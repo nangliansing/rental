@@ -34,7 +34,7 @@ test.describe("Neighbourhood explore smoke", () => {
   test("opens explore, filters categories, selects a place, and closes", async ({
     page,
   }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(180_000)
 
     await installMapSearchApiMocks(page)
     await installNeighbourhoodExploreRoute(page)

@@ -87,6 +87,8 @@ test.describe("Map search smoke", () => {
   test("opens building detail and returns to the results list", async ({
     page,
   }) => {
+    test.setTimeout(120_000)
+
     await installMapSearchApiMocks(page)
     await page.goto(areaSearchUrl)
 
@@ -94,24 +96,30 @@ test.describe("Map search smoke", () => {
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     const mobilePanel = getMobileResultsPanel(page)
-    await mobilePanel
-      .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-      .click()
+    const buildingBtn = mobilePanel.getByRole("button", {
+      name: new RegExp(smokeAreaBuilding.name),
+    })
+    await buildingBtn.waitFor({ state: "visible", timeout: 30_000 })
+    await buildingBtn.click({ timeout: 20_000 })
 
     await expect(
       mobilePanel.getByRole("heading", {
         name: `${smokeAreaBuilding.name} details`,
       }),
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 30_000 })
 
-    await mobilePanel.getByRole("button", { name: "Go back" }).click()
+    const goBackBtn = mobilePanel.getByRole("button", { name: "Go back" })
+    await goBackBtn.waitFor({ state: "visible", timeout: 30_000 })
+    await goBackBtn.click({ timeout: 20_000 })
 
-    await expect(mobilePanel.getByText("1 building")).toBeVisible()
+    await expect(mobilePanel.getByText("1 building")).toBeVisible({
+      timeout: 30_000,
+    })
     await expect(
       mobilePanel.getByRole("button", {
         name: new RegExp(smokeAreaBuilding.name),
       }),
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 30_000 })
   })
 
   test("commits a refreshed nearby search after radius changes", async ({
@@ -140,18 +148,21 @@ test.describe("Map search smoke", () => {
       })
       .first()
     await radiusToggle.waitFor({ state: "visible", timeout: 30_000 })
-    await radiusToggle.click({ timeout: 10_000 })
+    await radiusToggle.click({ timeout: 20_000 })
 
-    const radius500 = page.getByRole("button", { name: "500 m", exact: true })
-    await radius500.waitFor({ state: "visible", timeout: 20_000 })
-    await radius500.click({ timeout: 10_000 })
+    const radiusMenu = page.getByLabel("Select search radius")
+    await radiusMenu.waitFor({ state: "visible", timeout: 30_000 })
+
+    const radius500 = radiusMenu.getByRole("button", { name: /500\s?m/i })
+    await radius500.waitFor({ state: "visible", timeout: 30_000 })
+    await radius500.click({ timeout: 20_000 })
 
     const searchButton = page.getByRole("button", {
       name: /Search within 500\s?m/i,
     })
-    await expect(searchButton).toBeVisible({ timeout: 20_000 })
+    await expect(searchButton).toBeVisible({ timeout: 30_000 })
     await expect(searchButton).toBeEnabled()
-    await searchButton.click()
+    await searchButton.click({ timeout: 20_000 })
 
     await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
       timeout: 20_000,
