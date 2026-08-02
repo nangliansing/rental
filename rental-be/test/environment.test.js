@@ -73,6 +73,7 @@ describe("environment validation", () => {
         RATE_LIMIT_STORE: "redis",
         REDIS_URL: "redis://127.0.0.1:6379",
         METRICS_TOKEN: "metrics-token-with-at-least-32-characters",
+        GOOGLE_MAPS_API_KEY: "production-geocode-key",
       }),
     );
 
@@ -169,12 +170,28 @@ describe("environment validation", () => {
         RATE_LIMIT_STORE: "redis",
         REDIS_URL: "redis://127.0.0.1:6379",
         METRICS_TOKEN: "metrics-token-with-at-least-32-characters",
+        GOOGLE_MAPS_API_KEY: "production-geocode-key",
       }),
     );
 
     assert.equal(productionConfig.queue.enabled, true);
     assert.equal(productionConfig.queue.prefix, "rental:queue");
     assert.equal(productionConfig.queue.workerConcurrency, 5);
+  });
+
+  test("requires a Google Maps API key when reverse geocoding is enabled in production", () => {
+    expectIssues(
+      {
+        NODE_ENV: "production",
+        CORS_ORIGINS: "https://app.example.com",
+        TRUST_PROXY_HOPS: "1",
+        RATE_LIMIT_STORE: "redis",
+        REDIS_URL: "redis://127.0.0.1:6379",
+        METRICS_TOKEN: "metrics-token-with-at-least-32-characters",
+        GEOCODE_ENABLED: "true",
+      },
+      ["GOOGLE_MAPS_API_KEY is required when GEOCODE_ENABLED=true"],
+    );
   });
 
   test("rejects malformed scalar configuration", () => {

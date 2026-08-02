@@ -67,6 +67,11 @@ const friendlyErrorMessages: Record<string, string> = {
   SAVED_LISTING_NOT_FOUND: 'This listing is not saved.',
   BUILDING_ALREADY_FOLLOWED: 'You are already following this building.',
   BUILDING_FOLLOW_NOT_FOUND: 'You are not following this building.',
+  GEOCODE_NOT_FOUND: 'No address was found for this location.',
+  GEOCODE_UNAVAILABLE: 'Address lookup is temporarily unavailable. Please try again.',
+  GEOCODE_DISABLED: 'Address lookup is currently unavailable.',
+  GEOCODE_NOT_CONFIGURED: 'Address lookup is not configured on the server. Enter the address manually.',
+  GEOCODE_REQUEST_DENIED: 'Address lookup is blocked by Google API key restrictions. Enter the address manually.',
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {

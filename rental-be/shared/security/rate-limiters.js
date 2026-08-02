@@ -108,6 +108,14 @@ export const initializeRateLimiters = ({ config, createStore }) => {
       keyGenerator: getAuthenticatedKey,
       skip: (req) => ["GET", "HEAD", "OPTIONS"].includes(req.method),
     }),
+    geocode: createLimiter({
+      createStore,
+      prefix: "geocode",
+      identifier: "geocode-reverse",
+      windowMs: MINUTE,
+      limit: config.geocodeMax,
+      keyGenerator: getAuthenticatedKey,
+    }),
   };
 
   return configuredLimiters;
@@ -129,3 +137,4 @@ export const authenticationRateLimit = useLimiter("authentication");
 export const sensitiveActionRateLimit = useLimiter("sensitiveAction");
 export const uploadRateLimit = useLimiter("upload");
 export const adminMutationRateLimit = useLimiter("adminMutation");
+export const geocodeRateLimit = useLimiter("geocode");

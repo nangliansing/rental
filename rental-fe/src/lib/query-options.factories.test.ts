@@ -15,6 +15,7 @@ import { buildingsInMapQueryOptions } from "@/features/map-search/api/useSearchB
 import { buildingsNearLinesQueryOptions } from "@/features/map-search/api/useSearchBuildingsNearLines"
 import { buildingsNearbyQueryOptions } from "@/features/map-search/api/useSearchBuildingsNearby"
 import { listingsInBuildingQueryOptions } from "@/features/map-search/api/useSearchListingsInBuilding"
+import { reverseGeocodeQueryOptions } from "@/features/geocode/api/useReverseGeocode"
 import { notificationsQueryOptions } from "@/features/notifications/api/notificationQueryOptions"
 import { ownerPendingPostsQueryOptions } from "@/features/pending-post/api/useSearchOwnerPendingPosts"
 import { myAgentProfileQueryOptions } from "@/features/profile/api/useMyAgentProfile"
@@ -55,6 +56,13 @@ describe("query-options factories", () => {
         }),
         queryKeys.listings.publicDetail("listing-1", "viewer-1"),
       ],
+      [
+        reverseGeocodeQueryOptions({
+          lat: 13.756331,
+          lng: 100.501765,
+        }),
+        queryKeys.geocode.reverse(13.75633, 100.50177),
+      ],
       [myAgentProfileQueryOptions(), queryKeys.profiles.me],
     ] as const
 
@@ -77,6 +85,9 @@ describe("query-options factories", () => {
       ownerListingQueryOptions(" "),
       publicListingQueryOptions({ listingId: undefined }),
       publicListingQueryOptions({ listingId: "   " }),
+      reverseGeocodeQueryOptions({ lat: undefined, lng: 100.501765 }),
+      reverseGeocodeQueryOptions({ lat: 13.756331, lng: null }),
+      reverseGeocodeQueryOptions({ lat: 120, lng: 100.501765 }),
       adminQueries.buildingEditRequestDetail(undefined),
       adminQueries.reportDetail(undefined),
       adminQueries.reviewReportDetail(undefined),
@@ -106,6 +117,11 @@ describe("query-options factories", () => {
       }),
       listerReviewsQueryOptions({
         listerProfileId: "profile-1",
+        enabled: false,
+      }),
+      reverseGeocodeQueryOptions({
+        lat: 13.756331,
+        lng: 100.501765,
         enabled: false,
       }),
       adminQueries.pendingPosts("PENDING", false),
