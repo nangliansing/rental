@@ -20,6 +20,7 @@ import {
   validateContractMonths,
   validateDeposit,
   validateDescription,
+  validatePrivateNote,
   validateElectricRate,
   validateFacilities as validateListingFacilities,
   validateIsCookingAllowed,
@@ -95,6 +96,7 @@ export const validatePendingListing = (input) => {
     facilities: validateListingFacilities(input.facilities),
     media,
     description: validateDescription(input.description),
+    privateNote: validatePrivateNote(input.privateNote),
     availableAt: validateAvailableAt(input.availableAt),
   };
 };

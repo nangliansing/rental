@@ -41,6 +41,7 @@ const baseListingFormValues: ListingFormValues = {
   facilities: [],
   media: [listingPhoto],
   description: "Test room",
+  privateNote: "Gate code 1234",
   availabilityMode: "flexible",
   availableFromDate: "",
 }
@@ -58,6 +59,21 @@ vi.mock("@/lib/api-client", () => ({
 describe("buildPendingPostListingApiPayload", () => {
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it("includes privateNote in the pending post listing payload", () => {
+    const payload = buildPendingPostListingApiPayload(baseListingFormValues)
+
+    expect(payload.privateNote).toBe("Gate code 1234")
+  })
+
+  it("includes an empty privateNote when the form leaves it blank", () => {
+    const payload = buildPendingPostListingApiPayload({
+      ...baseListingFormValues,
+      privateNote: "",
+    })
+
+    expect(payload.privateNote).toBe("")
   })
 
   it("sends availableAt null for flexible listings", () => {
@@ -95,6 +111,28 @@ describe("buildPendingPostListingApiPayload", () => {
 describe("parseListing", () => {
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it("parses privateNote from pending post listing payloads", () => {
+    expect(
+      parseListing({
+        ...baseListingFormValues,
+        privateNote: "Call before viewing",
+        availableAt: null,
+      }).privateNote,
+    ).toBe("Call before viewing")
+  })
+
+  it("defaults privateNote to an empty string when the API omits it", () => {
+    const { privateNote: _privateNote, ...listingWithoutNote } =
+      baseListingFormValues
+
+    expect(
+      parseListing({
+        ...listingWithoutNote,
+        availableAt: null,
+      }).privateNote,
+    ).toBe("")
   })
 
   it("maps API availableAt into form availability fields", () => {
@@ -174,5 +212,47 @@ describe("createPendingPost", () => {
     const postedListing = apiClientMocks.post.mock.calls[0][1].listing
     expect(postedListing).not.toHaveProperty("availabilityMode")
     expect(postedListing).not.toHaveProperty("availableFromDate")
+  })
+
+  it("posts privateNote in the pending post listing payload", async () => {
+    apiClientMocks.post.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          _id: "pending-1",
+          status: "PENDING",
+          submittedBy: "user-1",
+          existingBuildingId: "building-1",
+          building: null,
+          listing: {
+            ...baseListingFormValues,
+            availableAt: null,
+          },
+          reviewNote: null,
+          reviewedBy: null,
+          reviewedAt: null,
+          approvedBuildingId: null,
+          approvedListingId: null,
+          isDeleted: false,
+          createdAt: "2026-07-29T00:00:00.000Z",
+          updatedAt: "2026-07-29T00:00:00.000Z",
+        },
+      },
+    })
+
+    await createPendingPost({
+      existingBuildingId: "building-1",
+      listing: {
+        ...baseListingFormValues,
+        privateNote: "Call before viewing",
+      },
+    })
+
+    expect(apiClientMocks.post).toHaveBeenCalledWith("/pending-posts", {
+      existingBuildingId: "building-1",
+      listing: expect.objectContaining({
+        privateNote: "Call before viewing",
+      }),
+    })
   })
 })

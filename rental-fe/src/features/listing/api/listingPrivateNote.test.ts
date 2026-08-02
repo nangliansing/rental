@@ -14,27 +14,82 @@ const baseListingPayload = {
 }
 
 describe("privateNote listing detail parsing", () => {
-  it("parseOwnerListing preserves owner-only privateNote on detail payloads", () => {
-    const parsed = parseOwnerListing({
-      ...baseListingPayload,
-      privateNote: "Gate code 1234",
+  describe("parseOwnerListing", () => {
+    it("preserves owner-only privateNote on detail payloads", () => {
+      const parsed = parseOwnerListing({
+        ...baseListingPayload,
+        privateNote: "Gate code 1234",
+      })
+
+      expect(parsed.privateNote).toBe("Gate code 1234")
     })
 
-    expect(parsed.privateNote).toBe("Gate code 1234")
-  })
+    it("omits privateNote when the API redacts it", () => {
+      const parsed = parseOwnerListing(baseListingPayload)
 
-  it("parseSearchListing omits privateNote when the API redacts it", () => {
-    const parsed = parseSearchListing(baseListingPayload)
-
-    expect(parsed.privateNote).toBeUndefined()
-  })
-
-  it("parseSearchListing coerces malformed privateNote types to null", () => {
-    const parsed = parseSearchListing({
-      ...baseListingPayload,
-      privateNote: 123,
+      expect(parsed.privateNote).toBeUndefined()
     })
 
-    expect(parsed.privateNote).toBeNull()
+    it("preserves explicit null privateNote when the API includes it", () => {
+      const parsed = parseOwnerListing({
+        ...baseListingPayload,
+        privateNote: null,
+      })
+
+      expect(parsed.privateNote).toBeNull()
+    })
+
+    it("coerces malformed privateNote types to null", () => {
+      const parsed = parseOwnerListing({
+        ...baseListingPayload,
+        privateNote: 123,
+      })
+
+      expect(parsed.privateNote).toBeNull()
+    })
+
+    it("preserves multiline private notes without trimming", () => {
+      const parsed = parseOwnerListing({
+        ...baseListingPayload,
+        privateNote: "  Gate code 1234\nCall before viewing  ",
+      })
+
+      expect(parsed.privateNote).toBe("  Gate code 1234\nCall before viewing  ")
+    })
+  })
+
+  describe("parseSearchListing", () => {
+    it("omits privateNote when the API redacts it", () => {
+      const parsed = parseSearchListing(baseListingPayload)
+
+      expect(parsed.privateNote).toBeUndefined()
+    })
+
+    it("keeps privateNote when the owner detail API includes it", () => {
+      const parsed = parseSearchListing({
+        ...baseListingPayload,
+        privateNote: "  Call before viewing  ",
+      })
+
+      expect(parsed.privateNote).toBe("  Call before viewing  ")
+    })
+
+    it("preserves explicit null privateNote when the API includes it", () => {
+      const parsed = parseSearchListing({
+        ...baseListingPayload,
+        privateNote: null,
+      })
+
+      expect(parsed.privateNote).toBeNull()
+    })
+
+    it("coerces malformed privateNote types to null", () => {
+      const parsed = parseSearchListing({
+        ...baseListingPayload,
+        privateNote: 123,
+      })
+
+      expect(parsed.privateNote).toBeNull()
+    })
   })
 })

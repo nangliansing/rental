@@ -59,6 +59,7 @@ const UPDATE_FIELDS = new Set([
   "facilities",
   "media",
   "description",
+  "privateNote",
   "availableAt",
 ])
 
@@ -189,7 +190,8 @@ export const buildOwnerListingUpdateApiBody = (
       .filter(([, value]) => value !== undefined)
       .map(([fieldName, value]) => [
         fieldName,
-        fieldName === "description" && typeof value === "string"
+        (fieldName === "description" || fieldName === "privateNote") &&
+        typeof value === "string"
           ? value.trim() || null
           : value,
       ]),

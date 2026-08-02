@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react"
 import {
   Bath,
   Bed,
@@ -110,6 +111,7 @@ export function ListingPostBody({
     [listing.media],
   )
   const description = listing.description
+  const privateNote = normalizeText(listing.privateNote)
   const facilities = normalizeFacilities(listing.facilities)
   const occupancy = normalizeOccupancy(listing.occupancy)
   const kitchenType = normalizeText(listing.kitchenType)
@@ -121,6 +123,22 @@ export function ListingPostBody({
         className="px-3 pb-2"
         textClassName="leading-5"
       />
+
+      {isOwnListing && privateNote && (
+        <section
+          aria-label="Private note"
+          className="mx-3 mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5"
+        >
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800">
+            <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Private note</span>
+          </div>
+          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-amber-950">
+            {privateNote}
+          </p>
+          <p className="mt-1.5 text-xs text-amber-700/80">Only visible to you</p>
+        </section>
+      )}
 
       <div className="relative">
         <ListingPhotoCarousel photos={photos} />

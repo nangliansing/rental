@@ -119,6 +119,46 @@ describe("buildOwnerListingUpdateApiBody", () => {
     })
   })
 
+  it("trims privateNote to null for cleared owner updates", () => {
+    expect(
+      buildOwnerListingUpdateApiBody({
+        privateNote: "   ",
+      }),
+    ).toEqual({
+      privateNote: null,
+    })
+
+    expect(
+      buildOwnerListingUpdateApiBody({
+        privateNote: "  Gate code 1234  ",
+      }),
+    ).toEqual({
+      privateNote: "Gate code 1234",
+    })
+  })
+
+  it("trims description and privateNote independently", () => {
+    expect(
+      buildOwnerListingUpdateApiBody({
+        description: "  Public details  ",
+        privateNote: "  Owner note  ",
+      }),
+    ).toEqual({
+      description: "Public details",
+      privateNote: "Owner note",
+    })
+  })
+
+  it("accepts explicit null privateNote patches", () => {
+    expect(
+      buildOwnerListingUpdateApiBody({
+        privateNote: null,
+      }),
+    ).toEqual({
+      privateNote: null,
+    })
+  })
+
   it("rejects unknown fields and empty patches", () => {
     expect(() =>
       buildOwnerListingUpdateApiBody({
@@ -163,5 +203,37 @@ describe("updateOwnerListing", () => {
       "/listings/listing-1",
       { availableAt: null },
     )
+  })
+
+  it("patches privateNote without form-only fields", async () => {
+    apiClientMocks.patch.mockResolvedValue({
+      data: {
+        success: true,
+        data: updatedListingResponse,
+      },
+    })
+
+    await updateOwnerListing("listing-1", {
+      privateNote: "  Gate code 1234  ",
+    })
+
+    expect(apiClientMocks.patch).toHaveBeenCalledWith("/listings/listing-1", {
+      privateNote: "Gate code 1234",
+    })
+  })
+
+  it("patches null privateNote to clear an existing owner note", async () => {
+    apiClientMocks.patch.mockResolvedValue({
+      data: {
+        success: true,
+        data: updatedListingResponse,
+      },
+    })
+
+    await updateOwnerListing("listing-1", { privateNote: null })
+
+    expect(apiClientMocks.patch).toHaveBeenCalledWith("/listings/listing-1", {
+      privateNote: null,
+    })
   })
 })

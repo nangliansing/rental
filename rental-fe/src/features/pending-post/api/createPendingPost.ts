@@ -237,6 +237,7 @@ export const parseListing = (value: unknown): ListingFormValues => {
     facilities: readStringArray(listing.facilities),
     media: parseMediaArray(listing.media),
     description: readString(listing.description),
+    privateNote: readString(listing.privateNote),
     ...parseListingAvailabilityFromApi(listing.availableAt),
   };
 };
