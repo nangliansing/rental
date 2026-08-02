@@ -149,7 +149,7 @@ describe("NotificationBellButton integration", () => {
     mocks.markMyNotificationsRead.mockReset()
   })
 
-  it("clears the unread badge after opening the panel", async () => {
+  it("hides the unread badge while the panel is open and marks read on close", async () => {
     const { user } = renderBellWithProvider([notification()])
 
     await waitFor(() =>
@@ -170,7 +170,13 @@ describe("NotificationBellButton integration", () => {
     expect(
       screen.getByText("Bangkapi Residence is now ฿13k/month."),
     ).toBeVisible()
-    expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1)
+    expect(mocks.markMyNotificationsRead).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole("button", { name: "Close notifications" }))
+
+    await waitFor(() =>
+      expect(mocks.markMyNotificationsRead).toHaveBeenCalledTimes(1),
+    )
   })
 
   it("closes the panel and restores the default bell label", async () => {
