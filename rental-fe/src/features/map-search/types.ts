@@ -141,6 +141,7 @@ export type SearchListing = {
   isSavedByMe: boolean
   availableAt: string | null
   description: string
+  privateNote?: string | null
   listedBy: string
   buildingId: string
   createdAt: string

@@ -128,6 +128,14 @@ export const listingDetailsSchemaDefinition = {
     default: null,
   },
 
+  // Owner-only note; omitted from default selects and public projections.
+  privateNote: {
+    type: String,
+    trim: true,
+    default: null,
+    select: false,
+  },
+
   // null = flexible/unknown; date <= today = available now; date > today = available from that date.
   // Create: omitted or null -> flexible. Update: omitted -> unchanged; null -> flexible.
   availableAt: {

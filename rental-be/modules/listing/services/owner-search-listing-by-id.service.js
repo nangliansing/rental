@@ -64,8 +64,11 @@ export const ownerSearchListingByIdService = async ({
             session,
         });
 
-    return serializeListingPayloadForApi({
-        agentProfile,
-        listing: listingWithBuildingFollowState,
-    });
+    return serializeListingPayloadForApi(
+        {
+            agentProfile,
+            listing: listingWithBuildingFollowState,
+        },
+        { includePrivateNote: true },
+    );
 };
