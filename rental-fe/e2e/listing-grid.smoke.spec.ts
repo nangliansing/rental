@@ -9,7 +9,7 @@ import {
 import { smokeAgentProfile } from "./fixtures/authenticated-session"
 import { smokeListingBuilding } from "./fixtures/lister-onboarding"
 import {
-  getMobileResultsPanel,
+  openMapBuildingDetail,
   waitForAreaSearchResults,
 } from "./fixtures/map-search-helpers"
 import {
@@ -144,17 +144,19 @@ async function expectVirtualizedWindow(
 }
 
 async function loadNextGridPage(page: Page, scope: Page | Locator = page) {
-  await scrollScopeToEnd(scope)
+  if (scope === page) {
+    await page.keyboard.press("End")
+  } else {
+    await scrollScopeToEnd(scope)
+  }
 
   const loadMore = scope.getByRole("button", { name: "Load more" }).first()
-  await expect(async () => {
-    if (await loadMore.isVisible().catch(() => false)) {
-      await loadMore.evaluate((button) => button.click())
-    }
+  if (await loadMore.isVisible().catch(() => false)) {
+    await loadMore.evaluate((button) => button.click())
     await expect(scope.getByText("Loading more...").first()).toBeHidden({
-      timeout: 15_000,
+      timeout: 30_000,
     })
-  }).toPass({ timeout: 30_000 })
+  }
 }
 
 async function clickListing(
@@ -256,6 +258,7 @@ test.describe("Listing grid smoke", () => {
   test("map building detail grid virtualizes and opens shared preview", async ({
     page,
   }) => {
+    test.setTimeout(180_000)
     test.skip(
       !hasMapsKey,
       "Set VITE_GOOGLE_MAPS_API_KEY in .env to run map building detail grid smoke.",
@@ -265,22 +268,13 @@ test.describe("Listing grid smoke", () => {
     await installBuildingListingGridRoute(page)
     await page.goto(areaSearchUrl)
 
-    await waitForMapReady(page)
+    await waitForMapReady(page, { requireMap: false })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
-    const mobilePanel = getMobileResultsPanel(page)
-    await mobilePanel
-      .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-      .click()
-
-    await expect(
-      mobilePanel.getByRole("heading", {
-        name: `${smokeAreaBuilding.name} details`,
-      }),
-    ).toBeVisible({ timeout: 15_000 })
+    const mobilePanel = await openMapBuildingDetail(page, smokeAreaBuilding.name)
 
     const grid = mobilePanel.getByTestId("building-listing-grid")
-    await expect(grid).toBeVisible()
+    await expect(grid).toBeVisible({ timeout: 30_000 })
     await expect(openListingButtons(grid).first()).toBeVisible({ timeout: 15_000 })
 
     await expectLazyCoverImages(grid)

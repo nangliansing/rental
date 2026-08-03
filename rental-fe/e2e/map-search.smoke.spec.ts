@@ -2,6 +2,8 @@ import { loadEnv } from "vite"
 import { expect, test } from "@playwright/test"
 
 import {
+  activatePinOnIdleMap,
+  commitNearbyPinSearch,
   drawLineOnMap,
   getMobileResultsPanel,
   triggerAreaSearchStaleState,
@@ -33,8 +35,6 @@ const hasMapsKey = Boolean(
 )
 
 test.describe("Map search smoke", () => {
-  test.describe.configure({ mode: "serial", timeout: 180_000 })
-
   test.beforeEach(async ({ page }) => {
     test.skip(
       !hasMapsKey,
@@ -44,47 +44,20 @@ test.describe("Map search smoke", () => {
 
   test("drops a pin and commits a nearby search from the idle map", async ({
     page,
+    context,
   }) => {
     test.setTimeout(180_000)
 
     await installMapSearchApiMocks(page)
 
-    // Warm Google Maps on an area-search page before the idle-map flow; CI is much
-    // more reliable once the maps script and canvas have already initialized.
+    // Prime the maps script, then move to idle search before the auth timer expires.
     await page.goto(areaSearchUrl)
     await waitForMapReady(page)
+    await page.goto("/")
+    await waitForMapReady(page)
 
-    await expect(async () => {
-      await page.goto("/")
-      await waitForMapReady(page)
-
-      const dropPinButton = page.getByRole("button", { name: "Drop pin" })
-      await expect(dropPinButton).toBeVisible({ timeout: 15_000 })
-      await dropPinButton.click({ force: true })
-
-      await expect(page.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-        { timeout: 15_000 },
-      )
-
-      const searchButton = page.getByRole("button", {
-        name: "Search within 1 km",
-      })
-      await expect
-        .poll(async () => searchButton.isEnabled(), { timeout: 20_000 })
-        .toBe(true)
-      await searchButton.click({ force: true })
-
-      const mobilePanel = getMobileResultsPanel(page)
-      await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
-        timeout: 30_000,
-      })
-      await expect(mobilePanel.getByText(smokeNearbyBuilding.name)).toBeVisible({
-        timeout: 15_000,
-      })
-      await expect(page).toHaveURL(/search=nearby/)
-    }).toPass({ timeout: 120_000 })
+    await activatePinOnIdleMap(page, context)
+    await commitNearbyPinSearch(page, smokeNearbyBuilding.name)
   })
 
   test("draws a line from the idle map and commits a search", async ({

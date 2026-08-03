@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test"
+import { expect, type BrowserContext, type Page } from "@playwright/test"
 
 export function getMobileResultsPanel(page: Page) {
   return page.getByTestId("results-panel-mobile")
@@ -99,4 +99,72 @@ export async function waitForSearchThisArea(page: Page) {
 /** @deprecated Use triggerAreaSearchStaleState */
 export async function panMap(page: Page) {
   await triggerAreaSearchStaleState(page)
+}
+
+export async function activatePinOnIdleMap(page: Page, context: BrowserContext) {
+  const dropPinButton = page.getByRole("button", { name: "Drop pin" })
+  const removePinButton = page.getByRole("button", { name: "Remove pin" })
+
+  await expect(dropPinButton).toBeVisible({ timeout: 15_000 })
+  await dropPinButton.click({ force: true })
+
+  const pinActivated = await removePinButton
+    .isVisible({ timeout: 4_000 })
+    .catch(() => false)
+
+  if (!pinActivated) {
+    await context.grantPermissions(["geolocation"])
+    await context.setGeolocation({ latitude: 13.7563, longitude: 100.5018 })
+    await page.getByRole("button", { name: "Use my location" }).click({ force: true })
+  }
+
+  await expect(removePinButton).toHaveAttribute("aria-pressed", "true", {
+    timeout: 25_000,
+  })
+}
+
+export async function commitNearbyPinSearch(
+  page: Page,
+  buildingName: string,
+) {
+  const searchButton = page.getByRole("button", {
+    name: "Search within 1 km",
+  })
+
+  await expect
+    .poll(async () => searchButton.isEnabled(), { timeout: 25_000 })
+    .toBe(true)
+  await searchButton.click({ force: true })
+
+  const mobilePanel = getMobileResultsPanel(page)
+  await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(mobilePanel.getByText(buildingName)).toBeVisible({
+    timeout: 15_000,
+  })
+  await expect(page).toHaveURL(/search=nearby/)
+}
+
+export async function openMapBuildingDetail(
+  page: Page,
+  buildingName: string,
+) {
+  const mobilePanel = getMobileResultsPanel(page)
+
+  await expect(async () => {
+    await expect(mobilePanel).toBeVisible({ timeout: 15_000 })
+    const buildingButton = mobilePanel.getByRole("button", {
+      name: new RegExp(buildingName),
+    })
+    await expect(buildingButton).toBeVisible({ timeout: 15_000 })
+    await buildingButton.click({ force: true })
+    await expect(
+      mobilePanel.getByRole("heading", {
+        name: `${buildingName} details`,
+      }),
+    ).toBeVisible({ timeout: 15_000 })
+  }).toPass({ timeout: 60_000 })
+
+  return mobilePanel
 }

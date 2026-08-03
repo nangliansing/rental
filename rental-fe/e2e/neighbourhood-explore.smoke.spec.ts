@@ -6,7 +6,7 @@ import {
   openNeighbourhoodExplore,
 } from "./fixtures/neighbourhood-explore"
 import {
-  getMobileResultsPanel,
+  openMapBuildingDetail,
   waitForAreaSearchResults,
 } from "./fixtures/map-search-helpers"
 import {
@@ -43,20 +43,7 @@ test.describe("Neighbourhood explore smoke", () => {
     await waitForMapReady(page, { requireMap: false })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
-    const mobilePanel = getMobileResultsPanel(page)
-    await expect(mobilePanel).toBeVisible({ timeout: 60_000 })
-
-    const buildingButton = mobilePanel.getByRole("button", {
-      name: new RegExp(smokeAreaBuilding.name),
-    })
-    await expect(buildingButton).toBeVisible({ timeout: 30_000 })
-    await buildingButton.click({ timeout: 10_000 })
-
-    await expect(
-      mobilePanel.getByRole("heading", {
-        name: `${smokeAreaBuilding.name} details`,
-      }),
-    ).toBeVisible({ timeout: 30_000 })
+    const mobilePanel = await openMapBuildingDetail(page, smokeAreaBuilding.name)
 
     if (
       await page
@@ -67,14 +54,7 @@ test.describe("Neighbourhood explore smoke", () => {
       await page.reload()
       await waitForMapReady(page, { requireMap: false })
       await waitForAreaSearchResults(page, smokeAreaBuilding.name)
-      await mobilePanel
-        .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-        .click({ force: true })
-      await expect(
-        mobilePanel.getByRole("heading", {
-          name: `${smokeAreaBuilding.name} details`,
-        }),
-      ).toBeVisible({ timeout: 15_000 })
+      await openMapBuildingDetail(page, smokeAreaBuilding.name)
     }
 
     const ensureBuildingDetail = async () => {
@@ -90,14 +70,7 @@ test.describe("Neighbourhood explore smoke", () => {
       await page.goto(areaSearchUrl)
       await waitForMapReady(page, { requireMap: false })
       await waitForAreaSearchResults(page, smokeAreaBuilding.name)
-      await mobilePanel
-        .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-        .click({ force: true })
-      await expect(
-        mobilePanel.getByRole("heading", {
-          name: `${smokeAreaBuilding.name} details`,
-        }),
-      ).toBeVisible({ timeout: 15_000 })
+      await openMapBuildingDetail(page, smokeAreaBuilding.name)
     }
 
     const exploreDialog = await openNeighbourhoodExplore(page, {
