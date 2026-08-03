@@ -17,6 +17,7 @@ import { buildingsNearbyQueryOptions } from "@/features/map-search/api/useSearch
 import { listingsInBuildingQueryOptions } from "@/features/map-search/api/useSearchListingsInBuilding"
 import { reverseGeocodeQueryOptions } from "@/features/geocode/api/useReverseGeocode"
 import { notificationsQueryOptions } from "@/features/notifications/api/notificationQueryOptions"
+import { ownerClientRequestQueryOptions } from "@/features/client-request/api/useOwnerClientRequestById"
 import { ownerPendingPostsQueryOptions } from "@/features/pending-post/api/useSearchOwnerPendingPosts"
 import { myAgentProfileQueryOptions } from "@/features/profile/api/useMyAgentProfile"
 import { savedListingsQueryOptions } from "@/features/saved-listing/api/useSearchSavedListings"
@@ -48,6 +49,10 @@ describe("query-options factories", () => {
       [
         ownerListingQueryOptions("listing-1"),
         queryKeys.listings.ownerDetail("listing-1"),
+      ],
+      [
+        ownerClientRequestQueryOptions("request-1"),
+        queryKeys.clientRequests.ownerDetail("request-1"),
       ],
       [
         publicListingQueryOptions({
@@ -83,6 +88,8 @@ describe("query-options factories", () => {
       buildingNeighbourhoodQueryOptions({ buildingId: " " }),
       ownerListingQueryOptions(undefined),
       ownerListingQueryOptions(" "),
+      ownerClientRequestQueryOptions(undefined),
+      ownerClientRequestQueryOptions(" "),
       publicListingQueryOptions({ listingId: undefined }),
       publicListingQueryOptions({ listingId: "   " }),
       reverseGeocodeQueryOptions({ lat: undefined, lng: 100.501765 }),
@@ -106,6 +113,7 @@ describe("query-options factories", () => {
       listerProfileQueryOptions("profile-1", false),
       buildingQueryOptions("building-1", false),
       ownerListingQueryOptions("listing-1", false),
+      ownerClientRequestQueryOptions("request-1", false),
       myAgentProfileQueryOptions(false),
       notificationsQueryOptions(false),
       savedListingsQueryOptions({ enabled: false }),
