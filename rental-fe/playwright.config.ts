@@ -47,7 +47,7 @@ export default defineConfig({
     : {
         webServer: {
           command: isCi
-            ? "npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort"
+            ? "npm run preview -- --host 127.0.0.1 --port 5173 --strictPort"
             : "npm run dev -- --host 127.0.0.1 --port 5173",
           url: baseURL,
           reuseExistingServer: !isCi,

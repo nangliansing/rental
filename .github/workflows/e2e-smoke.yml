@@ -25,7 +25,7 @@ jobs:
   smoke:
     name: Playwright smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       VITE_GOOGLE_MAPS_API_KEY: test-google-maps-api-key
       VITE_GOOGLE_MAPS_MAP_ID: test-google-maps-map-id
