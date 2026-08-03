@@ -7,10 +7,10 @@ export function usesPlaceholderMapsKey() {
   return !key || key === PLACEHOLDER_MAPS_KEY
 }
 
-/** Skip tests that need a live Google Maps canvas; unreliable with the CI placeholder key. */
+/** Skip tests that need live map mode controls; unreliable with the CI placeholder key. */
 export function skipIfCiPlaceholderMapsKey(test: TestType<any, any>) {
   test.skip(
     Boolean(process.env.CI) && usesPlaceholderMapsKey(),
-    "Interactive Google Maps canvas is unreliable with the CI placeholder API key.",
+    "Map mode controls are unreliable with the CI placeholder Google Maps API key.",
   )
 }

@@ -97,6 +97,7 @@ test.describe("Map search smoke", () => {
     page,
     context,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     await context.grantPermissions(["geolocation"])
     await context.setGeolocation(SMOKE_TEST_GEOLOCATION)
 
@@ -161,6 +162,7 @@ test.describe("Map search smoke", () => {
   test("commits a refreshed line search after distance changes", async ({
     page,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     await installMapSearchApiMocks(page, {
       refreshedLineOnSecondSearch: true,
     })
