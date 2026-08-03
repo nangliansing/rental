@@ -16,6 +16,7 @@ import {
   PROFILE_PRIMARY_ACTION_CLASS,
 } from "@/features/profile/utils/profileLayoutStyles"
 
+import { ListerMapSearchButton } from "./ListerMapSearchButton"
 import { getListerProfileUrl } from "../utils/listerProfileUrl"
 
 import type { ListerProfile } from "../api"
@@ -68,6 +69,15 @@ export function ListerProfileActions({ profile }: ListerProfileActionsProps) {
             Contact
           </button>
         ) : null}
+
+        <ListerMapSearchButton
+          lister={{
+            _id: profile._id,
+            displayName: profile.displayName,
+            profilePhoto: profile.profilePhoto,
+          }}
+          activeListingCount={profile.listingSummary.activeCount}
+        />
 
         <button
           type="button"

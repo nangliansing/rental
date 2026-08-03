@@ -276,6 +276,22 @@ export function DraggableBottomDrawer({
   }, [notifySnapSettled])
 
   useEffect(() => {
+    if (!isContentHiddenAtPeek) return
+
+    const content = contentElementRef.current
+    const activeElement = document.activeElement
+
+    if (
+      !(activeElement instanceof HTMLElement) ||
+      !content?.contains(activeElement)
+    ) {
+      return
+    }
+
+    asideRef.current?.focus({ preventScroll: true })
+  }, [isContentHiddenAtPeek])
+
+  useEffect(() => {
     const visualViewport = window.visualViewport
 
     visualViewport?.addEventListener("resize", refreshDrawerMetrics)
@@ -512,6 +528,7 @@ export function DraggableBottomDrawer({
       data-testid={testId}
       data-snap={normalizedSnap}
       aria-label={ariaLabel}
+      tabIndex={-1}
       className={cn(
         "fixed inset-x-0 bottom-0 z-40 box-border flex flex-col overflow-hidden rounded-t-2xl bg-white text-slate-950 shadow-2xl will-change-transform lg:hidden",
         DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS,

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { SearchAgentProfile } from "@/features/agent"
 
 import {
+  DEFAULT_MAP_SEARCH_FILTERS,
   FILTER_REMOVAL_DEBOUNCE_MS,
   useMapSearchFilterState,
 } from "./MapSearchFilterContext"
@@ -163,5 +164,19 @@ describe("useMapSearchFilterState", () => {
     act(() => vi.advanceTimersByTime(FILTER_REMOVAL_DEBOUNCE_MS))
     expect(result.current.submittedFilters.agentProfileIds).toBeUndefined()
     vi.useRealTimers()
+  })
+
+  it("preserves URL lister ids until selected listers are hydrated", () => {
+    const { result } = renderHook(() =>
+      useMapSearchFilterState({
+        initialFilters: {
+          ...DEFAULT_MAP_SEARCH_FILTERS,
+          agentProfileIds: ["agent-1"],
+        },
+      }),
+    )
+
+    expect(result.current.submittedFilters.agentProfileIds).toEqual(["agent-1"])
+    expect(result.current.selectedListers).toEqual([])
   })
 })

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 
 import { useBuildingFollowingFromCache } from "@/features/building-follow/hooks/useBuildingFollowingFromCache"
 import { useAuth } from "@/features/auth/hooks/useAuth"
+import type { SearchAgentProfile } from "@/features/agent/api/searchAgentProfiles"
 import { useMyAgentProfile } from "@/features/profile/api"
 
 import {
@@ -27,7 +28,10 @@ import { useMapSearchUrl } from "./useMapSearchUrl"
 import { useMapSearchCommands } from "./useMapSearchCommands"
 import { useMapSearchSessionAssembly } from "./useMapSearchSessionAssembly"
 
-export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
+export function useMapSearchPageState(
+  initialUrlState: MapSearchUrlState,
+  options: { initialSelectedListers?: SearchAgentProfile[] } = {},
+) {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const mapInteraction = useMapInteraction()
@@ -51,6 +55,7 @@ export function useMapSearchPageState(initialUrlState: MapSearchUrlState) {
   const filterState = useMapSearchFilterState({
     onFiltersChanged: (filters) => onFiltersChangedRef.current(filters),
     initialFilters: initialUrlState.filters,
+    initialSelectedListers: options.initialSelectedListers ?? [],
   })
   const { submittedFilters, submitFilters } = filterState
 

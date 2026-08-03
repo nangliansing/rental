@@ -2,6 +2,7 @@ import { Plus, Settings, Share2 } from "lucide-react"
 import { useState } from "react"
 
 import { MAP_SEARCH_LIST_ROOM_PATH } from "@/features/map-search/constants"
+import { ListerMapSearchButton } from "@/features/agent/components/ListerMapSearchButton"
 
 import { useMyProfile } from "../context/MyProfileContext"
 import {
@@ -23,6 +24,15 @@ export function MyProfileActions() {
         <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
         List a room
       </a>
+
+      <ListerMapSearchButton
+        lister={{
+          _id: profile._id,
+          displayName: profile.displayName,
+          profilePhoto: profile.profilePhoto,
+        }}
+        activeListingCount={profile.listingSummary?.activeCount ?? 0}
+      />
 
       <button
         type="button"

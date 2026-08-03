@@ -10,6 +10,7 @@ import {
 import { useDebouncedCallback } from "use-debounce"
 
 import type { SearchAgentProfile } from "@/features/agent"
+import { extractAgentProfileIds } from "@/features/agent/lister-map-search/extractAgentProfileIds"
 
 import { removeFilterChip } from "../filters/removeFilterChip"
 import type { FilterChip, MapSearchFilters } from "../filters/types"
@@ -35,10 +36,12 @@ type FilterAction =
   | { type: "removeFilter"; chip: FilterChip }
   | { type: "toggleLister"; lister: SearchAgentProfile }
   | { type: "removeLister"; listerId: string }
+  | { type: "hydrateSelectedListers"; listers: SearchAgentProfile[] }
 
 type UseMapSearchFilterStateOptions = {
   onFiltersChanged?: (filters: MapSearchFilters) => void
   initialFilters?: MapSearchFilters
+  initialSelectedListers?: SearchAgentProfile[]
 }
 
 export type MapSearchFilterContextValue = {
@@ -51,6 +54,7 @@ export type MapSearchFilterContextValue = {
   removeFilter: (chip: FilterChip) => void
   toggleLister: (lister: SearchAgentProfile) => void
   removeLister: (listerId: string) => void
+  hydrateSelectedListers: (listers: SearchAgentProfile[]) => void
 }
 
 export const MapSearchFilterContext =
@@ -150,18 +154,71 @@ function mapSearchFilterReducer(
     }
   }
 
+  if (action.type === "hydrateSelectedListers") {
+    const allowedIds = new Set([
+      ...(state.filters.agentProfileIds ?? []),
+      ...(state.filters.listerIds ?? []),
+    ])
+    const listersById = new Map(
+      state.selectedListers.map((lister) => [lister._id, lister]),
+    )
+
+    for (const lister of action.listers) {
+      if (!allowedIds.has(lister._id) || listersById.has(lister._id)) continue
+      listersById.set(lister._id, lister)
+    }
+
+    const selectedListers = [...listersById.values()]
+    const filters = syncFiltersWithListers(state.filters, selectedListers)
+
+    return {
+      ...state,
+      filters,
+      submittedFilters: filters,
+      selectedListers,
+    }
+  }
+
   return state
+}
+
+function createInitialFilterState({
+  initialFilters = DEFAULT_MAP_SEARCH_FILTERS,
+  initialSelectedListers = [],
+}: UseMapSearchFilterStateOptions = {}) {
+  const filters = syncFiltersWithListers(initialFilters, initialSelectedListers)
+  const pendingListerIds = extractAgentProfileIds(initialFilters)
+
+  if (pendingListerIds.length > 0 && initialSelectedListers.length === 0) {
+    const filtersWithPendingListers = {
+      ...filters,
+      agentProfileIds: pendingListerIds,
+    }
+
+    return {
+      filters: filtersWithPendingListers,
+      submittedFilters: filtersWithPendingListers,
+      selectedListers: initialSelectedListers,
+    }
+  }
+
+  return {
+    filters,
+    submittedFilters: filters,
+    selectedListers: initialSelectedListers,
+  }
 }
 
 export function useMapSearchFilterState({
   onFiltersChanged,
   initialFilters = DEFAULT_MAP_SEARCH_FILTERS,
+  initialSelectedListers = [],
 }: UseMapSearchFilterStateOptions = {}): MapSearchFilterContextValue {
-  const [state, dispatch] = useReducer(mapSearchFilterReducer, {
-    filters: initialFilters,
-    submittedFilters: initialFilters,
-    selectedListers: [],
-  })
+  const [state, dispatch] = useReducer(
+    mapSearchFilterReducer,
+    { initialFilters, initialSelectedListers },
+    createInitialFilterState,
+  )
   const latestStateRef = useRef(state)
 
   useEffect(() => {
@@ -222,6 +279,20 @@ export function useMapSearchFilterState({
     [dispatchStateAction, submitRemovedFilters],
   )
 
+  const hydrateSelectedListers = useCallback(
+    (listers: SearchAgentProfile[]) => {
+      if (listers.length === 0) return
+
+      submitRemovedFilters.cancel()
+      const nextState = dispatchStateAction({
+        type: "hydrateSelectedListers",
+        listers,
+      })
+      onFiltersChanged?.(nextState.submittedFilters)
+    },
+    [dispatchStateAction, onFiltersChanged, submitRemovedFilters],
+  )
+
   const selectedListerIds = useMemo(
     () => state.selectedListers.map((lister) => lister._id),
     [state.selectedListers],
@@ -238,6 +309,7 @@ export function useMapSearchFilterState({
       removeFilter,
       toggleLister,
       removeLister,
+      hydrateSelectedListers,
     }),
     [
       state.filters,
@@ -249,6 +321,7 @@ export function useMapSearchFilterState({
       removeFilter,
       toggleLister,
       removeLister,
+      hydrateSelectedListers,
     ],
   )
 }

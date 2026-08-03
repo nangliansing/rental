@@ -1,6 +1,17 @@
 import { useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useLocation, useSearchParams } from "react-router-dom"
 
+import { extractAgentProfileIds } from "@/features/agent/lister-map-search/extractAgentProfileIds"
+import {
+  isListerMapSearchSeedMatchingIds,
+  readListerMapSearchSeedFromLocationState,
+} from "@/features/agent/lister-map-search/navigationState"
+import { toSearchAgentProfileFromSeed } from "@/features/agent/lister-map-search/toSearchAgentProfile"
+import type { ListerMapSearchSeed } from "@/features/agent/lister-map-search/types"
+import type { SearchAgentProfile } from "@/features/agent/api/searchAgentProfiles"
+
+import { SelectedListerHydrator } from "./filters/SelectedListerHydrator"
+import { ListerMapSearchArrivalToast } from "./filters/ListerMapSearchArrivalToast"
 import { MapView } from "./MapView"
 import { BuildingResultsPanel } from "./results/BuildingResultsPanel"
 import { DEFAULT_MAP_SEARCH_FILTERS } from "../context/MapSearchFilterContext"
@@ -11,11 +22,15 @@ import { useMapSearchPageState } from "../hooks/useMapSearchPageState"
 
 function MapSearchPageContent({
   initialUrlState,
+  initialSelectedListers,
+  listerSeed,
 }: {
   initialUrlState: ReturnType<typeof parseMapSearchUrl>
+  initialSelectedListers: SearchAgentProfile[]
+  listerSeed: ListerMapSearchSeed | null
 }) {
   const { filterState, searchStatus, isPlaceSearchOpen, session } =
-    useMapSearchPageState(initialUrlState)
+    useMapSearchPageState(initialUrlState, { initialSelectedListers })
 
   return (
     <MapSearchProviders
@@ -26,6 +41,16 @@ function MapSearchPageContent({
       results={session.results}
       markerHighlight={session.markerHighlight}
     >
+      <SelectedListerHydrator
+        filters={filterState.submittedFilters}
+        listerSeed={listerSeed}
+      />
+
+      <ListerMapSearchArrivalToast
+        isSearchIdle={searchStatus === "idle"}
+        listerSeed={listerSeed}
+      />
+
       <main className="relative h-screen w-screen overflow-hidden">
         <MapView />
 
@@ -39,16 +64,33 @@ function MapSearchPageContent({
 
 export function MapSearchPage() {
   const [searchParams] = useSearchParams()
-  const [initialUrlState] = useState(() =>
-    parseMapSearchUrl(searchParams, DEFAULT_MAP_SEARCH_FILTERS),
-  )
+  const location = useLocation()
+  const [initialState] = useState(() => {
+    const urlState = parseMapSearchUrl(searchParams, DEFAULT_MAP_SEARCH_FILTERS)
+    const listerSeed = readListerMapSearchSeedFromLocationState(location.state)
+    const agentProfileIds = extractAgentProfileIds(urlState.filters)
+    const initialSelectedListers =
+      listerSeed && isListerMapSearchSeedMatchingIds(listerSeed, agentProfileIds)
+        ? [toSearchAgentProfileFromSeed(listerSeed)]
+        : []
+
+    return {
+      urlState,
+      initialSelectedListers,
+      listerSeed,
+    }
+  })
 
   return (
     <MapInteractionProvider
-      initialPosition={initialUrlState.position}
-      initialLineMode={initialUrlState.source === "line"}
+      initialPosition={initialState.urlState.position}
+      initialLineMode={initialState.urlState.source === "line"}
     >
-      <MapSearchPageContent initialUrlState={initialUrlState} />
+      <MapSearchPageContent
+        initialUrlState={initialState.urlState}
+        initialSelectedListers={initialState.initialSelectedListers}
+        listerSeed={initialState.listerSeed}
+      />
     </MapInteractionProvider>
   )
 }
