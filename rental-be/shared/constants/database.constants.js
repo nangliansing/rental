@@ -17,6 +17,7 @@ export const MODEL_NAMES = Object.freeze({
   AuthIdentity: "AuthIdentity",
   NeighbourhoodCache: "NeighbourhoodCache",
   GeocodeCache: "GeocodeCache",
+  ClientRequest: "ClientRequest",
 });
 
 export const COLLECTION_NAMES = Object.freeze({
@@ -37,4 +38,5 @@ export const COLLECTION_NAMES = Object.freeze({
   AuthIdentities: "auth_identities",
   NeighbourhoodCaches: "neighbourhood_caches",
   GeocodeCaches: "geocode_caches",
+  ClientRequests: "client_requests",
 });
