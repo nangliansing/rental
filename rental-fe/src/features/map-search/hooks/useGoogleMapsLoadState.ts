@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react"
 
 export type GoogleMapsLoadStatus = "loading" | "ready" | "error"
 
-const GOOGLE_MAPS_LOAD_TIMEOUT_MS = 25_000
+export const GOOGLE_MAPS_LOAD_TIMEOUT_MS = 25_000
 
 declare global {
   interface Window {
