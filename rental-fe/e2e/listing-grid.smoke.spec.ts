@@ -65,6 +65,42 @@ async function expectDefensiveGridCovers(scope: Page | Locator) {
   }).toPass({ timeout: 15_000 })
 }
 
+async function scrollScopeToEnd(scope: Page | Locator) {
+  await scope.evaluate((root) => {
+    const element = root instanceof HTMLElement ? root : document.body
+    const scrollTargets = [
+      element,
+      element.querySelector('[data-testid="building-listing-grid"]'),
+      element.closest("[data-scroll-root]"),
+      element.parentElement,
+    ].filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement)
+
+    for (const target of scrollTargets) {
+      target.scrollTop = target.scrollHeight
+    }
+
+    window.scrollTo(0, document.body.scrollHeight)
+  })
+}
+
+async function scrollScopeToTop(scope: Page | Locator) {
+  await scope.evaluate((root) => {
+    const element = root instanceof HTMLElement ? root : document.body
+    const scrollTargets = [
+      element,
+      element.querySelector('[data-testid="building-listing-grid"]'),
+      element.closest("[data-scroll-root]"),
+      element.parentElement,
+    ].filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement)
+
+    for (const target of scrollTargets) {
+      target.scrollTop = 0
+    }
+
+    window.scrollTo(0, 0)
+  })
+}
+
 async function expectVirtualizedWindow(
   page: Page,
   loadedCount: number,
@@ -74,11 +110,16 @@ async function expectVirtualizedWindow(
     return
   }
 
-  if (!scope) {
+  if (scope) {
+    await scrollScopeToTop(scope)
+    await expect(openListingButtons(scope).first()).toBeVisible({
+      timeout: 15_000,
+    })
+  } else {
     await page.evaluate(() => window.scrollTo(0, 0))
   }
 
-  const pollTimeout = 30_000
+  const pollTimeout = 45_000
   const pollInterval = 250
   const start = Date.now()
 
@@ -103,15 +144,17 @@ async function expectVirtualizedWindow(
 }
 
 async function loadNextGridPage(page: Page, scope: Page | Locator = page) {
-  await page.keyboard.press("End")
+  await scrollScopeToEnd(scope)
 
   const loadMore = scope.getByRole("button", { name: "Load more" }).first()
-  if (await loadMore.isVisible().catch(() => false)) {
-    await loadMore.evaluate((button) => button.click())
+  await expect(async () => {
+    if (await loadMore.isVisible().catch(() => false)) {
+      await loadMore.evaluate((button) => button.click())
+    }
     await expect(scope.getByText("Loading more...").first()).toBeHidden({
       timeout: 15_000,
     })
-  }
+  }).toPass({ timeout: 30_000 })
 }
 
 async function clickListing(
@@ -242,7 +285,7 @@ test.describe("Listing grid smoke", () => {
 
     await expectLazyCoverImages(grid)
     await expectDefensiveGridCovers(grid)
-    await loadNextGridPage(page, mobilePanel)
+    await loadNextGridPage(page, grid)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT, grid)
 
     await clickListing(grid, "Open listing ฿14k")

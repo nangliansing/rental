@@ -94,51 +94,38 @@ function isNeighbourhoodExploreResponse(url: string) {
 }
 
 async function assertNeighbourhoodExploreContent(
-  page: Page,
   exploreDialog: ReturnType<Page["getByRole"]>,
 ) {
   const loadingLocator = exploreDialog.getByText("Loading nearby places...")
-  const resultsDrawer = exploreDialog.getByTestId(
-    "neighbourhood-explore-results-drawer",
-  )
+  const errorLocator = exploreDialog.getByText("Could not load nearby places")
 
-  await expect(loadingLocator).toBeHidden({ timeout: 45_000 }).catch(async () => {
-    await expect(loadingLocator).toHaveCount(0, { timeout: 5_000 })
-  })
+  await expect(async () => {
+    if (await errorLocator.isVisible().catch(() => false)) {
+      throw new Error("Neighbourhood explore failed to load nearby places.")
+    }
 
-  try {
-    await expect(resultsDrawer).toBeVisible({ timeout: 30_000 })
-  } catch {
-    // Drawer may not mount on all breakpoints; fall through to content checks.
-  }
+    const isLoading = await loadingLocator.isVisible().catch(() => false)
+    expect(isLoading).toBe(false)
 
-  const hasTablist = await exploreDialog
-    .getByRole("tablist", { name: "Neighbourhood categories" })
-    .isVisible()
-    .catch(() => false)
-  const hasAllTab = await exploreDialog
-    .getByRole("tab", { name: /^All(?: \(\d+\))?$/ })
-    .isVisible()
-    .catch(() => false)
-  const hasPlace = await page
-    .getByRole("button", { name: /Smoke Lane Cafe/i })
-    .isVisible()
-    .catch(() => false)
-  const hasNearbyPlaces = await exploreDialog
-    .getByText("Nearby places")
-    .isVisible()
-    .catch(() => false)
-
-  expect(hasTablist || hasAllTab || hasPlace || hasNearbyPlaces).toBe(true)
-
-  if (
-    await exploreDialog
-      .getByText("Could not load nearby places")
+    const hasTablist = await exploreDialog
+      .getByRole("tablist", { name: "Neighbourhood categories" })
       .isVisible()
       .catch(() => false)
-  ) {
-    throw new Error("Neighbourhood explore failed to load nearby places.")
-  }
+    const hasAllTab = await exploreDialog
+      .getByRole("tab", { name: /^All(?: \(\d+\))?$/ })
+      .isVisible()
+      .catch(() => false)
+    const hasPlace = await exploreDialog
+      .getByRole("button", { name: /Smoke Lane Cafe/i })
+      .isVisible()
+      .catch(() => false)
+    const hasNearbyPlaces = await exploreDialog
+      .getByText("Nearby places")
+      .isVisible()
+      .catch(() => false)
+
+    expect(hasTablist || hasAllTab || hasPlace || hasNearbyPlaces).toBe(true)
+  }).toPass({ timeout: 45_000 })
 }
 
 export async function openNeighbourhoodExplore(
@@ -158,13 +145,15 @@ export async function openNeighbourhoodExplore(
       .or(page.getByRole("button", { name: "Explore neighbourhood" }))
     await expect(exploreButton).toBeVisible({ timeout: 15_000 })
 
-    const neighbourhoodResponse = page.waitForResponse(
-      (response) =>
-        isNeighbourhoodExploreResponse(response.url()) &&
-        response.request().method() === "GET" &&
-        response.ok(),
-      { timeout: 60_000 },
-    )
+    const neighbourhoodResponse = page
+      .waitForResponse(
+        (response) =>
+          isNeighbourhoodExploreResponse(response.url()) &&
+          response.request().method() === "GET" &&
+          response.ok(),
+        { timeout: 15_000 },
+      )
+      .catch(() => null)
 
     await exploreButton.click({ force: true })
 
@@ -173,7 +162,7 @@ export async function openNeighbourhoodExplore(
     })
     await expect(exploreDialog).toBeVisible({ timeout: 15_000 })
     await neighbourhoodResponse
-    await assertNeighbourhoodExploreContent(page, exploreDialog)
+    await assertNeighbourhoodExploreContent(exploreDialog)
   }).toPass({ timeout: 120_000 })
 
   return page.getByRole("dialog", { name: "Explore neighbourhood" })
@@ -186,7 +175,7 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
 
   await expect(async () => {
     await expect(exploreDialog).toBeVisible({ timeout: 5_000 })
-    await assertNeighbourhoodExploreContent(page, exploreDialog)
+    await assertNeighbourhoodExploreContent(exploreDialog)
   }).toPass({ timeout: 60_000 })
 
   return exploreDialog

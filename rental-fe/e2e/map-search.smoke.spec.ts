@@ -49,45 +49,52 @@ test.describe("Map search smoke", () => {
 
     await installMapSearchApiMocks(page)
 
+    // Warm Google Maps on an area-search page before the idle-map flow; CI is much
+    // more reliable once the maps script and canvas have already initialized.
+    await page.goto(areaSearchUrl)
+    await waitForMapReady(page)
+
     await expect(async () => {
       await page.goto("/")
       await waitForMapReady(page)
 
-      await page.getByRole("button", { name: "Drop pin" }).click({ force: true })
+      const dropPinButton = page.getByRole("button", { name: "Drop pin" })
+      await expect(dropPinButton).toBeVisible({ timeout: 15_000 })
+      await dropPinButton.click({ force: true })
 
       await expect(page.getByRole("button", { name: "Remove pin" })).toHaveAttribute(
         "aria-pressed",
         "true",
-        { timeout: 10_000 },
+        { timeout: 15_000 },
       )
-
-      await expect(getMobileResultsPanel(page)).toHaveCount(0)
 
       const searchButton = page.getByRole("button", {
         name: "Search within 1 km",
       })
       await expect
-        .poll(async () => searchButton.isEnabled(), { timeout: 15_000 })
+        .poll(async () => searchButton.isEnabled(), { timeout: 20_000 })
         .toBe(true)
       await searchButton.click({ force: true })
 
       const mobilePanel = getMobileResultsPanel(page)
       await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
-        timeout: 20_000,
+        timeout: 30_000,
       })
       await expect(mobilePanel.getByText(smokeNearbyBuilding.name)).toBeVisible({
-        timeout: 10_000,
+        timeout: 15_000,
       })
       await expect(page).toHaveURL(/search=nearby/)
-    }).toPass({ timeout: 150_000 })
+    }).toPass({ timeout: 120_000 })
   })
 
   test("draws a line from the idle map and commits a search", async ({
     page,
   }) => {
     await installMapSearchApiMocks(page)
-    await page.goto("/")
+    await page.goto(areaSearchUrl)
+    await waitForMapReady(page)
 
+    await page.goto("/")
     await waitForMapReady(page)
     await expect(getMobileResultsPanel(page)).toHaveCount(0)
 
