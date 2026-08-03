@@ -4,7 +4,7 @@ import {
 } from "../../../shared/validators/index.js";
 
 import { CLIENT_REQUEST_STATUSES } from "../client-request.constants.js";
-import { buildOwnerUpdateClientRequestRecord } from "../mappers/index.js";
+import { validateOwnerUpdateClientRequestStatusBody } from "../client-request.validation.js";
 import ClientRequest from "../client-request.model.js";
 import {
   buildOwnerClientRequestFilter,
@@ -12,7 +12,7 @@ import {
   throwClientRequestNotFound,
 } from "../utils/index.js";
 
-export const ownerUpdateClientRequestService = async ({
+export const ownerUpdateClientRequestStatusService = async ({
   clientRequestId,
   body,
   actorId,
@@ -25,31 +25,11 @@ export const ownerUpdateClientRequestService = async ({
     "clientRequestId",
   );
   const validatedActorId = validateMongooseId(actorId, "actorId");
+  const { status } = validateOwnerUpdateClientRequestStatusBody(body);
 
   const ownerFilter = buildOwnerClientRequestFilter({
     clientRequestId: validatedClientRequestId,
     actorId: validatedActorId,
-  });
-
-  let existingQuery = ClientRequest.findOne(ownerFilter);
-
-  if (session) {
-    existingQuery = existingQuery.session(session);
-  }
-
-  const existingClientRequest = await existingQuery;
-
-  if (!existingClientRequest) {
-    throwClientRequestNotFound();
-  }
-
-  if (existingClientRequest.status === CLIENT_REQUEST_STATUSES.CLOSED) {
-    throwClientRequestClosed();
-  }
-
-  const update = buildOwnerUpdateClientRequestRecord({
-    body,
-    clientRequest: existingClientRequest,
   });
 
   const updateFilter = {
@@ -59,7 +39,11 @@ export const ownerUpdateClientRequestService = async ({
 
   let updateQuery = ClientRequest.findOneAndUpdate(
     updateFilter,
-    { $set: update },
+    {
+      $set: {
+        status,
+      },
+    },
     {
       returnDocument: "after",
       runValidators: true,
