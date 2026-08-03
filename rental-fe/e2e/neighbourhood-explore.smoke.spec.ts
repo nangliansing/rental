@@ -1,6 +1,7 @@
 import { loadEnv } from "vite"
 import { expect, test } from "@playwright/test"
 
+import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
 import {
   closeNeighbourhoodExplore,
   installNeighbourhoodExploreRoute,
@@ -35,6 +36,7 @@ test.describe("Neighbourhood explore smoke", () => {
   test("opens explore, filters categories, selects a place, and closes", async ({
     page,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     test.setTimeout(180_000)
 
     await installMapSearchApiMocks(page)
