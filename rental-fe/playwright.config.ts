@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test"
 import { loadEnv } from "vite"
 
+import { SMOKE_TEST_GEOLOCATION } from "./e2e/fixtures/test-geolocation"
+
 const env = loadEnv("development", process.cwd(), "")
 const webServerEnv = {
   ...process.env,
@@ -38,6 +40,10 @@ export default defineConfig({
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 7"],
+        permissions: ["geolocation"],
+        geolocation: SMOKE_TEST_GEOLOCATION,
+        locale: "en-US",
+        timezoneId: "UTC",
         ...(browserChannel ? { channel: browserChannel as "chrome" } : {}),
       },
     },

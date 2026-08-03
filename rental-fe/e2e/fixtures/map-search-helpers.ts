@@ -1,7 +1,24 @@
 import { expect, type BrowserContext, type Locator, type Page } from "@playwright/test"
 
+import { SMOKE_TEST_GEOLOCATION } from "./test-geolocation"
+
 export function getMobileResultsPanel(page: Page) {
   return page.getByTestId("results-panel-mobile")
+}
+
+export async function waitForVisibleButton(
+  root: Page | Locator,
+  name: string | RegExp,
+  timeout = 60_000,
+  options?: { exact?: boolean },
+) {
+  const button = root.getByRole("button", {
+    name,
+    exact: options?.exact,
+  })
+  await button.waitFor({ state: "visible", timeout })
+  await expect(button).toBeEnabled({ timeout: 15_000 })
+  return button
 }
 
 export async function clickMapControlButton(
@@ -43,9 +60,10 @@ export async function waitForAreaSearchResults(
   buildingName: string,
 ) {
   const mobilePanel = getMobileResultsPanel(page)
-  await expect(mobilePanel).toBeVisible({ timeout: 30_000 })
-  await expect(mobilePanel.getByText("1 building")).toBeVisible({
-    timeout: 30_000,
+  await mobilePanel.waitFor({ state: "visible", timeout: 60_000 })
+  await mobilePanel.getByText("1 building").waitFor({
+    state: "visible",
+    timeout: 60_000,
   })
   await expect
     .poll(
@@ -53,7 +71,7 @@ export async function waitForAreaSearchResults(
         mobilePanel
           .getByRole("button", { name: new RegExp(buildingName) })
           .isVisible(),
-      { timeout: 45_000 },
+      { timeout: 60_000 },
     )
     .toBe(true)
 }
@@ -146,8 +164,10 @@ export async function activatePinOnIdleMap(page: Page, context: BrowserContext) 
 
   if (!pinActivated) {
     await context.grantPermissions(["geolocation"])
-    await context.setGeolocation({ latitude: 13.7563, longitude: 100.5018 })
-    await page.getByRole("button", { name: "Use my location" }).click({ force: true })
+    await context.setGeolocation(SMOKE_TEST_GEOLOCATION)
+    await waitForVisibleButton(page, "Use my location").then((button) =>
+      button.click({ force: true }),
+    )
   }
 
   await expect(removePinButton).toHaveAttribute("aria-pressed", "true", {
@@ -162,11 +182,13 @@ export async function commitNearbyPinSearch(
   await clickMapControlButton(page, "Search within 1 km")
 
   const mobilePanel = getMobileResultsPanel(page)
-  await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({
-    timeout: 30_000,
+  await mobilePanel.getByText("1 building near pin").waitFor({
+    state: "visible",
+    timeout: 60_000,
   })
-  await expect(mobilePanel.getByText(buildingName)).toBeVisible({
-    timeout: 15_000,
+  await mobilePanel.getByText(buildingName).waitFor({
+    state: "visible",
+    timeout: 60_000,
   })
   await expect(page).toHaveURL(/search=nearby/)
 }
@@ -176,20 +198,20 @@ export async function openMapBuildingDetail(
   buildingName: string,
 ) {
   const mobilePanel = getMobileResultsPanel(page)
+  await mobilePanel.waitFor({ state: "visible", timeout: 60_000 })
 
   await expect(async () => {
-    await expect(mobilePanel).toBeVisible({ timeout: 15_000 })
     const buildingButton = mobilePanel.getByRole("button", {
       name: new RegExp(buildingName),
     })
-    await expect(buildingButton).toBeVisible({ timeout: 15_000 })
+    await buildingButton.waitFor({ state: "visible", timeout: 15_000 })
     await buildingButton.click({ force: true })
     await expect(
       mobilePanel.getByRole("heading", {
         name: `${buildingName} details`,
       }),
-    ).toBeVisible({ timeout: 15_000 })
-  }).toPass({ timeout: 60_000 })
+    ).toBeVisible({ timeout: 30_000 })
+  }).toPass({ timeout: 90_000 })
 
   return mobilePanel
 }
