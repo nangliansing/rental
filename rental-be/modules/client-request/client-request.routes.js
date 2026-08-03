@@ -7,6 +7,7 @@ import {
 import {
   createClientRequestController,
   ownerDeleteClientRequestController,
+  ownerSearchClientRequestByIdController,
   ownerSearchClientRequestsController,
   ownerUpdateClientRequestController,
 } from "./controllers/index.js";
@@ -17,6 +18,7 @@ router.use(authenticate, requireActiveUser);
 
 router.get("/", ownerSearchClientRequestsController);
 router.post("/", createClientRequestController);
+router.get("/:clientRequestId", ownerSearchClientRequestByIdController);
 router.patch("/:clientRequestId", ownerUpdateClientRequestController);
 router.delete("/:clientRequestId", ownerDeleteClientRequestController);
 
