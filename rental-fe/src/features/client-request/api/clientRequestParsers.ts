@@ -135,7 +135,7 @@ const parseLineGeometry = (
     return {
       type,
       coordinates: coordinates
-        .filter((line): line is unknown[] => Array.isArray(line))
+        .filter(Array.isArray)
         .map(line =>
           line.filter(
             (point): point is [number, number] =>

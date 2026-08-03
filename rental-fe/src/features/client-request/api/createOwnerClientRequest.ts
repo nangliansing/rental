@@ -145,12 +145,11 @@ const buildLineGeometry = (geometry: ClientRequestGeoSearch["geometry"]) => {
   }
 
   if (geometry.type === "MultiLineString") {
-    const coordinates = Array.isArray(geometry.coordinates)
-      ? geometry.coordinates
-          .filter((line): line is unknown[] => Array.isArray(line))
-          .map(line => line.filter(isLngLatPair))
-          .filter(line => line.length >= 2)
-      : []
+    const coordinates = geometry.coordinates.flatMap(line => {
+      if (!Array.isArray(line)) return []
+      const points = line.filter(isLngLatPair)
+      return points.length >= 2 ? [points] : []
+    })
 
     if (coordinates.length === 0) {
       throw validationError(
