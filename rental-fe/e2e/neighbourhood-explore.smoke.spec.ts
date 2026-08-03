@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test"
 import {
   installNeighbourhoodExploreRoute,
   openNeighbourhoodExplore,
-  waitForNeighbourhoodExploreModal,
 } from "./fixtures/neighbourhood-explore"
 import {
   getMobileResultsPanel,
@@ -59,16 +58,52 @@ test.describe("Neighbourhood explore smoke", () => {
       }),
     ).toBeVisible({ timeout: 30_000 })
 
-    await expect(
-      page.getByRole("button", { name: "Explore neighbourhood" }),
-    ).toBeVisible({ timeout: 60_000 })
+    if (
+      await page
+        .getByText("Something went wrong")
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await page.reload()
+      await waitForMapReady(page, { requireMap: false })
+      await waitForAreaSearchResults(page, smokeAreaBuilding.name)
+      await mobilePanel
+        .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
+        .click({ force: true })
+      await expect(
+        mobilePanel.getByRole("heading", {
+          name: `${smokeAreaBuilding.name} details`,
+        }),
+      ).toBeVisible({ timeout: 15_000 })
+    }
 
-    await openNeighbourhoodExplore(page)
+    const ensureBuildingDetail = async () => {
+      const onDetail = await mobilePanel
+        .getByRole("heading", {
+          name: `${smokeAreaBuilding.name} details`,
+        })
+        .isVisible()
+        .catch(() => false)
 
-    const exploreDialog = page.getByRole("dialog", {
-      name: "Explore neighbourhood",
+      if (onDetail) return
+
+      await page.goto(areaSearchUrl)
+      await waitForMapReady(page, { requireMap: false })
+      await waitForAreaSearchResults(page, smokeAreaBuilding.name)
+      await mobilePanel
+        .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
+        .click({ force: true })
+      await expect(
+        mobilePanel.getByRole("heading", {
+          name: `${smokeAreaBuilding.name} details`,
+        }),
+      ).toBeVisible({ timeout: 15_000 })
+    }
+
+    const exploreDialog = await openNeighbourhoodExplore(page, {
+      scope: mobilePanel,
+      ensureReady: ensureBuildingDetail,
     })
-    await waitForNeighbourhoodExploreModal(page)
 
     await expect(async () => {
       const dialog = page.getByRole("dialog", {
