@@ -6,3 +6,4 @@ export * from "./mappers/index.js";
 export * from "./services/index.js";
 export * from "./controllers/index.js";
 export * from "./schemas/index.js";
+export * from "./utils/index.js";

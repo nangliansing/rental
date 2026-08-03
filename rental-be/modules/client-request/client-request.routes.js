@@ -6,6 +6,7 @@ import {
 } from "../../shared/middlewares/index.js";
 import {
   createClientRequestController,
+  ownerDeleteClientRequestController,
   ownerUpdateClientRequestController,
 } from "./controllers/index.js";
 
@@ -15,5 +16,6 @@ router.use(authenticate, requireActiveUser);
 
 router.post("/", createClientRequestController);
 router.patch("/:clientRequestId", ownerUpdateClientRequestController);
+router.delete("/:clientRequestId", ownerDeleteClientRequestController);
 
 export default router;
