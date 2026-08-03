@@ -96,7 +96,7 @@ createdAt
 updatedAt
 ```
 
-`status` changes will use a dedicated endpoint later. This endpoint never updates `createdBy`.
+`status` changes use [`owner-update-client-request-status.md`](./owner-update-client-request-status.md). This endpoint never updates `createdBy`.
 
 ## Business Rules
 
