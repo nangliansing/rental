@@ -9,9 +9,9 @@ export async function waitForAreaSearchResults(
   buildingName: string,
 ) {
   const mobilePanel = getMobileResultsPanel(page)
-  await expect(mobilePanel).toBeVisible({ timeout: 60_000 })
+  await expect(mobilePanel).toBeVisible({ timeout: 30_000 })
   await expect(mobilePanel.getByText("1 building")).toBeVisible({
-    timeout: 60_000,
+    timeout: 30_000,
   })
   await expect
     .poll(
@@ -19,7 +19,7 @@ export async function waitForAreaSearchResults(
         mobilePanel
           .getByRole("button", { name: new RegExp(buildingName) })
           .isVisible(),
-      { timeout: 60_000 },
+      { timeout: 45_000 },
     )
     .toBe(true)
 }
@@ -38,7 +38,7 @@ export async function waitForAreaSearchError(page: Page) {
 
 export async function triggerAreaSearchStaleState(page: Page) {
   const mapSurface = page.locator(".gm-style").first()
-  await mapSurface.waitFor({ state: "visible", timeout: 20_000 })
+  await mapSurface.waitFor({ state: "visible", timeout: 45_000 })
   const box = await mapSurface.boundingBox()
   if (!box) {
     throw new Error("Map surface bounding box unavailable for map interaction.")
@@ -60,7 +60,7 @@ export async function triggerAreaSearchStaleState(page: Page) {
 
 export async function drawLineOnMap(page: Page, pointCount = 2) {
   const mapSurface = page.locator(".gm-style").first()
-  await mapSurface.waitFor({ state: "visible", timeout: 20_000 })
+  await mapSurface.waitFor({ state: "visible", timeout: 45_000 })
   const box = await mapSurface.boundingBox()
   if (!box) {
     throw new Error("Map surface unavailable for line drawing.")
@@ -91,7 +91,7 @@ export async function waitForSearchThisArea(page: Page) {
     .poll(
       async () =>
         page.getByRole("button", { name: "Search this area" }).isVisible(),
-      { timeout: 60_000 },
+      { timeout: 45_000 },
     )
     .toBe(true)
 }

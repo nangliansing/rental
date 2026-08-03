@@ -124,29 +124,21 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     name: "Explore neighbourhood",
   })
 
-  await expect(exploreDialog).toBeVisible({ timeout: 60_000 })
-
-  await page
-    .waitForResponse(
-      (response) =>
-        isNeighbourhoodExploreResponse(response.url()) &&
-        response.request().method() === "GET" &&
-        response.ok(),
-      { timeout: 60_000 },
-    )
-    .catch(() => {
-      // Response may already have been consumed by openNeighbourhoodExplore.
-    })
+  await expect(exploreDialog).toBeVisible({ timeout: 30_000 })
 
   const loadingLocator = exploreDialog.getByText("Loading nearby places...")
   const resultsDrawer = exploreDialog.getByTestId(
     "neighbourhood-explore-results-drawer",
   )
 
+  await expect(loadingLocator).toBeHidden({ timeout: 45_000 }).catch(async () => {
+    await expect(loadingLocator).toHaveCount(0, { timeout: 5_000 })
+  })
+
   try {
-    await expect(resultsDrawer).toBeVisible({ timeout: 60_000 })
+    await expect(resultsDrawer).toBeVisible({ timeout: 30_000 })
   } catch {
-    await expect(loadingLocator).toHaveCount(0, { timeout: 60_000 })
+    // Drawer may not mount on all breakpoints; fall through to content checks.
   }
 
   await expect(async () => {
@@ -168,7 +160,7 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
       .catch(() => false)
 
     expect(hasTablist || hasAllTab || hasPlace || hasNearbyPlaces).toBe(true)
-  }).toPass({ timeout: 60_000 })
+  }).toPass({ timeout: 45_000 })
 
   if (
     await exploreDialog

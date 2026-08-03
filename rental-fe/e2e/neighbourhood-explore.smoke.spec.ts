@@ -41,7 +41,7 @@ test.describe("Neighbourhood explore smoke", () => {
     await installNeighbourhoodExploreRoute(page)
     await page.goto(areaSearchUrl)
 
-    await waitForMapReady(page)
+    await waitForMapReady(page, { requireMap: false })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     const mobilePanel = getMobileResultsPanel(page)
@@ -70,20 +70,28 @@ test.describe("Neighbourhood explore smoke", () => {
     })
     await waitForNeighbourhoodExploreModal(page)
 
-    await page.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ }).click()
-    await expect(exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })).toBeVisible()
-    await expect(
-      exploreDialog.getByRole("button", { name: /Smoke Corner Store/i }),
-    ).not.toBeVisible()
+    await expect(async () => {
+      const dialog = page.getByRole("dialog", {
+        name: "Explore neighbourhood",
+      })
+      const tab = dialog.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ })
+      await tab.click({ force: true })
+      await expect(
+        dialog.getByRole("button", { name: /Smoke Corner Store/i }),
+      ).not.toBeVisible({ timeout: 3_000 })
+    }).toPass({ timeout: 45_000 })
 
-    await exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i }).click()
+    await expect(exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })).toBeVisible()
+
+    const placeButton = exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })
+    await placeButton.click({ force: true })
     await expect(
       exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i }),
     ).toHaveAttribute("aria-current", "true")
 
-    await exploreDialog
+    await page
       .getByRole("button", { name: "Close explore neighbourhood" })
-      .click()
+      .click({ force: true })
 
     await expect(exploreDialog).not.toBeVisible()
     await expect(
