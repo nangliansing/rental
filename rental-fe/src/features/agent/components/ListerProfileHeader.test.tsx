@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { createListerProfile } from "@/test/fixtures/listerProfile"
@@ -16,9 +17,19 @@ vi.mock("@/features/profile/components/MyProfileShareModal", () => ({
   ),
 }))
 
+function renderListerProfileHeader(
+  profile = createListerProfile(),
+) {
+  return render(
+    <MemoryRouter>
+      <ListerProfileHeader profile={profile} />
+    </MemoryRouter>,
+  )
+}
+
 describe("ListerProfileHeader", () => {
   it("renders identity, online status, contact chips, stats, and share affordance", () => {
-    render(<ListerProfileHeader profile={createListerProfile()} />)
+    renderListerProfileHeader()
 
     expect(
       screen.getByRole("heading", { name: "Nang Lian Sing" }),
@@ -39,7 +50,7 @@ describe("ListerProfileHeader", () => {
   it("opens and closes the share modal", async () => {
     const user = userEvent.setup()
 
-    render(<ListerProfileHeader profile={createListerProfile()} />)
+    renderListerProfileHeader()
 
     await user.click(screen.getByRole("button", { name: "Share profile" }))
     expect(
@@ -53,23 +64,21 @@ describe("ListerProfileHeader", () => {
   })
 
   it("shows zero rating when there are no reviews", () => {
-    render(
-      <ListerProfileHeader
-        profile={createListerProfile({
-          reviewSummary: {
-            averageRating: 0,
-            reviewCount: 0,
-            ratingCounts: {
-              oneStar: 0,
-              twoStars: 0,
-              threeStars: 0,
-              fourStars: 0,
-              fiveStars: 0,
-            },
-            tagCounts: [],
+    renderListerProfileHeader(
+      createListerProfile({
+        reviewSummary: {
+          averageRating: 0,
+          reviewCount: 0,
+          ratingCounts: {
+            oneStar: 0,
+            twoStars: 0,
+            threeStars: 0,
+            fourStars: 0,
+            fiveStars: 0,
           },
-        })}
-      />,
+          tagCounts: [],
+        },
+      }),
     )
 
     expect(screen.getByText("0.0")).toBeInTheDocument()
@@ -77,16 +86,14 @@ describe("ListerProfileHeader", () => {
   })
 
   it("shows only share when no contact channels exist", () => {
-    render(
-      <ListerProfileHeader
-        profile={createListerProfile({
-          phone: null,
-          lineUrl: null,
-          whatsappPhone: null,
-          telegramUrl: null,
-          viberPhone: null,
-        })}
-      />,
+    renderListerProfileHeader(
+      createListerProfile({
+        phone: null,
+        lineUrl: null,
+        whatsappPhone: null,
+        telegramUrl: null,
+        viberPhone: null,
+      }),
     )
 
     expect(

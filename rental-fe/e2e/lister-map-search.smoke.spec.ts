@@ -25,7 +25,11 @@ const ARRIVAL_TOAST_PATTERN = new RegExp(
 )
 
 async function expectArrivalToast(page: import("@playwright/test").Page) {
-  await expect(page.getByText(ARRIVAL_TOAST_PATTERN)).toBeVisible({
+  await expect(
+    page
+      .locator('[data-slot="toast-title"]')
+      .filter({ hasText: ARRIVAL_TOAST_PATTERN }),
+  ).toBeVisible({
     timeout: 15_000,
   })
 }
@@ -85,14 +89,15 @@ test.describe("Lister map search smoke", () => {
     let agentProfileFetchCount = 0
 
     await installAuthenticatedSessionMocks(page)
+
+    await page.goto("/profile")
+    await waitForAuthenticatedProfile(page)
+
     await installListerMapSearchMocks(page, {
       onAgentProfileRequest: () => {
         agentProfileFetchCount += 1
       },
     })
-
-    await page.goto("/profile")
-    await waitForAuthenticatedProfile(page)
 
     await page
       .getByRole("link", {
@@ -114,7 +119,6 @@ test.describe("Lister map search smoke", () => {
     page,
   }) => {
     await installListingGridSessionMocks(page)
-    await installListerMapSearchMocks(page)
 
     await page.goto(`/listers/${smokeAgentProfile._id}`)
 
@@ -124,6 +128,8 @@ test.describe("Lister map search smoke", () => {
         level: 1,
       }),
     ).toBeVisible({ timeout: 15_000 })
+
+    await installListerMapSearchMocks(page)
 
     await page
       .getByRole("link", {
