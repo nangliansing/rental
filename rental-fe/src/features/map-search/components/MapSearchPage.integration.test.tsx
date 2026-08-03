@@ -6,8 +6,12 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { createMemoryRouter, RouterProvider } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { buildListerMapSearchUrl } from "@/features/agent/lister-map-search/buildListerMapSearchUrl"
+import { createListerMapSearchNavigationState } from "@/features/agent/lister-map-search/navigationState"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { useMyAgentProfile } from "@/features/profile/api"
+import { Toaster } from "@/components/ui/toaster"
+import { createListerProfile } from "@/test/fixtures/listerProfile"
 import {
   createTestQueryClient,
   renderWithProviders,
@@ -23,6 +27,9 @@ const searchMocks = vi.hoisted(() => ({
   line: vi.fn(),
   listingsInBuilding: vi.fn(),
 }))
+
+const getListerProfileById = vi.hoisted(() => vi.fn())
+const toastSpy = vi.hoisted(() => vi.fn())
 
 const googleMapsMocks = vi.hoisted(() => {
   const handlers: {
@@ -322,6 +329,22 @@ vi.mock("../api/searchListingsInBuilding", () => ({
 vi.mock("@/features/auth/hooks/useAuth")
 vi.mock("@/features/profile/api")
 
+vi.mock("@/features/agent/api/getListerProfileById", () => ({
+  getListerProfileById,
+}))
+
+vi.mock("@/hooks/use-toast", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/use-toast")>()
+
+  return {
+    ...actual,
+    toast: (props: Parameters<typeof actual.toast>[0]) => {
+      toastSpy(props)
+      return actual.toast(props)
+    },
+  }
+})
+
 function mockAreaSearchResults(
   ...responses: Array<{
     data: SearchBuilding[]
@@ -409,12 +432,31 @@ function getMarkerButton(label: string) {
   return screen.getByRole("button", { name: label })
 }
 
-function renderMapSearchPageAt(initialEntry: string) {
+const listerMapSearchAgentId = "agent-lister-map-1"
+const listerMapSearchUrl = buildListerMapSearchUrl(listerMapSearchAgentId)
+
+function renderMapSearchPageAt(
+  initialEntry:
+    | string
+    | {
+        pathname?: string
+        search?: string
+        state?: unknown
+      },
+  options: { withToaster?: boolean } = {},
+) {
   const queryClient = createTestQueryClient()
-  const router = createMemoryRouter(
-    [{ path: "/", element: <MapSearchPage /> }],
-    { initialEntries: [initialEntry] },
+  const pageElement = options.withToaster ? (
+    <>
+      <MapSearchPage />
+      <Toaster />
+    </>
+  ) : (
+    <MapSearchPage />
   )
+  const router = createMemoryRouter([{ path: "/", element: pageElement }], {
+    initialEntries: [initialEntry],
+  })
 
   return {
     router,
@@ -426,6 +468,10 @@ function renderMapSearchPageAt(initialEntry: string) {
       </QueryClientProvider>,
     ),
   }
+}
+
+async function waitForHydrationToSettle() {
+  await new Promise((resolve) => setTimeout(resolve, 500))
 }
 
 function getFiltersFromSearch(search: string) {
@@ -440,6 +486,8 @@ describe("MapSearchPage integration", () => {
     searchMocks.nearby.mockReset()
     searchMocks.line.mockReset()
     searchMocks.listingsInBuilding.mockReset()
+    getListerProfileById.mockReset()
+    toastSpy.mockReset()
     googleMapsMocks.resetBounds()
     googleMapsMocks.resetCenter()
 
@@ -1181,5 +1229,187 @@ describe("MapSearchPage integration", () => {
     expect(
       screen.queryByRole("button", { name: "Search within 1 km" }),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("MapSearchPage lister map search integration", () => {
+  beforeEach(() => {
+    searchMocks.area.mockReset()
+    searchMocks.nearby.mockReset()
+    searchMocks.line.mockReset()
+    searchMocks.listingsInBuilding.mockReset()
+    getListerProfileById.mockReset()
+    toastSpy.mockReset()
+    googleMapsMocks.resetBounds()
+    googleMapsMocks.resetCenter()
+
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+    } as never)
+
+    vi.mocked(useMyAgentProfile).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never)
+  })
+
+  it("hydrates the lister from router seed without fetching the profile", async () => {
+    renderMapSearchPageAt(
+      {
+        search: listerMapSearchUrl.split("?")[1]
+          ? `?${listerMapSearchUrl.split("?")[1]}`
+          : "",
+        state: createListerMapSearchNavigationState({
+          _id: listerMapSearchAgentId,
+          displayName: "Smoke Lister",
+          profilePhoto: null,
+        }),
+      },
+      { withToaster: true },
+    )
+
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith({
+        title: "Search an area to see Smoke Lister's listings",
+        variant: "search-hint",
+      })
+    })
+
+    expect(getListerProfileById).not.toHaveBeenCalled()
+  })
+
+  it("fetches the lister profile once when only the URL filter is present", async () => {
+    getListerProfileById.mockResolvedValue(
+      createListerProfile({
+        _id: listerMapSearchAgentId,
+        displayName: "Fetched Lister",
+      }),
+    )
+
+    renderMapSearchPageAt(listerMapSearchUrl, { withToaster: true })
+
+    await waitFor(() => {
+      expect(getListerProfileById).toHaveBeenCalledTimes(1)
+    })
+
+    await waitForHydrationToSettle()
+    expect(getListerProfileById).toHaveBeenCalledTimes(1)
+    expect(getListerProfileById).toHaveBeenCalledWith(
+      listerMapSearchAgentId,
+      expect.any(AbortSignal),
+    )
+  })
+
+  it("shows the arrival toast only once on an idle map with a lister filter", async () => {
+    getListerProfileById.mockResolvedValue(
+      createListerProfile({
+        _id: listerMapSearchAgentId,
+        displayName: "Fetched Lister",
+      }),
+    )
+
+    renderMapSearchPageAt(listerMapSearchUrl, { withToaster: true })
+
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith({
+        title: "Search an area to see Fetched Lister's listings",
+        variant: "search-hint",
+      })
+    })
+
+    await waitForHydrationToSettle()
+
+    expect(toastSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not loop lister hydration requests after selected listers catch up", async () => {
+    getListerProfileById.mockResolvedValue(
+      createListerProfile({
+        _id: listerMapSearchAgentId,
+        displayName: "Fetched Lister",
+      }),
+    )
+
+    renderMapSearchPageAt(listerMapSearchUrl, { withToaster: true })
+
+    await waitFor(() => {
+      expect(getListerProfileById).toHaveBeenCalledTimes(1)
+    })
+
+    await waitForHydrationToSettle()
+    await waitForHydrationToSettle()
+
+    expect(getListerProfileById).toHaveBeenCalledTimes(1)
+    expect(searchMocks.area).not.toHaveBeenCalled()
+    expect(searchMocks.nearby).not.toHaveBeenCalled()
+    expect(searchMocks.line).not.toHaveBeenCalled()
+  })
+
+  it("commits an area search with the lister filter preserved", async () => {
+    mockAreaSearchResults({ data: [mockBuilding] })
+    getListerProfileById.mockResolvedValue(
+      createListerProfile({
+        _id: listerMapSearchAgentId,
+        displayName: "Fetched Lister",
+      }),
+    )
+
+    const { user } = renderMapSearchPageAt(listerMapSearchUrl, {
+      withToaster: true,
+    })
+
+    await waitFor(() => {
+      expect(getListerProfileById).toHaveBeenCalledTimes(1)
+    })
+
+    const searchButton = await screen.findByRole("button", {
+      name: "Search this area",
+    })
+    await user.click(searchButton)
+
+    await waitFor(() => {
+      expect(searchMocks.area).toHaveBeenCalledOnce()
+    })
+
+    expect(searchMocks.area).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: expect.objectContaining({
+          agentProfileIds: [listerMapSearchAgentId],
+        }),
+      }),
+    )
+
+    const mobilePanel = await screen.findByTestId("results-panel-mobile")
+    await waitFor(() => {
+      expect(
+        within(mobilePanel).queryByRole("button", {
+          name: "Remove Fetched Lister from search",
+        }),
+      ).not.toBeNull()
+    })
+  })
+
+  it("clears the router seed from browser history after mount", async () => {
+    const seedState = createListerMapSearchNavigationState({
+      _id: listerMapSearchAgentId,
+      displayName: "Smoke Lister",
+      profilePhoto: null,
+    })
+
+    window.history.replaceState(
+      {
+        ...seedState,
+        preserved: "keep-me",
+      },
+      "",
+      listerMapSearchUrl,
+    )
+
+    renderMapSearchPageAt(listerMapSearchUrl, { withToaster: true })
+
+    await waitFor(() => {
+      expect(window.history.state).toEqual({ preserved: "keep-me" })
+    })
   })
 })

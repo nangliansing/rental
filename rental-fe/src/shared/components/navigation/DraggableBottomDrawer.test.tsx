@@ -210,6 +210,48 @@ describe("DraggableBottomDrawer", () => {
       expect(content.closest(".overflow-y-auto")).toHaveClass("invisible")
     })
 
+    it("moves focus out of hidden content when collapsed to peek", () => {
+      const contentRef = createRef<HTMLDivElement>()
+      const { rerender } = render(
+        <DraggableBottomDrawer
+          snap="half"
+          onSnapChange={vi.fn()}
+          testId="drawer"
+          contentRef={contentRef}
+          header={(dragHandle) => (
+            <div data-testid="drawer-header" {...dragHandle}>
+              Header
+            </div>
+          )}
+        >
+          <button type="button">Focusable item</button>
+        </DraggableBottomDrawer>,
+      )
+
+      const focusTarget = screen.getByRole("button", { name: "Focusable item" })
+      focusTarget.focus()
+      expect(document.activeElement).toBe(focusTarget)
+
+      rerender(
+        <DraggableBottomDrawer
+          snap="peek"
+          onSnapChange={vi.fn()}
+          testId="drawer"
+          contentRef={contentRef}
+          header={(dragHandle) => (
+            <div data-testid="drawer-header" {...dragHandle}>
+              Header
+            </div>
+          )}
+        >
+          <button type="button">Focusable item</button>
+        </DraggableBottomDrawer>,
+      )
+
+      expect(document.activeElement).toBe(screen.getByTestId("drawer"))
+      expect(document.activeElement).not.toBe(focusTarget)
+    })
+
     it("shows children at half and full", () => {
       const { rerender } = renderDrawer({ snap: "half" })
       expect(screen.getByText("Drawer body")).toBeInTheDocument()
