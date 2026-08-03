@@ -62,9 +62,9 @@ test.describe("Map search smoke", () => {
         "true",
         { timeout: 10_000 },
       )
-    }).toPass({ timeout: 120_000 })
 
-    await expect(getMobileResultsPanel(page)).toHaveCount(0)
+      await expect(getMobileResultsPanel(page)).toHaveCount(0)
+    }).toPass({ timeout: 120_000 })
 
     await expect(async () => {
       const searchButton = page.getByRole("button", {

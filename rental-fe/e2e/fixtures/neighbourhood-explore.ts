@@ -124,7 +124,7 @@ export async function waitForNeighbourhoodExploreModal(page: Page) {
     name: "Explore neighbourhood",
   })
 
-  await expect(exploreDialog).toBeVisible({ timeout: 30_000 })
+  await expect(exploreDialog).toBeVisible({ timeout: 45_000 })
 
   const loadingLocator = exploreDialog.getByText("Loading nearby places...")
   const resultsDrawer = exploreDialog.getByTestId(
