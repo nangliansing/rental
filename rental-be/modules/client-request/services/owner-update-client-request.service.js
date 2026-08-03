@@ -7,14 +7,10 @@ import { AppError } from "../../../shared/errors/app-error.js";
 import { CLIENT_REQUEST_STATUSES } from "../client-request.constants.js";
 import { buildOwnerUpdateClientRequestRecord } from "../mappers/index.js";
 import ClientRequest from "../client-request.model.js";
-
-const throwClientRequestNotFound = () => {
-  throw new AppError(
-    "Client request not found",
-    404,
-    "CLIENT_REQUEST_NOT_FOUND",
-  );
-};
+import {
+  buildOwnerClientRequestFilter,
+  throwClientRequestNotFound,
+} from "../utils/index.js";
 
 const throwClientRequestClosed = () => {
   throw new AppError(
@@ -38,11 +34,10 @@ export const ownerUpdateClientRequestService = async ({
   );
   const validatedActorId = validateMongooseId(actorId, "actorId");
 
-  const ownerFilter = {
-    _id: validatedClientRequestId,
-    createdBy: validatedActorId,
-    isDeleted: false,
-  };
+  const ownerFilter = buildOwnerClientRequestFilter({
+    clientRequestId: validatedClientRequestId,
+    actorId: validatedActorId,
+  });
 
   let existingQuery = ClientRequest.findOne(ownerFilter);
 
