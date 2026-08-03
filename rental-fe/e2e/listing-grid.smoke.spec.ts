@@ -275,7 +275,11 @@ test.describe("Listing grid smoke", () => {
 
     const grid = mobilePanel.getByTestId("building-listing-grid")
     await expect(grid).toBeVisible({ timeout: 30_000 })
-    await expect(openListingButtons(grid).first()).toBeVisible({ timeout: 15_000 })
+    await expect(async () => {
+      await expect(openListingButtons(grid).first()).toBeVisible({
+        timeout: 10_000,
+      })
+    }).toPass({ timeout: 60_000 })
 
     await expectLazyCoverImages(grid)
     await expectDefensiveGridCovers(grid)

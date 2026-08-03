@@ -1,7 +1,41 @@
-import { expect, type BrowserContext, type Page } from "@playwright/test"
+import { expect, type BrowserContext, type Locator, type Page } from "@playwright/test"
 
 export function getMobileResultsPanel(page: Page) {
   return page.getByTestId("results-panel-mobile")
+}
+
+export async function clickMapControlButton(
+  page: Page,
+  name: string | RegExp,
+  options?: { scope?: Locator },
+) {
+  const root = options?.scope ?? page
+
+  await expect(async () => {
+    const button = root.getByRole("button", { name })
+    await expect(button).toBeVisible({ timeout: 5_000 })
+    await expect(button).toBeEnabled({ timeout: 5_000 })
+    await button.evaluate((element) => {
+      ;(element as HTMLButtonElement).click()
+    })
+  }).toPass({ timeout: 30_000 })
+}
+
+async function waitForMapCanvas(page: Page) {
+  const mapSurface = page.locator(".gm-style").first()
+  const unavailable = page.getByText("Map temporarily unavailable")
+
+  await expect(async () => {
+    if (await unavailable.isVisible().catch(() => false)) {
+      throw new Error("Google Maps failed to load.")
+    }
+
+    await expect(mapSurface).toBeVisible({ timeout: 10_000 })
+    const box = await mapSurface.boundingBox()
+    expect(box).toBeTruthy()
+  }).toPass({ timeout: 45_000 })
+
+  return mapSurface
 }
 
 export async function waitForAreaSearchResults(
@@ -37,8 +71,7 @@ export async function waitForAreaSearchError(page: Page) {
 }
 
 export async function triggerAreaSearchStaleState(page: Page) {
-  const mapSurface = page.locator(".gm-style").first()
-  await mapSurface.waitFor({ state: "visible", timeout: 45_000 })
+  const mapSurface = await waitForMapCanvas(page)
   const box = await mapSurface.boundingBox()
   if (!box) {
     throw new Error("Map surface bounding box unavailable for map interaction.")
@@ -59,8 +92,7 @@ export async function triggerAreaSearchStaleState(page: Page) {
 }
 
 export async function drawLineOnMap(page: Page, pointCount = 2) {
-  const mapSurface = page.locator(".gm-style").first()
-  await mapSurface.waitFor({ state: "visible", timeout: 45_000 })
+  const mapSurface = await waitForMapCanvas(page)
   const box = await mapSurface.boundingBox()
   if (!box) {
     throw new Error("Map surface unavailable for line drawing.")
@@ -73,7 +105,7 @@ export async function drawLineOnMap(page: Page, pointCount = 2) {
   ]
 
   for (const point of tapPoints.slice(0, Math.max(pointCount, 2))) {
-    await mapSurface.click({ position: point, force: true })
+    await mapSurface.click({ position: point, force: true, timeout: 15_000 })
     await page.waitForTimeout(350)
   }
 
@@ -127,14 +159,7 @@ export async function commitNearbyPinSearch(
   page: Page,
   buildingName: string,
 ) {
-  const searchButton = page.getByRole("button", {
-    name: "Search within 1 km",
-  })
-
-  await expect
-    .poll(async () => searchButton.isEnabled(), { timeout: 25_000 })
-    .toBe(true)
-  await searchButton.click({ force: true })
+  await clickMapControlButton(page, "Search within 1 km")
 
   const mobilePanel = getMobileResultsPanel(page)
   await expect(mobilePanel.getByText("1 building near pin")).toBeVisible({

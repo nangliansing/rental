@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from "@playwright/test"
+import { expect, type Locator, type Page, type Route } from "@playwright/test"
 
 import { smokeAreaBuilding } from "./map-search-buildings"
 
@@ -190,6 +190,25 @@ export async function openNeighbourhoodExplore(
   }).toPass({ timeout: 120_000 })
 
   return page.getByRole("dialog", { name: "Explore neighbourhood" })
+}
+
+export async function closeNeighbourhoodExplore(
+  page: Page,
+  exploreDialog: Locator,
+) {
+  await expect(async () => {
+    const closeButton = exploreDialog.getByRole("button", {
+      name: "Close explore neighbourhood",
+    })
+
+    if (await closeButton.isVisible().catch(() => false)) {
+      await closeButton.click({ force: true })
+    } else {
+      await page.keyboard.press("Escape")
+    }
+
+    await expect(exploreDialog).not.toBeVisible({ timeout: 10_000 })
+  }).toPass({ timeout: 30_000 })
 }
 
 export async function waitForNeighbourhoodExploreModal(page: Page) {

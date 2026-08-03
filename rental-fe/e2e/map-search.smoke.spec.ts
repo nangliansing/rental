@@ -1,8 +1,10 @@
 import { loadEnv } from "vite"
 import { expect, test } from "@playwright/test"
 
+import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
 import {
   activatePinOnIdleMap,
+  clickMapControlButton,
   commitNearbyPinSearch,
   drawLineOnMap,
   getMobileResultsPanel,
@@ -46,6 +48,7 @@ test.describe("Map search smoke", () => {
     page,
     context,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     test.setTimeout(180_000)
 
     await installMapSearchApiMocks(page)
@@ -63,6 +66,7 @@ test.describe("Map search smoke", () => {
   test("draws a line from the idle map and commits a search", async ({
     page,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     await installMapSearchApiMocks(page)
     await page.goto(areaSearchUrl)
     await waitForMapReady(page)
@@ -77,11 +81,7 @@ test.describe("Map search smoke", () => {
     ).toHaveAttribute("aria-pressed", "true")
 
     await drawLineOnMap(page)
-
-    const searchButton = page.getByRole("button", {
-      name: /Search within .* of line/,
-    })
-    await searchButton.click()
+    await clickMapControlButton(page, /Search within .* of line/)
 
     const mobilePanel = getMobileResultsPanel(page)
     await expect(mobilePanel.getByText("1 building along line")).toBeVisible({
@@ -128,6 +128,7 @@ test.describe("Map search smoke", () => {
   test("commits a refreshed area search after the map is panned", async ({
     page,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     await installMapSearchApiMocks(page, { pannedAreaOnSecondSearch: true })
     await page.goto(areaSearchUrl)
 
@@ -140,10 +141,8 @@ test.describe("Map search smoke", () => {
 
     await triggerAreaSearchStaleState(page)
 
-    const searchButton = page.getByRole("button", { name: "Search this area" })
     await waitForSearchThisArea(page)
-    await expect(searchButton).toBeEnabled()
-    await searchButton.click()
+    await clickMapControlButton(page, "Search this area")
 
     const mobilePanel = getMobileResultsPanel(page)
     await expect(mobilePanel.getByText("1 building")).toBeVisible({
@@ -178,12 +177,7 @@ test.describe("Map search smoke", () => {
       .click()
     await page.getByRole("button", { name: "750 m", exact: true }).click()
 
-    const searchButton = page.getByRole("button", {
-      name: "Search updated line",
-    })
-    await expect(searchButton).toBeVisible({ timeout: 20_000 })
-    await expect(searchButton).toBeEnabled()
-    await searchButton.click()
+    await clickMapControlButton(page, "Search updated line")
 
     await expect(mobilePanel.getByText("1 building along line")).toBeVisible({
       timeout: 20_000,

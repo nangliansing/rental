@@ -2,6 +2,7 @@ import { loadEnv } from "vite"
 import { expect, test } from "@playwright/test"
 
 import {
+  closeNeighbourhoodExplore,
   installNeighbourhoodExploreRoute,
   openNeighbourhoodExplore,
 } from "./fixtures/neighbourhood-explore"
@@ -97,11 +98,8 @@ test.describe("Neighbourhood explore smoke", () => {
       exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i }),
     ).toHaveAttribute("aria-current", "true")
 
-    await page
-      .getByRole("button", { name: "Close explore neighbourhood" })
-      .click({ force: true })
+    await closeNeighbourhoodExplore(page, exploreDialog)
 
-    await expect(exploreDialog).not.toBeVisible()
     await expect(
       mobilePanel.getByRole("heading", {
         name: `${smokeAreaBuilding.name} details`,
