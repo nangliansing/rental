@@ -61,6 +61,16 @@ const clientRequestSchema = new Schema(
   { timestamps: true, versionKey: false },
 );
 
+// Owner list with status filter (default Waiting): availableBy sooner-first.
+clientRequestSchema.index({
+  createdBy: 1,
+  isDeleted: 1,
+  status: 1,
+  "filters.availableBy": 1,
+  createdAt: -1,
+  _id: 1,
+});
+
 const ClientRequest =
   mongoose.models[MODEL_NAMES.ClientRequest] ||
   mongoose.model(

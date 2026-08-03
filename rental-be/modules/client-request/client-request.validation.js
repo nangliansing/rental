@@ -28,6 +28,7 @@ export const validateClientRequestStatus = (input) => {
     input,
     "status",
     Object.values(CLIENT_REQUEST_STATUSES),
+    null,
   );
 };
 
