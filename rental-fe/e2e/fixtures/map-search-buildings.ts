@@ -61,5 +61,8 @@ export const areaSearchUrl =
 export const nearbySearchUrl =
   "/?search=nearby&lat=13.75630&lng=100.50180&radius=1000"
 
+export const nearbySearchUrl500 =
+  "/?search=nearby&lat=13.75630&lng=100.50180&radius=500"
+
 export const lineSearchUrl =
   "/?search=line&line=100.64210,13.76531;100.65200,13.77500&radius=500"

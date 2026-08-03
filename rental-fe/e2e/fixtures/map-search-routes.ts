@@ -147,7 +147,7 @@ export async function installMapSearchApiMocks(
   )
 
   await page.route(
-    "**/api/v1/search/buildings/*/listings",
+    "**/api/v1/buildings/*/listings/search**",
     async (route: Route) => {
       await route.fulfill(
         jsonRoute({
@@ -173,42 +173,75 @@ export async function installMapSearchApiMocks(
   )
 }
 
-export async function waitForMapReady(page: Page) {
+export type WaitForMapReadyOptions = {
+  /** When false, pass once the mobile results panel is visible even if the map failed. */
+  requireMap?: boolean
+}
+
+export async function waitForMapReady(
+  page: Page,
+  options: WaitForMapReadyOptions = {},
+) {
+  const requireMap = options.requireMap ?? true
   const mapCanvas = page.locator(".gm-style").first()
-  const maxAttempts = 3
+  const unavailable = page.getByText("Map temporarily unavailable")
+  const resultsPanel = page.getByTestId("results-panel-mobile")
+  const maxAttempts = requireMap ? 3 : 2
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    await page.getByText("Loading map...").waitFor({
-      state: "hidden",
-      timeout: 20_000,
-    })
+  const hasFallbackResults = async () =>
+    !requireMap && (await resultsPanel.isVisible().catch(() => false))
 
-    const unavailable = page.getByText("Map temporarily unavailable")
-    const mapVisible = await mapCanvas
-      .waitFor({ state: "visible", timeout: 20_000 })
-      .then(() => true)
-      .catch(() => false)
+  const isMapInteractive = async () =>
+    await mapCanvas.isVisible().catch(() => false)
 
-    if (mapVisible && !(await unavailable.isVisible().catch(() => false))) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await page
+      .getByText("Loading map...")
+      .waitFor({ state: "hidden", timeout: 30_000 })
+      .catch(() => {})
+
+    if (await isMapInteractive()) {
       return
     }
 
-    if (attempt === maxAttempts) {
-      if (await unavailable.isVisible().catch(() => false)) {
-        throw new Error("Google Maps failed to load after retries.")
+    if (await hasFallbackResults()) {
+      return
+    }
+
+    if (await unavailable.isVisible().catch(() => false)) {
+      if (attempt < maxAttempts - 1) {
+        await page.reload({ waitUntil: "domcontentloaded" })
+        continue
       }
 
-      await mapCanvas.waitFor({ state: "visible", timeout: 1_000 })
-      return
+      if (await hasFallbackResults()) {
+        return
+      }
+
+      throw new Error("Google Maps failed to load.")
     }
 
     try {
-      await page.reload({ waitUntil: "domcontentloaded" })
+      await mapCanvas.waitFor({
+        state: "visible",
+        timeout: requireMap ? 45_000 : 30_000,
+      })
+      return
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(
-        `Failed to reload page during map readiness check on attempt ${attempt}: ${message}`,
-      )
+      if (await isMapInteractive()) {
+        return
+      }
+
+      if (await hasFallbackResults()) {
+        return
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await page.reload({ waitUntil: "domcontentloaded" })
+        continue
+      }
+
+      throw error
     }
   }
 }

@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test"
 import { loadEnv } from "vite"
 
+import { SMOKE_TEST_GEOLOCATION } from "./e2e/fixtures/test-geolocation"
+
 const env = loadEnv("development", process.cwd(), "")
 const webServerEnv = {
   ...process.env,
@@ -25,8 +27,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
-  timeout: 60_000,
+  timeout: process.env.CI ? 120_000 : 60_000,
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -37,6 +40,10 @@ export default defineConfig({
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 7"],
+        permissions: ["geolocation"],
+        geolocation: SMOKE_TEST_GEOLOCATION,
+        locale: "en-US",
+        timezoneId: "UTC",
         ...(browserChannel ? { channel: browserChannel as "chrome" } : {}),
       },
     },
@@ -46,7 +53,7 @@ export default defineConfig({
     : {
         webServer: {
           command: isCi
-            ? "npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort"
+            ? "npm run preview -- --host 127.0.0.1 --port 5173 --strictPort"
             : "npm run dev -- --host 127.0.0.1 --port 5173",
           url: baseURL,
           reuseExistingServer: !isCi,

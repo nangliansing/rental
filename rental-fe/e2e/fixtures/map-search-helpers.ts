@@ -1,7 +1,58 @@
-import { expect, type Page } from "@playwright/test"
+import { expect, type BrowserContext, type Locator, type Page } from "@playwright/test"
+
+import { SMOKE_TEST_GEOLOCATION } from "./test-geolocation"
 
 export function getMobileResultsPanel(page: Page) {
   return page.getByTestId("results-panel-mobile")
+}
+
+export async function waitForVisibleButton(
+  root: Page | Locator,
+  name: string | RegExp,
+  timeout = 60_000,
+  options?: { exact?: boolean },
+) {
+  const button = root.getByRole("button", {
+    name,
+    exact: options?.exact,
+  })
+  await button.waitFor({ state: "visible", timeout })
+  await expect(button).toBeEnabled({ timeout: 15_000 })
+  return button
+}
+
+export async function clickMapControlButton(
+  page: Page,
+  name: string | RegExp,
+  options?: { scope?: Locator },
+) {
+  const root = options?.scope ?? page
+
+  await expect(async () => {
+    const button = root.getByRole("button", { name })
+    await expect(button).toBeVisible({ timeout: 5_000 })
+    await expect(button).toBeEnabled({ timeout: 5_000 })
+    await button.evaluate((element) => {
+      ;(element as HTMLButtonElement).click()
+    })
+  }).toPass({ timeout: 30_000 })
+}
+
+async function waitForMapCanvas(page: Page) {
+  const mapSurface = page.locator(".gm-style").first()
+  const unavailable = page.getByText("Map temporarily unavailable")
+
+  await expect(async () => {
+    if (await unavailable.isVisible().catch(() => false)) {
+      throw new Error("Google Maps failed to load.")
+    }
+
+    await expect(mapSurface).toBeVisible({ timeout: 10_000 })
+    const box = await mapSurface.boundingBox()
+    expect(box).toBeTruthy()
+  }).toPass({ timeout: 45_000 })
+
+  return mapSurface
 }
 
 export async function waitForAreaSearchResults(
@@ -9,15 +60,20 @@ export async function waitForAreaSearchResults(
   buildingName: string,
 ) {
   const mobilePanel = getMobileResultsPanel(page)
-  await expect(mobilePanel).toBeVisible({ timeout: 20_000 })
-  await expect(mobilePanel.getByText("1 building")).toBeVisible({
-    timeout: 20_000,
+  await mobilePanel.waitFor({ state: "visible", timeout: 60_000 })
+  await mobilePanel.getByText("1 building").waitFor({
+    state: "visible",
+    timeout: 60_000,
   })
-  await expect(
-    mobilePanel.getByRole("button", { name: new RegExp(buildingName) }),
-  ).toBeVisible({
-    timeout: 20_000,
-  })
+  await expect
+    .poll(
+      async () =>
+        mobilePanel
+          .getByRole("button", { name: new RegExp(buildingName) })
+          .isVisible(),
+      { timeout: 60_000 },
+    )
+    .toBe(true)
 }
 
 export async function waitForAreaSearchError(page: Page) {
@@ -33,8 +89,7 @@ export async function waitForAreaSearchError(page: Page) {
 }
 
 export async function triggerAreaSearchStaleState(page: Page) {
-  const mapSurface = page.locator(".gm-style").first()
-  await mapSurface.waitFor({ state: "visible", timeout: 20_000 })
+  const mapSurface = await waitForMapCanvas(page)
   const box = await mapSurface.boundingBox()
   if (!box) {
     throw new Error("Map surface bounding box unavailable for map interaction.")
@@ -55,8 +110,7 @@ export async function triggerAreaSearchStaleState(page: Page) {
 }
 
 export async function drawLineOnMap(page: Page, pointCount = 2) {
-  const mapSurface = page.locator(".gm-style").first()
-  await mapSurface.waitFor({ state: "visible", timeout: 20_000 })
+  const mapSurface = await waitForMapCanvas(page)
   const box = await mapSurface.boundingBox()
   if (!box) {
     throw new Error("Map surface unavailable for line drawing.")
@@ -68,8 +122,8 @@ export async function drawLineOnMap(page: Page, pointCount = 2) {
     { x: box.width * 0.52, y: box.height * 0.74 },
   ]
 
-  for (const point of tapPoints.slice(0, Math.max(pointCount, 2) + 1)) {
-    await mapSurface.click({ position: point, force: true })
+  for (const point of tapPoints.slice(0, Math.max(pointCount, 2))) {
+    await mapSurface.click({ position: point, force: true, timeout: 15_000 })
     await page.waitForTimeout(350)
   }
 
@@ -87,7 +141,7 @@ export async function waitForSearchThisArea(page: Page) {
     .poll(
       async () =>
         page.getByRole("button", { name: "Search this area" }).isVisible(),
-      { timeout: 25_000 },
+      { timeout: 45_000 },
     )
     .toBe(true)
 }
@@ -95,4 +149,69 @@ export async function waitForSearchThisArea(page: Page) {
 /** @deprecated Use triggerAreaSearchStaleState */
 export async function panMap(page: Page) {
   await triggerAreaSearchStaleState(page)
+}
+
+export async function activatePinOnIdleMap(page: Page, context: BrowserContext) {
+  const dropPinButton = page.getByRole("button", { name: "Drop pin" })
+  const removePinButton = page.getByRole("button", { name: "Remove pin" })
+
+  await expect(dropPinButton).toBeVisible({ timeout: 15_000 })
+  await dropPinButton.click({ force: true })
+
+  const pinActivated = await removePinButton
+    .isVisible({ timeout: 4_000 })
+    .catch(() => false)
+
+  if (!pinActivated) {
+    await context.grantPermissions(["geolocation"])
+    await context.setGeolocation(SMOKE_TEST_GEOLOCATION)
+    await waitForVisibleButton(page, "Use my location").then((button) =>
+      button.click({ force: true }),
+    )
+  }
+
+  await expect(removePinButton).toHaveAttribute("aria-pressed", "true", {
+    timeout: 25_000,
+  })
+}
+
+export async function commitNearbyPinSearch(
+  page: Page,
+  buildingName: string,
+) {
+  await clickMapControlButton(page, "Search within 1 km")
+
+  const mobilePanel = getMobileResultsPanel(page)
+  await mobilePanel.getByText("1 building near pin").waitFor({
+    state: "visible",
+    timeout: 60_000,
+  })
+  await mobilePanel.getByText(buildingName).waitFor({
+    state: "visible",
+    timeout: 60_000,
+  })
+  await expect(page).toHaveURL(/search=nearby/)
+}
+
+export async function openMapBuildingDetail(
+  page: Page,
+  buildingName: string,
+) {
+  const mobilePanel = getMobileResultsPanel(page)
+  await mobilePanel.waitFor({ state: "visible", timeout: 60_000 })
+
+  await expect(async () => {
+    const buildingButton = mobilePanel.getByRole("button", {
+      name: new RegExp(buildingName),
+    })
+    await buildingButton.waitFor({ state: "visible", timeout: 15_000 })
+    await buildingButton.click({ force: true })
+    await expect(
+      mobilePanel.getByRole("heading", {
+        name: `${buildingName} details`,
+      }),
+    ).toBeVisible({ timeout: 30_000 })
+  }).toPass({ timeout: 90_000 })
+
+  return mobilePanel
 }

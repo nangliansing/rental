@@ -1,7 +1,10 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useGoogleMapsLoadState } from "./useGoogleMapsLoadState"
+import {
+  GOOGLE_MAPS_LOAD_TIMEOUT_MS,
+  useGoogleMapsLoadState,
+} from "./useGoogleMapsLoadState"
 
 describe("useGoogleMapsLoadState", () => {
   beforeEach(() => {
@@ -26,7 +29,7 @@ describe("useGoogleMapsLoadState", () => {
     expect(result.current.status).toBe("loading")
 
     act(() => result.current.markReady())
-    act(() => vi.advanceTimersByTime(10_000))
+    act(() => vi.advanceTimersByTime(GOOGLE_MAPS_LOAD_TIMEOUT_MS))
 
     expect(result.current.status).toBe("ready")
   })
@@ -46,7 +49,7 @@ describe("useGoogleMapsLoadState", () => {
   it("fails cleanly when loading times out", () => {
     const { result } = renderHook(() => useGoogleMapsLoadState(true))
 
-    act(() => vi.advanceTimersByTime(10_000))
+    act(() => vi.advanceTimersByTime(GOOGLE_MAPS_LOAD_TIMEOUT_MS))
 
     expect(result.current.status).toBe("error")
   })

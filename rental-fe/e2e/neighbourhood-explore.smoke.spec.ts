@@ -1,12 +1,14 @@
 import { loadEnv } from "vite"
 import { expect, test } from "@playwright/test"
 
+import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
 import {
+  closeNeighbourhoodExplore,
   installNeighbourhoodExploreRoute,
-  waitForNeighbourhoodExploreModal,
+  openNeighbourhoodExplore,
 } from "./fixtures/neighbourhood-explore"
 import {
-  getMobileResultsPanel,
+  openMapBuildingDetail,
   waitForAreaSearchResults,
 } from "./fixtures/map-search-helpers"
 import {
@@ -34,50 +36,72 @@ test.describe("Neighbourhood explore smoke", () => {
   test("opens explore, filters categories, selects a place, and closes", async ({
     page,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
+    test.setTimeout(180_000)
+
     await installMapSearchApiMocks(page)
     await installNeighbourhoodExploreRoute(page)
     await page.goto(areaSearchUrl)
 
-    await waitForMapReady(page)
+    await waitForMapReady(page, { requireMap: false })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
-    const mobilePanel = getMobileResultsPanel(page)
-    await mobilePanel
-      .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-      .click()
+    const mobilePanel = await openMapBuildingDetail(page, smokeAreaBuilding.name)
 
-    await expect(
-      mobilePanel.getByRole("heading", {
-        name: `${smokeAreaBuilding.name} details`,
-      }),
-    ).toBeVisible()
+    if (
+      await page
+        .getByText("Something went wrong")
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await page.reload()
+      await waitForMapReady(page, { requireMap: false })
+      await waitForAreaSearchResults(page, smokeAreaBuilding.name)
+      await openMapBuildingDetail(page, smokeAreaBuilding.name)
+    }
 
-    await mobilePanel
-      .getByRole("button", { name: "Explore neighbourhood" })
-      .click()
+    const ensureBuildingDetail = async () => {
+      const onDetail = await mobilePanel
+        .getByRole("heading", {
+          name: `${smokeAreaBuilding.name} details`,
+        })
+        .isVisible()
+        .catch(() => false)
 
-    const exploreDialog = page.getByRole("dialog", {
-      name: "Explore neighbourhood",
+      if (onDetail) return
+
+      await page.goto(areaSearchUrl)
+      await waitForMapReady(page, { requireMap: false })
+      await waitForAreaSearchResults(page, smokeAreaBuilding.name)
+      await openMapBuildingDetail(page, smokeAreaBuilding.name)
+    }
+
+    const exploreDialog = await openNeighbourhoodExplore(page, {
+      scope: mobilePanel,
+      ensureReady: ensureBuildingDetail,
     })
-    await waitForNeighbourhoodExploreModal(page)
 
-    await expect(exploreDialog.getByRole("tab", { name: "All (3)" })).toBeVisible()
-    await exploreDialog.getByRole("tab", { name: "Cafes (1)" }).click()
+    await expect(async () => {
+      const dialog = page.getByRole("dialog", {
+        name: "Explore neighbourhood",
+      })
+      const tab = dialog.getByRole("tab", { name: /^Cafes(?: \(\d+\))?$/ })
+      await tab.click({ force: true })
+      await expect(
+        dialog.getByRole("button", { name: /Smoke Corner Store/i }),
+      ).not.toBeVisible({ timeout: 3_000 })
+    }).toPass({ timeout: 45_000 })
+
     await expect(exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })).toBeVisible()
-    await expect(
-      exploreDialog.getByRole("button", { name: /Smoke Corner Store/i }),
-    ).not.toBeVisible()
 
-    await exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i }).click()
+    const placeButton = exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i })
+    await placeButton.click({ force: true })
     await expect(
       exploreDialog.getByRole("button", { name: /Smoke Lane Cafe/i }),
     ).toHaveAttribute("aria-current", "true")
 
-    await exploreDialog
-      .getByRole("button", { name: "Close explore neighbourhood" })
-      .click()
+    await closeNeighbourhoodExplore(page, exploreDialog)
 
-    await expect(exploreDialog).not.toBeVisible()
     await expect(
       mobilePanel.getByRole("heading", {
         name: `${smokeAreaBuilding.name} details`,

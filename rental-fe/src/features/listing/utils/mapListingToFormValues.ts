@@ -40,6 +40,7 @@ export function mapListingToFormValues(
         }))
       : [],
     description: listing.description ?? "",
+    privateNote: listing.privateNote ?? "",
     availabilityMode: availability.availabilityMode,
     availableFromDate: availability.availableFromDate,
   }

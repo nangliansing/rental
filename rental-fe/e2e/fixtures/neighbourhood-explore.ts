@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test"
+import { expect, type Locator, type Page, type Route } from "@playwright/test"
 
 import { smokeAreaBuilding } from "./map-search-buildings"
 
@@ -89,12 +89,135 @@ export async function installNeighbourhoodExploreRoute(page: Page) {
   )
 }
 
-export async function waitForNeighbourhoodExploreModal(page: Page) {
-  await page
-    .getByRole("dialog", { name: "Explore neighbourhood" })
-    .waitFor({ state: "visible", timeout: 20_000 })
-  await page.getByText("Loading nearby places...").waitFor({
-    state: "hidden",
-    timeout: 20_000,
+function isNeighbourhoodExploreResponse(url: string) {
+  return url.includes("/neighbourhood")
+}
+
+async function closeNeighbourhoodExploreIfOpen(page: Page) {
+  const exploreDialog = page.getByRole("dialog", {
+    name: "Explore neighbourhood",
   })
+
+  if (!(await exploreDialog.isVisible().catch(() => false))) {
+    return
+  }
+
+  await page
+    .getByRole("button", { name: "Close explore neighbourhood" })
+    .click({ force: true })
+  await expect(exploreDialog).not.toBeVisible({ timeout: 10_000 })
+}
+
+async function assertNeighbourhoodExploreContent(
+  exploreDialog: ReturnType<Page["getByRole"]>,
+) {
+  const loadingLocator = exploreDialog.getByText("Loading nearby places...")
+  const errorLocator = exploreDialog.getByText("Could not load nearby places")
+
+  await expect
+    .poll(
+      async () => {
+        if (await errorLocator.isVisible().catch(() => false)) {
+          throw new Error("Neighbourhood explore failed to load nearby places.")
+        }
+
+        if (await loadingLocator.isVisible().catch(() => false)) {
+          return "loading"
+        }
+
+        const hasTablist = await exploreDialog
+          .getByRole("tablist", { name: "Neighbourhood categories" })
+          .isVisible()
+          .catch(() => false)
+        const hasAllTab = await exploreDialog
+          .getByRole("tab", { name: /^All(?: \(\d+\))?$/ })
+          .isVisible()
+          .catch(() => false)
+        const hasPlace = await exploreDialog
+          .getByRole("button", { name: /Smoke Lane Cafe/i })
+          .isVisible()
+          .catch(() => false)
+        const hasNearbyPlaces = await exploreDialog
+          .getByText("Nearby places")
+          .isVisible()
+          .catch(() => false)
+
+        return hasTablist || hasAllTab || hasPlace || hasNearbyPlaces
+          ? "ready"
+          : "waiting"
+      },
+      { timeout: 60_000 },
+    )
+    .toBe("ready")
+}
+
+export async function openNeighbourhoodExplore(
+  page: Page,
+  options?: {
+    scope?: ReturnType<Page["locator"]>
+    ensureReady?: () => Promise<void>
+  },
+) {
+  const scope = options?.scope ?? page
+
+  await expect(async () => {
+    await closeNeighbourhoodExploreIfOpen(page)
+    await options?.ensureReady?.()
+
+    const exploreButton = scope
+      .getByRole("button", { name: "Explore neighbourhood" })
+      .or(page.getByRole("button", { name: "Explore neighbourhood" }))
+    await expect(exploreButton).toBeVisible({ timeout: 15_000 })
+
+    const neighbourhoodResponse = page
+      .waitForResponse(
+        (response) =>
+          isNeighbourhoodExploreResponse(response.url()) &&
+          response.request().method() === "GET" &&
+          response.ok(),
+        { timeout: 20_000 },
+      )
+      .catch(() => null)
+
+    await exploreButton.click({ force: true })
+
+    const exploreDialog = page.getByRole("dialog", {
+      name: "Explore neighbourhood",
+    })
+    await expect(exploreDialog).toBeVisible({ timeout: 15_000 })
+    await neighbourhoodResponse
+    await assertNeighbourhoodExploreContent(exploreDialog)
+  }).toPass({ timeout: 120_000 })
+
+  return page.getByRole("dialog", { name: "Explore neighbourhood" })
+}
+
+export async function closeNeighbourhoodExplore(
+  page: Page,
+  exploreDialog: Locator,
+) {
+  await expect(async () => {
+    const closeButton = exploreDialog.getByRole("button", {
+      name: "Close explore neighbourhood",
+    })
+
+    if (await closeButton.isVisible().catch(() => false)) {
+      await closeButton.click({ force: true })
+    } else {
+      await page.keyboard.press("Escape")
+    }
+
+    await expect(exploreDialog).not.toBeVisible({ timeout: 10_000 })
+  }).toPass({ timeout: 30_000 })
+}
+
+export async function waitForNeighbourhoodExploreModal(page: Page) {
+  const exploreDialog = page.getByRole("dialog", {
+    name: "Explore neighbourhood",
+  })
+
+  await expect(exploreDialog).toBeVisible({ timeout: 15_000 })
+  await assertNeighbourhoodExploreContent(exploreDialog)
+
+  return exploreDialog
 }

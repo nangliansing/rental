@@ -265,8 +265,8 @@ const MapViewContent = memo(function MapViewContent() {
               </AdvancedMarker>
             )}
 
-            {!isPlaceSearchOpen && <SearchAreaButton />}
           </Map>
+          {!isPlaceSearchOpen && <SearchAreaButton />}
           <MapStatusOverlay status={status} />
         </>
       )}

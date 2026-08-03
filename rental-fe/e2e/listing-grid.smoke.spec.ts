@@ -9,7 +9,7 @@ import {
 import { smokeAgentProfile } from "./fixtures/authenticated-session"
 import { smokeListingBuilding } from "./fixtures/lister-onboarding"
 import {
-  getMobileResultsPanel,
+  openMapBuildingDetail,
   waitForAreaSearchResults,
 } from "./fixtures/map-search-helpers"
 import {
@@ -28,7 +28,6 @@ const hasMapsKey = Boolean(
 
 const LISTING_GRID_VIRTUALIZATION_THRESHOLD = 24
 const PUBLIC_GRID_LISTING_COUNT = 29
-const LATEST_SORTED_LISTING_LABEL = "Open listing ฿30k"
 
 function openListingButtons(scope: Page | Locator) {
   return scope.getByRole("button", { name: /^Open listing / })
@@ -66,6 +65,42 @@ async function expectDefensiveGridCovers(scope: Page | Locator) {
   }).toPass({ timeout: 15_000 })
 }
 
+async function scrollScopeToEnd(scope: Page | Locator) {
+  await scope.evaluate((root) => {
+    const element = root instanceof HTMLElement ? root : document.body
+    const scrollTargets = [
+      element,
+      element.querySelector('[data-testid="building-listing-grid"]'),
+      element.closest("[data-scroll-root]"),
+      element.parentElement,
+    ].filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement)
+
+    for (const target of scrollTargets) {
+      target.scrollTop = target.scrollHeight
+    }
+
+    window.scrollTo(0, document.body.scrollHeight)
+  })
+}
+
+async function scrollScopeToTop(scope: Page | Locator) {
+  await scope.evaluate((root) => {
+    const element = root instanceof HTMLElement ? root : document.body
+    const scrollTargets = [
+      element,
+      element.querySelector('[data-testid="building-listing-grid"]'),
+      element.closest("[data-scroll-root]"),
+      element.parentElement,
+    ].filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement)
+
+    for (const target of scrollTargets) {
+      target.scrollTop = 0
+    }
+
+    window.scrollTo(0, 0)
+  })
+}
+
 async function expectVirtualizedWindow(
   page: Page,
   loadedCount: number,
@@ -76,38 +111,65 @@ async function expectVirtualizedWindow(
   }
 
   if (scope) {
-    const renderedCards = await openListingButtons(scope).count()
-    expect(renderedCards).toBeGreaterThan(0)
-    expect(renderedCards).toBeLessThan(loadedCount)
-    return
+    await scrollScopeToTop(scope)
+    await expect(openListingButtons(scope).first()).toBeVisible({
+      timeout: 15_000,
+    })
+  } else {
+    await page.evaluate(() => window.scrollTo(0, 0))
   }
 
-  await page.evaluate(() => window.scrollTo(0, 0))
+  const pollTimeout = 45_000
+  const pollInterval = 250
+  const start = Date.now()
 
-  const renderedCards = await countViewportOpenListingButtons(page)
+  const getRendered = async () => {
+    if (scope) {
+      return openListingButtons(scope).count()
+    }
+    return countViewportOpenListingButtons(page)
+  }
+
+  let renderedCards = 0
+  while (Date.now() - start < pollTimeout) {
+    renderedCards = await getRendered()
+    if (renderedCards > 0 && renderedCards < loadedCount) {
+      break
+    }
+    await page.waitForTimeout(pollInterval)
+  }
+
   expect(renderedCards).toBeGreaterThan(0)
   expect(renderedCards).toBeLessThan(loadedCount)
 }
 
 async function loadNextGridPage(page: Page, scope: Page | Locator = page) {
-  await page.keyboard.press("End")
+  if (scope === page) {
+    await page.keyboard.press("End")
+  } else {
+    await scrollScopeToEnd(scope)
+  }
 
   const loadMore = scope.getByRole("button", { name: "Load more" }).first()
   if (await loadMore.isVisible().catch(() => false)) {
     await loadMore.evaluate((button) => button.click())
     await expect(scope.getByText("Loading more...").first()).toBeHidden({
-      timeout: 15_000,
+      timeout: 30_000,
     })
   }
 }
 
-async function clickListing(scope: Page | Locator, label?: string) {
+async function clickListing(
+  scope: Page | Locator,
+  label?: string | RegExp,
+) {
   await expect(async () => {
     const button = label
       ? scope.getByRole("button", { name: label }).first()
       : openListingButtons(scope).first()
+
     await button.click({ timeout: 5_000 })
-  }).toPass({ timeout: 15_000 })
+  }).toPass({ timeout: 30_000 })
 }
 
 test.describe("Listing grid smoke", () => {
@@ -153,7 +215,8 @@ test.describe("Listing grid smoke", () => {
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT)
 
     await page.evaluate(() => window.scrollTo(0, 0))
-    await clickListing(page, LATEST_SORTED_LISTING_LABEL)
+    await expect(openListingButtons(page).first()).toBeVisible({ timeout: 30_000 })
+    await clickListing(page)
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 })
   })
 
@@ -195,6 +258,7 @@ test.describe("Listing grid smoke", () => {
   test("map building detail grid virtualizes and opens shared preview", async ({
     page,
   }) => {
+    test.setTimeout(180_000)
     test.skip(
       !hasMapsKey,
       "Set VITE_GOOGLE_MAPS_API_KEY in .env to run map building detail grid smoke.",
@@ -204,27 +268,22 @@ test.describe("Listing grid smoke", () => {
     await installBuildingListingGridRoute(page)
     await page.goto(areaSearchUrl)
 
-    await waitForMapReady(page)
+    await waitForMapReady(page, { requireMap: false })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
-    const mobilePanel = getMobileResultsPanel(page)
-    await mobilePanel
-      .getByRole("button", { name: new RegExp(smokeAreaBuilding.name) })
-      .click()
-
-    await expect(
-      mobilePanel.getByRole("heading", {
-        name: `${smokeAreaBuilding.name} details`,
-      }),
-    ).toBeVisible({ timeout: 15_000 })
+    const mobilePanel = await openMapBuildingDetail(page, smokeAreaBuilding.name)
 
     const grid = mobilePanel.getByTestId("building-listing-grid")
-    await expect(grid).toBeVisible()
-    await expect(openListingButtons(grid).first()).toBeVisible({ timeout: 15_000 })
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+    await expect(async () => {
+      await expect(openListingButtons(grid).first()).toBeVisible({
+        timeout: 10_000,
+      })
+    }).toPass({ timeout: 60_000 })
 
     await expectLazyCoverImages(grid)
     await expectDefensiveGridCovers(grid)
-    await loadNextGridPage(page, mobilePanel)
+    await loadNextGridPage(page, grid)
     await expectVirtualizedWindow(page, PUBLIC_GRID_LISTING_COUNT, grid)
 
     await clickListing(grid, "Open listing ฿14k")

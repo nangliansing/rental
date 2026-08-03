@@ -188,7 +188,7 @@ function buildSeedPendingPost(): SmokePendingPost {
       media: [
         {
           publicId: "test/pending-cover",
-          secureUrl: "https://example.com/pending.jpg",
+          secureUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
           resourceType: "image",
           position: 0,
           alt: "Pending room",

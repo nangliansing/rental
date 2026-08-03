@@ -61,9 +61,12 @@ export type ListingFormValues = {
   facilities: string[]
   media: UploadedMedia[]
   description: string
+  privateNote: string
   availabilityMode: ListingAvailabilityMode
   availableFromDate: string
 }
+
+const PRIVATE_NOTE_MAX_LENGTH = 3000
 
 export type ListingFormMode = "create" | "edit"
 
@@ -124,6 +127,7 @@ const initialValues: ListingFormValues = {
   facilities: [],
   media: [],
   description: "",
+  privateNote: "",
   availabilityMode: "now",
   availableFromDate: "",
 }
@@ -177,6 +181,7 @@ function buildFormValues(
     facilities: Array.isArray(values?.facilities) ? values.facilities : [],
     media: Array.isArray(values?.media) ? values.media : [],
     description: values?.description ?? "",
+    privateNote: values?.privateNote ?? "",
     availabilityMode: values?.availabilityMode ?? initialValues.availabilityMode,
     availableFromDate:
       values?.availableFromDate ?? initialValues.availableFromDate,
@@ -221,6 +226,7 @@ function normalizeListingValues(values: ListingFormState): ListingFormValues {
     facilities: sortFormStrings(values.facilities),
     media: values.media,
     description: normalizeFormText(values.description),
+    privateNote: normalizeFormText(values.privateNote),
     availabilityMode: values.availabilityMode,
     availableFromDate: normalizeFormText(values.availableFromDate),
   }
@@ -333,6 +339,10 @@ function buildChangedListingValues(
     changes.description = currentValues.description
   }
 
+  if (initialValues.privateNote !== currentValues.privateNote) {
+    changes.privateNote = currentValues.privateNote
+  }
+
   const initialAvailableAt = serializeListingAvailabilityForApi({
     availabilityMode: initialValues.availabilityMode,
     availableFromDate: initialValues.availableFromDate,
@@ -366,7 +376,8 @@ function isListingValid(values: ListingFormValues) {
     isListingAvailabilityFormValid(
       values.availabilityMode,
       values.availableFromDate,
-    )
+    ) &&
+    values.privateNote.length <= PRIVATE_NOTE_MAX_LENGTH
   )
 }
 
@@ -736,6 +747,30 @@ export function ListingForm({
           disabled={isSubmitting}
           className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700"
           onChange={(event) => updateField("description", event.target.value)}
+        />
+      </FormSection>
+
+      <FormSection
+        title="Private note"
+        titleId={`${fieldIdPrefix}-private-note-heading`}
+      >
+        <p
+          id={`${fieldIdPrefix}-private-note-description`}
+          className="text-xs leading-5 text-slate-500"
+        >
+          Only visible to you. Use this for gate codes, viewing instructions, or
+          other notes renters should not see.
+        </p>
+        <Textarea
+          id={`${fieldIdPrefix}-private-note`}
+          aria-labelledby={`${fieldIdPrefix}-private-note-heading`}
+          aria-describedby={`${fieldIdPrefix}-private-note-description`}
+          value={values.privateNote}
+          placeholder="Example: Gate code 1234. Call before viewing."
+          disabled={isSubmitting}
+          maxLength={PRIVATE_NOTE_MAX_LENGTH}
+          className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700"
+          onChange={(event) => updateField("privateNote", event.target.value)}
         />
       </FormSection>
 

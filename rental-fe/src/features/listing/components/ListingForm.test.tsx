@@ -126,6 +126,10 @@ describe("ListingForm", () => {
       screen.getByRole("textbox", { name: "Description" }),
       "  Quiet room near transit  ",
     )
+    await user.type(
+      screen.getByRole("textbox", { name: "Private note" }),
+      "  Gate code 4321  ",
+    )
     await user.click(submit)
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
@@ -137,6 +141,7 @@ describe("ListingForm", () => {
         facilities: ["Wifi"],
         media: [listingPhoto],
         description: "Quiet room near transit",
+        privateNote: "Gate code 4321",
       }),
     )
   })
@@ -193,6 +198,7 @@ describe("ListingForm", () => {
           facilities: [],
           media: [originalPhoto],
           description: "Original description",
+          privateNote: "Original private note",
         }}
         onSubmit={onSubmit}
       />,
@@ -244,6 +250,9 @@ describe("ListingForm", () => {
     const description = screen.getByRole("textbox", { name: "Description" })
     await user.clear(description)
     await user.type(description, "Updated description")
+    const privateNote = screen.getByRole("textbox", { name: "Private note" })
+    await user.clear(privateNote)
+    await user.type(privateNote, "Updated private note")
     await user.click(screen.getByRole("button", { name: "Save changes" }))
 
     await waitFor(() =>
@@ -267,6 +276,7 @@ describe("ListingForm", () => {
         facilities: ["Wifi"],
         media: [listingPhoto],
         description: "Updated description",
+        privateNote: "Updated private note",
       }),
     )
   })
@@ -416,6 +426,220 @@ describe("ListingForm", () => {
         within(tabRow).getByRole("button", { name }),
       ).not.toHaveAttribute("aria-busy", "true")
     }
+  })
+
+  it("labels Private note from the section heading with owner-only helper copy", () => {
+    render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+    const heading = screen.getByRole("heading", { name: "Private note" })
+    const privateNote = screen.getByRole("textbox", { name: "Private note" })
+
+    expect(heading).toBeInTheDocument()
+    expect(privateNote).toHaveAttribute(
+      "aria-labelledby",
+      heading.getAttribute("id") ?? undefined,
+    )
+    expect(screen.getByText(/Only visible to you/)).toBeInTheDocument()
+    expect(privateNote).toHaveAttribute("maxLength", "3000")
+  })
+
+  it("submits null privateNote when clearing an existing note in edit mode", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <ListingForm
+        mode="edit"
+        defaultValues={{
+          rent: 12000,
+          media: [listingPhoto],
+          privateNote: "Gate code 1234",
+        }}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const privateNote = screen.getByRole("textbox", { name: "Private note" })
+    await user.clear(privateNote)
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({ privateNote: "" }),
+    )
+  })
+
+  describe("privateNote", () => {
+    it("defaults privateNote to empty on create", () => {
+      render(<ListingForm defaultValues={{ media: [listingPhoto] }} />)
+
+      expect(screen.getByRole("textbox", { name: "Private note" })).toHaveValue(
+        "",
+      )
+    })
+
+    it("submits an empty privateNote when the field is left untouched on create", async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+
+      render(<ListingForm onSubmit={onSubmit} />)
+
+      await user.click(screen.getByRole("button", { name: "Add listing photo" }))
+      await user.click(screen.getByRole("button", { name: "Continue" }))
+
+      await waitFor(() =>
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ privateNote: "" }),
+        ),
+      )
+    })
+
+    it("normalizes whitespace-only private notes to empty on create", async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+
+      render(<ListingForm onSubmit={onSubmit} />)
+
+      await user.click(screen.getByRole("button", { name: "Add listing photo" }))
+      await user.type(
+        screen.getByRole("textbox", { name: "Private note" }),
+        "     ",
+      )
+      await user.click(screen.getByRole("button", { name: "Continue" }))
+
+      await waitFor(() =>
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ privateNote: "" }),
+        ),
+      )
+    })
+
+    it("prefills privateNote in edit mode from defaultValues", () => {
+      render(
+        <ListingForm
+          mode="edit"
+          defaultValues={{
+            rent: 12000,
+            media: [listingPhoto],
+            privateNote: "Existing owner note",
+          }}
+        />,
+      )
+
+      expect(screen.getByRole("textbox", { name: "Private note" })).toHaveValue(
+        "Existing owner note",
+      )
+    })
+
+    it("omits privateNote from edit patches when it did not change", async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+
+      render(
+        <ListingForm
+          mode="edit"
+          defaultValues={{
+            rent: 12000,
+            media: [listingPhoto],
+            privateNote: "Existing owner note",
+          }}
+          onSubmit={onSubmit}
+        />,
+      )
+
+      const rent = screen.getByRole("spinbutton", { name: "Rent" })
+      await user.clear(rent)
+      await user.type(rent, "13000")
+      await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ rent: 13000 }))
+      expect(onSubmit).not.toHaveBeenCalledWith(
+        expect.objectContaining({ privateNote: expect.anything() }),
+      )
+    })
+
+    it("submits only privateNote when it is the sole changed field in edit mode", async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+
+      render(
+        <ListingForm
+          mode="edit"
+          defaultValues={{
+            rent: 12000,
+            media: [listingPhoto],
+            privateNote: "",
+          }}
+          onSubmit={onSubmit}
+        />,
+      )
+
+      await user.type(
+        screen.getByRole("textbox", { name: "Private note" }),
+        "New owner note",
+      )
+      await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+      await waitFor(() =>
+        expect(onSubmit).toHaveBeenCalledWith({ privateNote: "New owner note" }),
+      )
+    })
+
+    it("treats whitespace-only retypes as unchanged after normalization in edit mode", async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+
+      render(
+        <ListingForm
+          mode="edit"
+          defaultValues={{
+            rent: 12000,
+            media: [listingPhoto],
+            privateNote: "",
+          }}
+          onSubmit={onSubmit}
+        />,
+      )
+
+      await user.type(
+        screen.getByRole("textbox", { name: "Private note" }),
+        "   ",
+      )
+
+      expect(screen.getByRole("button", { name: "No changes" })).toBeDisabled()
+      expect(onSubmit).not.toHaveBeenCalled()
+    })
+
+    it("keeps description and privateNote changes independent in edit mode", async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+
+      render(
+        <ListingForm
+          mode="edit"
+          defaultValues={{
+            rent: 12000,
+            media: [listingPhoto],
+            description: "Public description",
+            privateNote: "Owner note",
+          }}
+          onSubmit={onSubmit}
+        />,
+      )
+
+      const description = screen.getByRole("textbox", { name: "Description" })
+      await user.clear(description)
+      await user.type(description, "Updated public description")
+      await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+      await waitFor(() =>
+        expect(onSubmit).toHaveBeenCalledWith({
+          description: "Updated public description",
+        }),
+      )
+      expect(onSubmit).not.toHaveBeenCalledWith(
+        expect.objectContaining({ privateNote: expect.anything() }),
+      )
+    })
   })
 
   it("labels Description from the section heading without a duplicate field label", () => {

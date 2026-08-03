@@ -11,6 +11,109 @@ describe("ListingPostBody", () => {
     vi.useRealTimers()
   })
 
+  describe("privateNote", () => {
+    it("shows the owner-only private note on listing detail", () => {
+      const listing = createSearchListing({
+        privateNote: "Gate code 1234\nCall before viewing",
+      })
+
+      render(<ListingPostBody listing={listing} isOwnListing />)
+
+      expect(screen.getByLabelText("Private note")).toBeInTheDocument()
+      expect(screen.getByText(/Gate code 1234/)).toHaveClass("whitespace-pre-wrap")
+      expect(screen.getByText("Only visible to you")).toBeInTheDocument()
+    })
+
+    it("hides the private note from non-owners even when the field is present", () => {
+      const listing = createSearchListing({
+        privateNote: "Gate code 1234",
+      })
+
+      render(<ListingPostBody listing={listing} isOwnListing={false} />)
+
+      expect(screen.queryByLabelText("Private note")).not.toBeInTheDocument()
+      expect(screen.queryByText("Gate code 1234")).not.toBeInTheDocument()
+    })
+
+    it("hides the private note when isOwnListing is omitted", () => {
+      render(
+        <ListingPostBody
+          listing={createSearchListing({ privateNote: "Gate code 1234" })}
+        />,
+      )
+
+      expect(screen.queryByLabelText("Private note")).not.toBeInTheDocument()
+    })
+
+    it("hides the private note section when the owner note is blank", () => {
+      render(
+        <ListingPostBody
+          listing={createSearchListing({ privateNote: "   " })}
+          isOwnListing
+        />,
+      )
+
+      expect(screen.queryByLabelText("Private note")).not.toBeInTheDocument()
+    })
+
+    it("hides the private note section when the API sends null", () => {
+      render(
+        <ListingPostBody
+          listing={createSearchListing({ privateNote: null })}
+          isOwnListing
+        />,
+      )
+
+      expect(screen.queryByLabelText("Private note")).not.toBeInTheDocument()
+    })
+
+    it("hides the private note section when the field is omitted from the payload", () => {
+      render(<ListingPostBody listing={createSearchListing()} isOwnListing />)
+
+      expect(screen.queryByLabelText("Private note")).not.toBeInTheDocument()
+    })
+
+    it("ignores malformed privateNote values instead of rendering them", () => {
+      render(
+        <ListingPostBody
+          listing={createSearchListing({ privateNote: 123 as never })}
+          isOwnListing
+        />,
+      )
+
+      expect(screen.queryByLabelText("Private note")).not.toBeInTheDocument()
+    })
+
+    it("renders the private note before the photo carousel", () => {
+      render(
+        <ListingPostBody
+          listing={createSearchListing({ privateNote: "Gate code 1234" })}
+          isOwnListing
+        />,
+      )
+
+      const note = screen.getByLabelText("Private note")
+      const photo = screen.getByRole("img", { name: "Bright rental room" })
+
+      expect(
+        note.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    })
+
+    it("renders long private notes without truncation", () => {
+      const longNote = "A".repeat(500)
+
+      render(
+        <ListingPostBody
+          listing={createSearchListing({ privateNote: longNote })}
+          isOwnListing
+        />,
+      )
+
+      expect(screen.getByText(longNote)).toBeInTheDocument()
+    })
+  })
+
   it("scrolls detail chips edge to edge within the listing card", () => {
     const listing = createSearchListing({
       occupancy: 2,
