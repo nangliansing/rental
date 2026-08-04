@@ -177,6 +177,9 @@ describe("environment validation", () => {
     assert.equal(productionConfig.queue.enabled, true);
     assert.equal(productionConfig.queue.prefix, "rental:queue");
     assert.equal(productionConfig.queue.workerConcurrency, 5);
+    assert.equal(productionConfig.queue.workerDrainDelaySeconds, 30);
+    assert.equal(productionConfig.queue.workerRedisCooldownInitialMs, 1_000);
+    assert.equal(productionConfig.queue.workerRedisCooldownMaxMs, 60_000);
   });
 
   test("requires a Google Maps API key when reverse geocoding is enabled in production", () => {

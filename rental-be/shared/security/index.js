@@ -5,6 +5,7 @@ export {
   geocodeRateLimit,
   globalRateLimit,
   initializeRateLimiters,
+  isSearchApiRequest,
   mutationRateLimit,
   readRateLimit,
   searchRateLimit,

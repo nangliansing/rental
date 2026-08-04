@@ -131,6 +131,46 @@ describe("HTTP security boundary", () => {
     });
   });
 
+  test("does not apply the global policy to search routes", async () => {
+    await withServer(
+      {
+        RATE_LIMIT_GLOBAL_MAX: "2",
+        RATE_LIMIT_SEARCH_MAX: "100",
+        RATE_LIMIT_READ_MAX: "100",
+      },
+      async (baseUrl) => {
+        const url = `${baseUrl}/api/v1/search/agents?page=invalid`;
+
+        for (let index = 0; index < 4; index += 1) {
+          assert.equal((await fetch(url)).status, 422);
+        }
+      },
+    );
+  });
+
+  test("does not apply the mutation policy to search POSTs", async () => {
+    await withServer(
+      {
+        RATE_LIMIT_GLOBAL_MAX: "100",
+        RATE_LIMIT_MUTATION_MAX: "2",
+        RATE_LIMIT_SEARCH_MAX: "100",
+      },
+      async (baseUrl) => {
+        const send = () =>
+          fetch(`${baseUrl}/api/v1/search/buildings/map`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{}",
+          });
+
+        for (let index = 0; index < 4; index += 1) {
+          const response = await send();
+          assert.ok([400, 422].includes(response.status));
+        }
+      },
+    );
+  });
+
   test("applies the API mutation policy to non-GET methods", async () => {
     await withServer({ RATE_LIMIT_MUTATION_MAX: "2" }, async (baseUrl) => {
       const send = () =>

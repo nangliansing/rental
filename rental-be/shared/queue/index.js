@@ -15,7 +15,7 @@ export {
   initializeQueueProducer,
   isQueueEnabled,
 } from "./queue-manager.js";
-export { startQueueWorker } from "./run-worker.js";
+export { startQueueWorker, resolveQueueWorkerOptions, resolveWorkerRedisCooldownOptions } from "./run-worker.js";
 export {
   clearJobHandlersForTests,
   createJobHandlerRunner,
@@ -40,4 +40,8 @@ export {
   createRealtimePublisher,
   createRealtimeSubscriber,
 } from "./pubsub/realtime-hints.js";
+export {
+  createWorkerRedisCooldown,
+  isRedisWorkerFault,
+} from "./worker-redis-cooldown.js";
 export { validateEnqueueOptions } from "./validate-enqueue-options.js";

@@ -15,6 +15,14 @@ const getClientKey = (req) => `ip:${ipKeyGenerator(req.ip)}`;
 const getAuthenticatedKey = (req) =>
   req.user?.id ? `user:${req.user.id}` : getClientKey(req);
 
+export const isSearchApiRequest = (req) => {
+  const path = String(req?.originalUrl ?? req?.url ?? "").split("?")[0];
+  return /(?:^|\/)api\/v1\/search(?:\/|$)/.test(path);
+};
+
+const composeSkip = (...predicates) => (req, res) =>
+  predicates.some((predicate) => Boolean(predicate?.(req, res)));
+
 const createLimiter = ({
   createStore,
   identifier,
@@ -39,7 +47,8 @@ const createLimiter = ({
         ...rateLimitResponse,
         requestId: req.id,
       }),
-    passOnStoreError: false,
+    // Prefer API availability over hard failure when Redis is unavailable.
+    passOnStoreError: true,
     ...(store ? { store } : {}),
   });
 };
@@ -52,6 +61,8 @@ export const initializeRateLimiters = ({ config, createStore }) => {
       identifier: "global-api",
       windowMs: 5 * MINUTE,
       limit: config.globalMax,
+      // Search has its own limiter; skip redundant Redis incrs on map traffic.
+      skip: isSearchApiRequest,
     }),
     read: createLimiter({
       createStore,
@@ -59,7 +70,10 @@ export const initializeRateLimiters = ({ config, createStore }) => {
       identifier: "api-read",
       windowMs: MINUTE,
       limit: config.readMax,
-      skip: (req) => !["GET", "HEAD"].includes(req.method),
+      skip: composeSkip(
+        (req) => !["GET", "HEAD"].includes(req.method),
+        isSearchApiRequest,
+      ),
     }),
     mutation: createLimiter({
       createStore,
@@ -67,7 +81,10 @@ export const initializeRateLimiters = ({ config, createStore }) => {
       identifier: "api-mutation",
       windowMs: 10 * MINUTE,
       limit: config.mutationMax,
-      skip: (req) => ["GET", "HEAD", "OPTIONS"].includes(req.method),
+      skip: composeSkip(
+        (req) => ["GET", "HEAD", "OPTIONS"].includes(req.method),
+        isSearchApiRequest,
+      ),
     }),
     search: createLimiter({
       createStore,

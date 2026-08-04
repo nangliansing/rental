@@ -2,12 +2,16 @@
 
 The API applies layered controls. A client must remain within every applicable
 quota; passing the global limit does not bypass a narrower route limit.
+Public `/api/v1/search/*` routes skip the global, read, and mutation limiters and
+use only the search policy so map/search traffic does not triple Redis command
+usage. If the Redis rate-limit store fails, limiters fail open so availability is
+preserved.
 
 | Policy | Default window | Default maximum | Key |
 | --- | ---: | ---: | --- |
 | All non-health HTTP methods | 5 minutes | 300 | Client IP |
 | API `GET` and `HEAD` | 1 minute | 180 | Client IP |
-| Public search and map routes | 1 minute | 60 | Client IP |
+| Public search and map routes (only) | 1 minute | 60 | Client IP |
 | Signup, login, and refresh | 15 minutes | 10 | Client IP |
 | API mutations | 10 minutes | 100 | Client IP |
 | Reports, review reports, reviews, and building edits | 1 hour | 20 | Authenticated user |
