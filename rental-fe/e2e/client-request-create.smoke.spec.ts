@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test"
 import {
   installAuthenticatedSessionMocks,
 } from "./fixtures/authenticated-session"
+import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
 import {
   continueToClientRequestPreferences,
   expectClientRequestCreatedToast,
@@ -10,6 +11,8 @@ import {
   installClientRequestCreateMocks,
   openAgentMapActionsMenu,
   openCreateClientRequestFromMap,
+  waitForAgentMapActions,
+  waitForMapModeControls,
 } from "./fixtures/client-request-create"
 import {
   areaSearchUrl,
@@ -23,6 +26,7 @@ async function prepareAgentMapPage(
   url: string,
   options?: { hasAgentProfile?: boolean; failCreateOnce?: boolean },
 ) {
+  // Register anonymous map mocks first, then auth mocks so auth routes win (LIFO).
   await installMapSearchApiMocks(page)
   await installAuthenticatedSessionMocks(page, {
     hasAgentProfile: options?.hasAgentProfile ?? true,
@@ -32,12 +36,29 @@ async function prepareAgentMapPage(
   })
 
   await page.goto(url)
-  await waitForMapReady(page, { requireMap: false })
+  // Agent actions live on SearchAreaButton, which only mounts when Maps is ready.
+  await waitForMapReady(page, { requireMap: true })
+
+  if (options?.hasAgentProfile === false) {
+    await waitForMapModeControls(page)
+    // Let agent-profile 404 settle before asserting absence.
+    await expect(page.getByTestId("agent-map-actions")).toHaveCount(0, {
+      timeout: 15_000,
+    })
+  } else {
+    await waitForAgentMapActions(page)
+  }
 
   return createMocks
 }
 
 test.describe("Create client request from map", () => {
+  test.beforeEach(() => {
+    // Same gate as other map-control smoke suites: placeholder Maps key never
+    // mounts SearchAreaButton / agent-map-actions in CI.
+    skipIfCiPlaceholderMapsKey(test)
+  })
+
   test("happy path: area search → details → preferences → create → toast", async ({
     page,
   }) => {
@@ -206,6 +227,7 @@ test.describe("Create client request from map", () => {
       hasAgentProfile: false,
     })
 
+    await expect(page.getByTestId("map-mode-controls")).toBeVisible()
     await expect(page.getByTestId("agent-map-actions")).toHaveCount(0)
   })
 

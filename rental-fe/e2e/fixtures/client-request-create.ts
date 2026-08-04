@@ -110,13 +110,42 @@ export async function installClientRequestCreateMocks(
   }
 }
 
-export async function openAgentMapActionsMenu(page: Page) {
-  const trigger = page.getByTestId("agent-map-actions")
-  await expect(trigger).toBeVisible({ timeout: 30_000 })
-  await trigger.click()
-  await expect(page.getByRole("menu", { name: "Agent map actions" })).toBeVisible({
-    timeout: 10_000,
+/**
+ * Map mode controls (including agent actions) only mount after Maps loads.
+ * Wait for them explicitly — do not treat results-panel fallback as ready.
+ */
+export async function waitForMapModeControls(page: Page) {
+  await expect(page.getByTestId("map-mode-controls")).toBeVisible({
+    timeout: 60_000,
   })
+  await expect(
+    page.getByRole("button", { name: "Use my location" }),
+  ).toBeVisible({ timeout: 15_000 })
+}
+
+export async function waitForAgentMapActions(page: Page) {
+  await waitForMapModeControls(page)
+  await expect(page.getByTestId("agent-map-actions")).toBeVisible({
+    timeout: 45_000,
+  })
+}
+
+export async function openAgentMapActionsMenu(page: Page) {
+  await waitForAgentMapActions(page)
+  const trigger = page.getByTestId("agent-map-actions")
+
+  // Radix Tooltip + Trigger nesting can make Playwright's actionability click
+  // flaky on mobile; drive the native click after visibility is confirmed.
+  await expect(async () => {
+    await expect(trigger).toBeVisible({ timeout: 5_000 })
+    await expect(trigger).toBeEnabled({ timeout: 5_000 })
+    await trigger.evaluate((element) => {
+      ;(element as HTMLButtonElement).click()
+    })
+    await expect(
+      page.getByRole("menu", { name: "Agent map actions" }),
+    ).toBeVisible({ timeout: 5_000 })
+  }).toPass({ timeout: 30_000 })
 }
 
 export async function openCreateClientRequestFromMap(page: Page) {
