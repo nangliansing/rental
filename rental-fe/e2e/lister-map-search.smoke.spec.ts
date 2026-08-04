@@ -34,9 +34,19 @@ async function expectArrivalToast(page: import("@playwright/test").Page) {
   })
 }
 
+/** Wait for map settle without missing a short-lived arrival toast. */
+async function waitForListerMapArrival(
+  page: import("@playwright/test").Page,
+) {
+  await Promise.all([
+    expectArrivalToast(page),
+    waitForMapReady(page, { requireMap: false }),
+  ])
+}
+
 /**
  * Assert hydrate fetches settle without looping.
- * `maxCalls` may be 2 when `waitForMapReady` can reload once (CI placeholder Maps).
+ * `maxCalls` may be 2 when map hydration remounts under the CI Maps placeholder.
  */
 async function expectStableAgentProfileFetchCount(
   observedCount: () => number,
@@ -81,11 +91,9 @@ test.describe("Lister map search smoke", () => {
 
     await page.goto(listerMapSearchUrl)
 
-    await waitForMapReady(page, { requireMap: false })
+    await waitForListerMapArrival(page)
     await expect(page).toHaveURL(/filters=/)
-    await expectArrivalToast(page)
 
-    // Allow one remount from waitForMapReady reload under the CI Maps placeholder.
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
       2,
@@ -110,15 +118,16 @@ test.describe("Lister map search smoke", () => {
       },
     })
 
+    const arrival = waitForListerMapArrival(page)
+
     await page
       .getByRole("link", {
         name: `Search ${smokeAgentProfile.displayName}'s listings on map`,
       })
       .click()
 
-    await waitForMapReady(page, { requireMap: false })
+    await arrival
     await expect(page).toHaveURL(/agent-smoke-1/)
-    await expectArrivalToast(page)
 
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
@@ -142,15 +151,16 @@ test.describe("Lister map search smoke", () => {
 
     await installListerMapSearchMocks(page)
 
+    const arrival = waitForListerMapArrival(page)
+
     await page
       .getByRole("link", {
         name: `Search ${smokeAgentProfile.displayName}'s listings on map`,
       })
       .click()
 
-    await waitForMapReady(page, { requireMap: false })
+    await arrival
     await expect(page).toHaveURL(/agent-smoke-1/)
-    await expectArrivalToast(page)
   })
 
   test("commits an area search that keeps the lister filter scoped", async ({
@@ -161,8 +171,7 @@ test.describe("Lister map search smoke", () => {
     await installListerMapSearchMocks(page)
     await page.goto(listerMapSearchUrl)
 
-    await waitForMapReady(page, { requireMap: false })
-    await expectArrivalToast(page)
+    await waitForListerMapArrival(page)
 
     const areaSearchRequest = page.waitForRequest(
       (request) =>
@@ -208,7 +217,6 @@ test.describe("Lister map search smoke", () => {
       .poll(() => agentProfileFetchCount, { timeout: 10_000 })
       .toBeGreaterThan(0)
 
-    // Allow one remount from waitForMapReady reload under the CI Maps placeholder.
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
       2,
