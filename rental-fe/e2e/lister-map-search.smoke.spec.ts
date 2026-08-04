@@ -34,6 +34,10 @@ async function expectArrivalToast(page: import("@playwright/test").Page) {
   })
 }
 
+/**
+ * Assert hydrate fetches settle without looping.
+ * `maxCalls` may be 2 when `waitForMapReady` can reload once (CI placeholder Maps).
+ */
 async function expectStableAgentProfileFetchCount(
   observedCount: () => number,
   maxCalls: number,
@@ -48,9 +52,15 @@ async function expectStableAgentProfileFetchCount(
     )
     .toBeLessThanOrEqual(maxCalls)
 
+  const settled = observedCount()
+  expect(settled).toBeLessThanOrEqual(maxCalls)
+
   await pageWait(1_500)
 
-  expect(observedCount()).toBeLessThanOrEqual(maxCalls)
+  expect(
+    observedCount(),
+    "Agent profile fetch count grew after settle — possible fetch loop",
+  ).toBe(settled)
 }
 
 function pageWait(ms: number) {
@@ -75,9 +85,10 @@ test.describe("Lister map search smoke", () => {
     await expect(page).toHaveURL(/filters=/)
     await expectArrivalToast(page)
 
+    // Allow one remount from waitForMapReady reload under the CI Maps placeholder.
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
-      1,
+      2,
     )
 
     expect(await getMobileResultsPanel(page).count()).toBe(0)
@@ -197,9 +208,10 @@ test.describe("Lister map search smoke", () => {
       .poll(() => agentProfileFetchCount, { timeout: 10_000 })
       .toBeGreaterThan(0)
 
+    // Allow one remount from waitForMapReady reload under the CI Maps placeholder.
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
-      1,
+      2,
     )
   })
 })
