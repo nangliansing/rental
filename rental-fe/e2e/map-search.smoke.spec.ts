@@ -8,6 +8,7 @@ import {
   commitNearbyPinSearch,
   drawLineOnMap,
   getMobileResultsPanel,
+  openMapBuildingDetail,
   triggerAreaSearchStaleState,
   waitForAreaSearchError,
   waitForAreaSearchResults,
@@ -261,18 +262,10 @@ test.describe("Map search smoke", () => {
     await waitForMapReady(page, { requireMap: false })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
-    const mobilePanel = getMobileResultsPanel(page)
-    const buildingBtn = mobilePanel.getByRole("button", {
-      name: new RegExp(smokeAreaBuilding.name),
-    })
-    await buildingBtn.waitFor({ state: "visible", timeout: 30_000 })
-    await buildingBtn.click({ timeout: 20_000 })
-
-    await expect(
-      mobilePanel.getByRole("heading", {
-        name: `${smokeAreaBuilding.name} details`,
-      }),
-    ).toBeVisible({ timeout: 30_000 })
+    const mobilePanel = await openMapBuildingDetail(
+      page,
+      smokeAreaBuilding.name,
+    )
 
     const goBackBtn = mobilePanel.getByRole("button", { name: "Go back" })
     await goBackBtn.waitFor({ state: "visible", timeout: 30_000 })
