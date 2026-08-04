@@ -201,6 +201,10 @@ export async function openMapBuildingDetail(
   await mobilePanel.waitFor({ state: "visible", timeout: 60_000 })
 
   await expect(async () => {
+    await expect(
+      page.getByRole("heading", { name: "Something went wrong" }),
+    ).toHaveCount(0)
+
     const buildingButton = mobilePanel.getByRole("button", {
       name: new RegExp(buildingName),
     })
@@ -211,6 +215,9 @@ export async function openMapBuildingDetail(
         name: `${buildingName} details`,
       }),
     ).toBeVisible({ timeout: 30_000 })
+    await expect(
+      mobilePanel.getByRole("button", { name: "Go back" }),
+    ).toBeVisible({ timeout: 15_000 })
   }).toPass({ timeout: 90_000 })
 
   return mobilePanel

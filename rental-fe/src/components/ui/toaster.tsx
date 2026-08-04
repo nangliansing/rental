@@ -39,7 +39,7 @@ export function Toaster() {
           }}
         >
           <ToastLeadingIcon variant={variant} />
-          {variant === "search-hint" ? (
+          {variant === "search-hint" || variant === "success-pill" ? (
             title ? <ToastTitle variant={variant}>{title}</ToastTitle> : null
           ) : (
             <div className="grid min-w-0 flex-1 gap-1 pr-6">

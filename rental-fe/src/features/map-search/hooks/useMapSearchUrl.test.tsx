@@ -136,4 +136,19 @@ describe("useMapSearchUrl", () => {
       expect(search).toContain("search=nearby")
     })
   })
+
+  it("enters the listing purpose parameter", async () => {
+    const { result, getSearchParams } = renderUrlHook(
+      nearbyUrlState,
+      "/?search=nearby&lat=13.7653&lng=100.642&radius=1000",
+    )
+
+    result.current.enterListingPurpose()
+
+    await waitFor(() => {
+      const search = getSearchParams()
+      expect(search).toContain("purpose=list")
+      expect(search).toContain("search=nearby")
+    })
+  })
 })

@@ -256,6 +256,11 @@ test.describe("Map search smoke", () => {
   }) => {
     test.setTimeout(120_000)
 
+    const pageErrors: string[] = []
+    page.on("pageerror", (error) => {
+      pageErrors.push(error.message)
+    })
+
     await installMapSearchApiMocks(page)
     await page.goto(areaSearchUrl)
 
@@ -267,18 +272,29 @@ test.describe("Map search smoke", () => {
       smokeAreaBuilding.name,
     )
 
-    const goBackBtn = mobilePanel.getByRole("button", { name: "Go back" })
-    await goBackBtn.waitFor({ state: "visible", timeout: 30_000 })
-    await goBackBtn.click({ timeout: 20_000 })
+    await expect(
+      page.getByRole("heading", { name: "Something went wrong" }),
+    ).toHaveCount(0)
 
-    await expect(mobilePanel.getByText("1 building")).toBeVisible({
-      timeout: 30_000,
-    })
+    await expect(async () => {
+      const goBackBtn = mobilePanel.getByRole("button", { name: "Go back" })
+      await expect(goBackBtn).toBeVisible({ timeout: 5_000 })
+      await goBackBtn.click({ force: true, timeout: 10_000 })
+      await expect(mobilePanel.getByText("1 building")).toBeVisible({
+        timeout: 15_000,
+      })
+    }).toPass({ timeout: 60_000 })
+
     await expect(
       mobilePanel.getByRole("button", {
         name: new RegExp(smokeAreaBuilding.name),
       }),
     ).toBeVisible({ timeout: 30_000 })
+
+    expect(
+      pageErrors,
+      `Unexpected page errors while opening building detail: ${pageErrors.join("; ")}`,
+    ).toEqual([])
   })
 
   test("commits a refreshed nearby search after radius changes", async ({

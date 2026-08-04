@@ -542,6 +542,36 @@ export async function installAuthenticatedSessionMocks(
     await route.continue()
   })
 
+  await page.route("**/api/v1/client-requests**", async (route) => {
+    if (!isAuthorized(route)) {
+      await route.fulfill(jsonRoute({ success: false }, 401))
+      return
+    }
+
+    if (route.request().method() === "GET") {
+      const url = new URL(route.request().url())
+      const pageParam = Number(url.searchParams.get("page") ?? "1")
+      const limitParam = Number(url.searchParams.get("limit") ?? "20")
+
+      await route.fulfill(
+        jsonRoute({
+          success: true,
+          data: [],
+          pagination: {
+            page: Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1,
+            limit:
+              Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 20,
+            total: 0,
+            totalPages: 0,
+          },
+        }),
+      )
+      return
+    }
+
+    await route.continue()
+  })
+
   await page.route("**/api/v1/listings?**", async (route) => {
     if (!isAuthorized(route)) {
       await route.fulfill(jsonRoute({ success: false }, 401))

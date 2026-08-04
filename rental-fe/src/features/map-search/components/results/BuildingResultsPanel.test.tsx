@@ -390,6 +390,11 @@ describe("BuildingResultsPanel mobile drawer", () => {
     )
     view.rerender(<BuildingResultsPanel />)
 
+    expect(mobilePanel).toHaveAttribute("data-snap", "full")
+    expect(mobilePanel).toHaveStyle({
+      transform: `translate3d(0, ${metrics.snapOffsets.full}px, 0)`,
+    })
+
     const backButton = within(mobilePanel).getByRole("button", {
       name: "Go back",
     })
@@ -406,8 +411,8 @@ describe("BuildingResultsPanel mobile drawer", () => {
     ])
 
     expect(mobilePanel).toHaveStyle({
-      transform: `translate3d(0, ${metrics.snapOffsets.half}px, 0)`,
+      transform: `translate3d(0, ${metrics.snapOffsets.full}px, 0)`,
     })
-    expect(mobilePanel).toHaveAttribute("data-snap", "half")
+    expect(mobilePanel).toHaveAttribute("data-snap", "full")
   })
 })

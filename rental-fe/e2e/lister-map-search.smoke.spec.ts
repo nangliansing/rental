@@ -34,6 +34,20 @@ async function expectArrivalToast(page: import("@playwright/test").Page) {
   })
 }
 
+/** Wait for map settle without missing a short-lived arrival toast. */
+async function waitForListerMapArrival(
+  page: import("@playwright/test").Page,
+) {
+  await Promise.all([
+    expectArrivalToast(page),
+    waitForMapReady(page, { requireMap: false }),
+  ])
+}
+
+/**
+ * Assert hydrate fetches settle without looping.
+ * `maxCalls` may be 2 when map hydration remounts under the CI Maps placeholder.
+ */
 async function expectStableAgentProfileFetchCount(
   observedCount: () => number,
   maxCalls: number,
@@ -48,9 +62,15 @@ async function expectStableAgentProfileFetchCount(
     )
     .toBeLessThanOrEqual(maxCalls)
 
+  const settled = observedCount()
+  expect(settled).toBeLessThanOrEqual(maxCalls)
+
   await pageWait(1_500)
 
-  expect(observedCount()).toBeLessThanOrEqual(maxCalls)
+  expect(
+    observedCount(),
+    "Agent profile fetch count grew after settle — possible fetch loop",
+  ).toBe(settled)
 }
 
 function pageWait(ms: number) {
@@ -71,13 +91,12 @@ test.describe("Lister map search smoke", () => {
 
     await page.goto(listerMapSearchUrl)
 
-    await waitForMapReady(page, { requireMap: false })
+    await waitForListerMapArrival(page)
     await expect(page).toHaveURL(/filters=/)
-    await expectArrivalToast(page)
 
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
-      1,
+      2,
     )
 
     expect(await getMobileResultsPanel(page).count()).toBe(0)
@@ -99,15 +118,16 @@ test.describe("Lister map search smoke", () => {
       },
     })
 
+    const arrival = waitForListerMapArrival(page)
+
     await page
       .getByRole("link", {
         name: `Search ${smokeAgentProfile.displayName}'s listings on map`,
       })
       .click()
 
-    await waitForMapReady(page, { requireMap: false })
+    await arrival
     await expect(page).toHaveURL(/agent-smoke-1/)
-    await expectArrivalToast(page)
 
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
@@ -131,15 +151,16 @@ test.describe("Lister map search smoke", () => {
 
     await installListerMapSearchMocks(page)
 
+    const arrival = waitForListerMapArrival(page)
+
     await page
       .getByRole("link", {
         name: `Search ${smokeAgentProfile.displayName}'s listings on map`,
       })
       .click()
 
-    await waitForMapReady(page, { requireMap: false })
+    await arrival
     await expect(page).toHaveURL(/agent-smoke-1/)
-    await expectArrivalToast(page)
   })
 
   test("commits an area search that keeps the lister filter scoped", async ({
@@ -150,8 +171,7 @@ test.describe("Lister map search smoke", () => {
     await installListerMapSearchMocks(page)
     await page.goto(listerMapSearchUrl)
 
-    await waitForMapReady(page, { requireMap: false })
-    await expectArrivalToast(page)
+    await waitForListerMapArrival(page)
 
     const areaSearchRequest = page.waitForRequest(
       (request) =>
@@ -199,7 +219,7 @@ test.describe("Lister map search smoke", () => {
 
     await expectStableAgentProfileFetchCount(
       () => agentProfileFetchCount,
-      1,
+      2,
     )
   })
 })

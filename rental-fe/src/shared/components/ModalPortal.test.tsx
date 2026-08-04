@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
+import { DialogShell } from "@/shared/components/dialogs/DialogShell"
+
 import { ModalPortal } from "./ModalPortal"
 
 describe("ModalPortal", () => {
@@ -27,5 +29,21 @@ describe("ModalPortal", () => {
     )
 
     expect(document.body).toContainElement(screen.getByText("Fallback content"))
+  })
+
+  it("nests inside DialogShell content so pickers stay interactive", () => {
+    render(
+      <DialogShell isOpen onDismiss={() => undefined}>
+        <ModalPortal>
+          <p>Nested portaled content</p>
+        </ModalPortal>
+      </DialogShell>,
+    )
+
+    const dialogContent = document.querySelector('[data-slot="dialog-content"]')
+    const content = screen.getByText("Nested portaled content")
+
+    expect(dialogContent).toContainElement(content)
+    expect(content.parentElement).toBe(dialogContent)
   })
 })

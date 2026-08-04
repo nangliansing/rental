@@ -3,10 +3,11 @@ import * as React from "react"
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 300
 
-export type ToastVariant = "default" | "search-hint"
+export type ToastVariant = "default" | "search-hint" | "success-pill"
 
 const TOAST_DURATIONS_MS: Record<ToastVariant, number> = {
   "search-hint": 3_000,
+  "success-pill": 3_000,
   default: 5_000,
 }
 

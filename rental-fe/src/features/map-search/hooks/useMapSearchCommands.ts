@@ -59,6 +59,7 @@ type UseMapSearchCommandsInput = {
   setHoveredBuildingId: (buildingId: string | null) => void
   updateSearchUrl: (state: MapSearchUrlState, replace?: boolean) => void
   clearListingPurpose: () => void
+  enterListingPurpose: () => void
   submitFilters: () => MapSearchFilters
   scopedFilters: ScopedFilterActions
   navigate: NavigateFunction
@@ -128,6 +129,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
     setHoveredBuildingId,
     updateSearchUrl,
     clearListingPurpose,
+    enterListingPurpose,
     submitFilters,
     scopedFilters,
     navigate,
@@ -563,6 +565,14 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
     }
   }, [activeSelectedBuilding, clearListingPurpose, searchSource, setIsStale])
 
+  const handleEnterListingSearch = useCallback(() => {
+    enterListingPurpose()
+
+    if (searchSource !== null && !activeSelectedBuilding) {
+      setIsStale(true)
+    }
+  }, [activeSelectedBuilding, enterListingPurpose, searchSource, setIsStale])
+
   return {
     onPlaceFound: useEventCallback(handlePlaceFound),
     onSearchArea: useEventCallback(handleSearchArea),
@@ -583,6 +593,7 @@ export function useMapSearchCommands(input: UseMapSearchCommandsInput) {
     onListingClose: useEventCallback(handleListingClose),
     onSearchAgain: useEventCallback(handleSearchAgain),
     onExitListingSearch: useEventCallback(handleExitListingSearch),
+    onEnterListingSearch: useEventCallback(handleEnterListingSearch),
     onListExistingBuilding: useEventCallback(handleListExistingBuilding),
     onListNewBuilding: useEventCallback(handleListNewBuilding),
   }

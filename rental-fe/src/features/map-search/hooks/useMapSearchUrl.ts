@@ -131,6 +131,15 @@ export function useMapSearchUrl({
     }
   }, [searchParams, setSearchParams])
 
+  const enterListingPurpose = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (nextParams.get(MAP_SEARCH_PURPOSE_PARAM) === MAP_SEARCH_LIST_PURPOSE) {
+      return
+    }
+    nextParams.set(MAP_SEARCH_PURPOSE_PARAM, MAP_SEARCH_LIST_PURPOSE)
+    setSearchParams(nextParams, { replace: true })
+  }, [searchParams, setSearchParams])
+
   useEffect(() => {
     if (navigationType !== "POP") return
     const urlKey = searchParams.toString()
@@ -190,6 +199,7 @@ export function useMapSearchUrl({
     cameraRestoreVersion,
     updateSearchUrl,
     clearListingPurpose,
+    enterListingPurpose,
     isHydratingUrlRef,
   }
 }

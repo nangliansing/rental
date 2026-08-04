@@ -23,11 +23,11 @@ import {
   PROFILE_TAB_CONTENT_TOP_CLASS,
   PROFILE_TABS_SECTION_CLASS,
 } from "../utils/profileLayoutStyles"
+import { MyProfileClientRequestsPanel } from "./MyProfileClientRequestsPanel"
 import { MyProfileFirstListingPrompt } from "./MyProfileFirstListingPrompt"
 import { MyProfileHeader } from "./MyProfileHeader"
 import { MyProfileListingsPanel } from "./MyProfileListingsPanel"
 import { MyProfilePendingPanel } from "./MyProfilePendingPanel"
-import { MyProfileSavedPanel } from "./MyProfileSavedPanel"
 import {
   MyProfileListingTabs,
   type MyProfileMainTab,
@@ -127,7 +127,7 @@ function MyProfileTabsSection() {
         />
       )}
 
-      {activeTab === "saved" && <MyProfileSavedPanel />}
+      {activeTab === "requests" && <MyProfileClientRequestsPanel />}
 
       {activeTab === "reviews" && (
         <ListerReviewsSection

@@ -26,6 +26,7 @@ function createAssemblyInput(
     onListingClose: vi.fn(),
     onSearchAgain: vi.fn(),
     onExitListingSearch: vi.fn(),
+    onEnterListingSearch: vi.fn(),
     onListExistingBuilding: vi.fn(),
     onListNewBuilding: vi.fn(),
   }
@@ -132,5 +133,27 @@ describe("useMapSearchSessionAssembly", () => {
     )
 
     expect(result.current.results.searchSource).toBe("area")
+  })
+
+  it("exposes agent listing controls on the controls slice", () => {
+    const onEnterListingSearch = vi.fn()
+    const { result } = renderHook(() =>
+      useMapSearchSessionAssembly(
+        createAssemblyInput({
+          canCreateListing: true,
+          isListingSearch: true,
+          commands: {
+            ...createAssemblyInput().commands,
+            onEnterListingSearch,
+          },
+        }),
+      ),
+    )
+
+    expect(result.current.controls.canCreateListing).toBe(true)
+    expect(result.current.controls.isListingSearch).toBe(true)
+    expect(result.current.controls.onEnterListingSearch).toBe(
+      onEnterListingSearch,
+    )
   })
 })

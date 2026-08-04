@@ -48,7 +48,9 @@ test.describe("Profile dashboard smoke", () => {
     ).toBeVisible({ timeout: 15_000 })
   })
 
-  test("loads listings, saved, and reviews tabs", async ({ page }) => {
+  test("loads listings, requests, saved drawer, and reviews", async ({
+    page,
+  }) => {
     await page.goto("/profile")
 
     await waitForAuthenticatedProfile(page)
@@ -73,10 +75,20 @@ test.describe("Profile dashboard smoke", () => {
       page.getByRole("dialog", { name: "Listing details" }),
     ).toHaveCount(0, { timeout: 15_000 })
 
-    await page.getByRole("tab", { name: "Saved" }).click()
+    await page.getByRole("tab", { name: "Requests" }).click()
+    await expect(
+      page.getByRole("region", { name: "Client requests" }),
+    ).toBeVisible()
+    await expect(page.getByText("No waiting requests")).toBeVisible()
+
+    const [savedButton] = await page
+      .getByRole("button", { name: "Saved listings" })
+      .all()
+    await savedButton.click()
     await expect(
       page.getByRole("button", { name: "Open saved listing ฿14k" }),
     ).toBeVisible()
+    await page.getByRole("button", { name: "Close saved listings" }).click()
 
     await page.getByRole("tab", { name: "Reviews" }).click()
     await expect(page.getByRole("heading", { name: "Reviews" })).toBeVisible()
@@ -133,7 +145,12 @@ test.describe("Profile dashboard smoke", () => {
     await waitForAuthenticatedProfile(page)
     await expectStableProfileHeaderStats(page)
 
-    for (const tabName of ["Pending", "Saved", "Reviews", "Listings"] as const) {
+    for (const tabName of [
+      "Pending",
+      "Requests",
+      "Reviews",
+      "Listings",
+    ] as const) {
       await page.getByRole("tab", { name: tabName }).click()
       await expectStableProfileHeaderStats(page)
     }

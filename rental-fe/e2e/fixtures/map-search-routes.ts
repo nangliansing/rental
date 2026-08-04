@@ -186,7 +186,7 @@ export async function waitForMapReady(
   const mapCanvas = page.locator(".gm-style").first()
   const unavailable = page.getByText("Map temporarily unavailable")
   const resultsPanel = page.getByTestId("results-panel-mobile")
-  const maxAttempts = requireMap ? 3 : 2
+  const maxAttempts = requireMap ? 3 : 1
 
   const hasFallbackResults = async () =>
     !requireMap && (await resultsPanel.isVisible().catch(() => false))
@@ -208,14 +208,24 @@ export async function waitForMapReady(
       return
     }
 
+    // When the map is optional, never reload — a reload races URL-seeded search
+    // hydration under the CI placeholder Maps key. Return as soon as the map,
+    // results panel, or unavailable card settles so toasts are still visible.
+    if (!requireMap) {
+      const deadline = Date.now() + 20_000
+      while (Date.now() < deadline) {
+        if (await isMapInteractive()) return
+        if (await hasFallbackResults()) return
+        if (await unavailable.isVisible().catch(() => false)) return
+        await page.waitForTimeout(250)
+      }
+      return
+    }
+
     if (await unavailable.isVisible().catch(() => false)) {
       if (attempt < maxAttempts - 1) {
         await page.reload({ waitUntil: "domcontentloaded" })
         continue
-      }
-
-      if (await hasFallbackResults()) {
-        return
       }
 
       throw new Error("Google Maps failed to load.")
@@ -224,15 +234,11 @@ export async function waitForMapReady(
     try {
       await mapCanvas.waitFor({
         state: "visible",
-        timeout: requireMap ? 45_000 : 30_000,
+        timeout: 45_000,
       })
       return
     } catch (error) {
       if (await isMapInteractive()) {
-        return
-      }
-
-      if (await hasFallbackResults()) {
         return
       }
 

@@ -35,6 +35,7 @@ export type MapSearchSessionAssemblyCommands = Pick<
   | "onListingClose"
   | "onSearchAgain"
   | "onExitListingSearch"
+  | "onEnterListingSearch"
   | "onListExistingBuilding"
   | "onListNewBuilding"
 >
@@ -138,6 +139,7 @@ export function useMapSearchSessionAssembly(
     onListingClose,
     onSearchAgain,
     onExitListingSearch,
+    onEnterListingSearch,
     onListExistingBuilding,
     onListNewBuilding,
   } = commands
@@ -197,6 +199,8 @@ export function useMapSearchSessionAssembly(
       nearbyRadiusMeters,
       linePoints,
       lineDistanceMeters,
+      isListingSearch,
+      canCreateListing,
       onSearchArea,
       onDropPin,
       onCurrentLocationFound,
@@ -207,11 +211,15 @@ export function useMapSearchSessionAssembly(
       onUndoLinePoint,
       onLineDistanceChange,
       onSearchLine,
+      onEnterListingSearch,
+      onExitListingSearch,
     }),
     [
       buildingSearch.isSearchingArea,
       buildingSearch.isSearchingNearby,
       buildingSearch.isSearchingLine,
+      canCreateListing,
+      isListingSearch,
       isSearchActionVisible,
       searchStatus,
       nearbyRadiusMeters,
@@ -227,6 +235,8 @@ export function useMapSearchSessionAssembly(
       onUndoLinePoint,
       onLineDistanceChange,
       onSearchLine,
+      onEnterListingSearch,
+      onExitListingSearch,
     ],
   )
 

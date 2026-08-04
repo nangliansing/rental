@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils"
 
 export const RESPONSIVE_SCREEN_MODAL_BACKDROP_CLASS =
-  "fixed inset-0 z-[1000] bg-slate-950/45 md:flex md:items-center md:justify-center md:p-4"
+  // Above DialogShell content (z-[1001]) so pickers opened inside dialogs stay visible.
+  "fixed inset-0 z-[1100] bg-slate-950/45 md:flex md:items-center md:justify-center md:p-4"
+
 
 const RESPONSIVE_SCREEN_MODAL_PANEL_BASE_CLASS =
   "flex h-dvh w-full flex-col overflow-hidden bg-white text-slate-950 md:rounded-2xl md:shadow-2xl"

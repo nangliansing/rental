@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -28,6 +28,31 @@ function renderListingTabs(
 
   return { onListingFilterChange, onListingSortChange }
 }
+
+describe("MyProfileListingTabs section tabs", () => {
+  it("includes Requests and omits Saved among profile sections", () => {
+    render(
+      <MyProfileListingTabs
+        activeTab="requests"
+        activeListingFilter="all"
+        activeListingSort="latest"
+        activePendingFilter="all"
+        onTabChange={vi.fn()}
+        onListingFilterChange={vi.fn()}
+        onListingSortChange={vi.fn()}
+        onPendingFilterChange={vi.fn()}
+      />,
+    )
+
+    const sections = screen.getByRole("tablist", { name: "Profile sections" })
+    expect(
+      within(sections).getByRole("tab", { name: "Requests" }),
+    ).toHaveAttribute("aria-selected", "true")
+    expect(
+      within(sections).queryByRole("tab", { name: "Saved" }),
+    ).not.toBeInTheDocument()
+  })
+})
 
 describe("MyProfileListingTabs listing controls", () => {
   it("renders all owner listing filter tabs", () => {

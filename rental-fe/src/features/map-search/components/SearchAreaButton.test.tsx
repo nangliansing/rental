@@ -13,6 +13,9 @@ vi.mock("../context/MapSearchSessionContext")
 vi.mock("../context/MapInteractionContext")
 vi.mock("../hooks/useMapBounds")
 vi.mock("../hooks/useCurrentLocation")
+vi.mock("./agent-actions/AgentMapActionsMenu", () => ({
+  AgentMapActionsMenu: () => <div data-testid="agent-map-actions-menu" />,
+}))
 
 describe("SearchAreaButton", () => {
   beforeEach(() => {
@@ -36,6 +39,8 @@ describe("SearchAreaButton", () => {
       linePoints: [],
       lineDistanceMeters: 1_000,
       isSearchingLine: false,
+      isListingSearch: false,
+      canCreateListing: false,
       onSearchArea: vi.fn(),
       onDropPin: vi.fn(),
       onCurrentLocationFound: vi.fn(),
@@ -46,6 +51,8 @@ describe("SearchAreaButton", () => {
       onUndoLinePoint: vi.fn(),
       onLineDistanceChange: vi.fn(),
       onSearchLine: vi.fn(),
+      onEnterListingSearch: vi.fn(),
+      onExitListingSearch: vi.fn(),
     } as never)
     vi.mocked(useMapInteraction).mockReturnValue({
       mode: "area",
@@ -64,6 +71,7 @@ describe("SearchAreaButton", () => {
     expect(screen.getByRole("button", { name: "Use my location" })).toBeVisible()
     expect(screen.getByRole("button", { name: "Drop pin" })).toBeVisible()
     expect(screen.getByRole("button", { name: "Draw search line" })).toBeVisible()
+    expect(screen.getByTestId("agent-map-actions-menu")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Search radius: 1 km" })).not.toBeInTheDocument()
   })
 

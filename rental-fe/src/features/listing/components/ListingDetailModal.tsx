@@ -5,7 +5,9 @@ import { NeighbourhoodExploreDialogProvider } from "@/features/buildings/neighbo
 import { useMyAgentProfile } from "@/features/profile/api"
 import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { ModalDismissHeader } from "@/shared/components/navigation/ModalDismissHeader"
+import { MOBILE_NAV_SCROLL_PADDING_CLASS } from "@/shared/components/navigation/mobileNavLayout"
 import { ResponsiveScreenModal } from "@/shared/components/modals/ResponsiveScreenModal"
+import { cn } from "@/lib/utils"
 
 import { useListingDetailData } from "../hooks/useListingDetailData"
 import { ListingDetailContent } from "./ListingDetailContent"
@@ -47,7 +49,12 @@ export function ListingDetailModal({
             closeLabel="Close listing details"
           />
 
-          <div className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto",
+              MOBILE_NAV_SCROLL_PADDING_CLASS,
+            )}
+          >
             {isLoading ? (
               <div className="flex min-h-[55vh] items-center justify-center gap-2 text-sm font-medium text-slate-500">
                 <LoaderIcon className="h-4 w-4" />

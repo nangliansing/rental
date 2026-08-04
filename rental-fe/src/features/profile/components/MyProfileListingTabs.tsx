@@ -2,9 +2,9 @@ import type { ComponentType } from "react"
 import {
     ArrowDownUp,
     ChevronDown,
+    ClipboardList,
     Clock3,
     Grid3X3,
-    Heart,
     Star,
 } from "lucide-react"
 
@@ -21,7 +21,11 @@ import {
   PROFILE_TAB_CONTROLS_CLASS,
 } from "../utils/profileLayoutStyles"
 
-export type MyProfileMainTab = "listings" | "pending" | "saved" | "reviews"
+export type MyProfileMainTab =
+    | "listings"
+    | "pending"
+    | "reviews"
+    | "requests"
 export type MyProfilePendingFilter =
     | "all"
     | "pending"
@@ -46,9 +50,9 @@ const PROFILE_TABS: ProfileTabConfig[] = [
         icon: Clock3,
     },
     {
-        id: "saved",
-        label: "Saved",
-        icon: Heart,
+        id: "requests",
+        label: "Requests",
+        icon: ClipboardList,
     },
     {
         id: "reviews",

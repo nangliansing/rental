@@ -207,6 +207,7 @@ export function BuildingResultsPanel() {
   useEffect(() => {
     if (!selectedBuilding) return
     setPage((current) => (current === "results" ? "buildingDetail" : current))
+    setSnap("full")
   }, [selectedBuilding])
   const {
     mobilePageHeadingRef,

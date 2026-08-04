@@ -1,6 +1,7 @@
 import { loadEnv } from "vite"
 import { expect, test, type Locator, type Page } from "@playwright/test"
 
+import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
 import {
   installBuildingListingGridRoute,
   installListingGridSessionMocks,
@@ -258,17 +259,20 @@ test.describe("Listing grid smoke", () => {
   test("map building detail grid virtualizes and opens shared preview", async ({
     page,
   }) => {
+    skipIfCiPlaceholderMapsKey(test)
     test.setTimeout(180_000)
     test.skip(
       !hasMapsKey,
       "Set VITE_GOOGLE_MAPS_API_KEY in .env to run map building detail grid smoke.",
     )
 
+    // Avoid stacking authenticated beforeEach mocks under anonymous map mocks;
+    // map-search routes must win without auth-session side effects.
     await installMapSearchApiMocks(page)
     await installBuildingListingGridRoute(page)
     await page.goto(areaSearchUrl)
 
-    await waitForMapReady(page, { requireMap: false })
+    await waitForMapReady(page, { requireMap: true })
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     const mobilePanel = await openMapBuildingDetail(page, smokeAreaBuilding.name)
@@ -292,10 +296,16 @@ test.describe("Listing grid smoke", () => {
     ).toBeVisible({ timeout: 15_000 })
   })
 
-  test("saved tab keeps the lightweight grid card behavior", async ({ page }) => {
+  test("saved drawer keeps the lightweight grid card behavior", async ({
+    page,
+  }) => {
     await page.goto("/profile")
     await waitForAuthenticatedProfile(page)
-    await page.getByRole("tab", { name: "Saved" }).click()
+
+    const [savedButton] = await page
+      .getByRole("button", { name: "Saved listings" })
+      .all()
+    await savedButton.click()
 
     const savedCard = page.getByRole("button", { name: "Open saved listing ฿14k" })
     await expect(savedCard).toBeVisible()

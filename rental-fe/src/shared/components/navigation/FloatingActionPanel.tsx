@@ -3,6 +3,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { ModalPortal } from "@/shared/components/ModalPortal"
+import { MOBILE_NAV_SCROLL_PADDING_MOBILE_CLASS } from "@/shared/components/navigation/mobileNavLayout"
 
 type FloatingActionPanelProps = {
   variant: "desktop" | "mobile"
@@ -92,7 +93,7 @@ export function FloatingActionPanel({
             ref={bodyRef}
             className={cn(
               "min-h-0 flex-1 overflow-y-auto",
-              variant === "mobile" && "pb-20",
+              variant === "mobile" && MOBILE_NAV_SCROLL_PADDING_MOBILE_CLASS,
             )}
           >
             {children}
