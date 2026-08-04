@@ -19,7 +19,8 @@ test.describe("Signed-in smoke", () => {
     await waitForAuthenticatedProfile(page)
 
     await expect(page.getByRole("tab", { name: "Listings" })).toBeVisible()
-    await expect(page.getByRole("tab", { name: "Saved" })).toBeVisible()
+    await expect(page.getByRole("tab", { name: "Requests" })).toBeVisible()
+    await expect(page.getByRole("tab", { name: "Saved" })).toHaveCount(0)
     await expect(
       page.getByRole("navigation", { name: "Mobile navigation" }),
     ).toBeVisible()
@@ -61,15 +62,19 @@ test.describe("Signed-in smoke", () => {
     await expect(page.getByRole("button", { name: "Open listing ฿16k" })).toHaveCount(0)
   })
 
-  test("shows saved rooms on the profile Saved tab", async ({ page }) => {
+  test("loads the profile Requests tab workspace", async ({ page }) => {
     await page.goto("/profile")
 
     await waitForAuthenticatedProfile(page)
-    await page.getByRole("tab", { name: "Saved" }).click()
+    await page.getByRole("tab", { name: "Requests" }).click()
 
     await expect(
-      page.getByRole("button", { name: "Open saved listing ฿14k" }),
+      page.getByRole("region", { name: "Client requests" }),
     ).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Client requests" }),
+    ).toBeVisible()
+    await expect(page.getByText("No waiting requests")).toBeVisible()
   })
 
   test("opens the nav saved drawer while signed in", async ({ page }) => {

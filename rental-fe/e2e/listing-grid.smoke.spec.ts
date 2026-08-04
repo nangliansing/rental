@@ -292,10 +292,16 @@ test.describe("Listing grid smoke", () => {
     ).toBeVisible({ timeout: 15_000 })
   })
 
-  test("saved tab keeps the lightweight grid card behavior", async ({ page }) => {
+  test("saved drawer keeps the lightweight grid card behavior", async ({
+    page,
+  }) => {
     await page.goto("/profile")
     await waitForAuthenticatedProfile(page)
-    await page.getByRole("tab", { name: "Saved" }).click()
+
+    const [savedButton] = await page
+      .getByRole("button", { name: "Saved listings" })
+      .all()
+    await savedButton.click()
 
     const savedCard = page.getByRole("button", { name: "Open saved listing ฿14k" })
     await expect(savedCard).toBeVisible()
