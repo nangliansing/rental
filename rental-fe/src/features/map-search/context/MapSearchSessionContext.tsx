@@ -65,6 +65,7 @@ export type MapSearchSessionContextValue = {
   onFetchNextPage: () => void
   onSearchAgain: () => void
   onExitListingSearch: () => void
+  onEnterListingSearch: () => void
   onListExistingBuilding: (building: SearchBuilding) => void
   onListNewBuilding: () => void
 }
@@ -97,6 +98,8 @@ export type MapSearchControlsContextValue = Pick<
   | "nearbyRadiusMeters"
   | "linePoints"
   | "lineDistanceMeters"
+  | "isListingSearch"
+  | "canCreateListing"
   | "onSearchArea"
   | "onDropPin"
   | "onCurrentLocationFound"
@@ -107,6 +110,8 @@ export type MapSearchControlsContextValue = Pick<
   | "onUndoLinePoint"
   | "onLineDistanceChange"
   | "onSearchLine"
+  | "onEnterListingSearch"
+  | "onExitListingSearch"
 >
 
 export type MapSearchPlaceContextValue = Pick<

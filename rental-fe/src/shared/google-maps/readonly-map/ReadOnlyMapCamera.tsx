@@ -47,6 +47,9 @@ export const ReadOnlyMapCamera = memo(function ReadOnlyMapCamera({
     if (fittedSceneKeyRef.current === scene.sceneKey) return
 
     fittedSceneKeyRef.current = scene.sceneKey
+
+    // Modal / late-mounted containers often need a resize before fitBounds paints.
+    google.maps.event.trigger(map, "resize")
     applyCameraTarget(
       map,
       getReadOnlyMapCameraTarget(sceneRef.current),

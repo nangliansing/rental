@@ -289,7 +289,10 @@ export function NotificationBellButton({
           isOpen && variant === "mobile" && "text-slate-950",
         )}
         onClick={() => {
-          if (isVisible) {
+          // Toggle on `isOpen`, not `isVisible`. The enter animation sets
+          // `isVisible` on the next frame; using `isVisible` here would treat a
+          // fast second click as another open.
+          if (isOpen) {
             closePanel()
           } else {
             openPanel()

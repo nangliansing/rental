@@ -95,6 +95,7 @@ export function useMapSearchPageState(
     cameraRestoreVersion,
     updateSearchUrl,
     clearListingPurpose,
+    enterListingPurpose,
     isHydratingUrlRef,
   } = urlState
 
@@ -268,6 +269,7 @@ export function useMapSearchPageState(
     setHoveredBuildingId,
     updateSearchUrl,
     clearListingPurpose,
+    enterListingPurpose,
     submitFilters,
     scopedFilters,
     navigate,
@@ -321,6 +323,7 @@ export function useMapSearchPageState(
       onListingClose: commands.onListingClose,
       onSearchAgain: commands.onSearchAgain,
       onExitListingSearch: commands.onExitListingSearch,
+      onEnterListingSearch: commands.onEnterListingSearch,
       onListExistingBuilding: commands.onListExistingBuilding,
       onListNewBuilding: commands.onListNewBuilding,
     },

@@ -63,4 +63,19 @@ describe("useGoogleMapsLoadState", () => {
 
     expect(window.gm_authFailure).toBe(previousHandler)
   })
+
+  it("skips load lifecycle when disabled under a parent maps provider", () => {
+    const previousHandler = vi.fn()
+    window.gm_authFailure = previousHandler
+    const { result } = renderHook(() =>
+      useGoogleMapsLoadState(true, { enabled: false }),
+    )
+
+    expect(result.current.status).toBe("ready")
+
+    act(() => vi.advanceTimersByTime(GOOGLE_MAPS_LOAD_TIMEOUT_MS))
+
+    expect(result.current.status).toBe("ready")
+    expect(window.gm_authFailure).toBe(previousHandler)
+  })
 })

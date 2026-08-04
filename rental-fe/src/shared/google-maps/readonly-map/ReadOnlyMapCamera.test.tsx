@@ -7,7 +7,16 @@ const mocks = vi.hoisted(() => ({
     setZoom: ReturnType<typeof vi.fn>
     fitBounds: ReturnType<typeof vi.fn>
   },
+  trigger: vi.fn(),
 }))
+
+vi.stubGlobal("google", {
+  maps: {
+    event: {
+      trigger: mocks.trigger,
+    },
+  },
+})
 
 vi.mock("@vis.gl/react-google-maps", () => ({
   useMap: () => mocks.map,
@@ -27,6 +36,7 @@ function createMap() {
 describe("ReadOnlyMapCamera", () => {
   beforeEach(() => {
     mocks.map = createMap()
+    mocks.trigger.mockClear()
   })
 
   it("centers once for a point scene", () => {
@@ -39,6 +49,7 @@ describe("ReadOnlyMapCamera", () => {
       <ReadOnlyMapCamera scene={scene} fitPadding={32} />,
     )
 
+    expect(mocks.trigger).toHaveBeenCalledWith(mocks.map, "resize")
     expect(mocks.map?.setCenter).toHaveBeenCalledTimes(1)
     expect(mocks.map?.setCenter).toHaveBeenCalledWith({
       lat: 13.73,

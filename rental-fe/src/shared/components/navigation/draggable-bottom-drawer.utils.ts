@@ -1,3 +1,5 @@
+import { MOBILE_NAV_BAR_HEIGHT_PX } from "./mobileNavLayout"
+
 export type DraggableBottomDrawerSnap = "peek" | "half" | "full"
 
 export const DRAGGABLE_BOTTOM_DRAWER_SNAPS = [
@@ -31,7 +33,8 @@ export const DRAGGABLE_BOTTOM_DRAWER_SETTLE_TRANSITION =
 export const DRAGGABLE_BOTTOM_DRAWER_SHELL_HEIGHT_CLASS = "h-[90dvh]"
 
 /** Matches `AppNavigation` mobile tab bar height (`h-16`). */
-export const DRAGGABLE_BOTTOM_DRAWER_MOBILE_NAV_HEIGHT_PX = 64
+export const DRAGGABLE_BOTTOM_DRAWER_MOBILE_NAV_HEIGHT_PX =
+  MOBILE_NAV_BAR_HEIGHT_PX
 
 export type DraggableBottomDrawerMetrics = {
   shellHeight: number

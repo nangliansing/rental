@@ -10,10 +10,23 @@ declare global {
   }
 }
 
-export function useGoogleMapsLoadState(hasApiKey: boolean) {
-  const [status, setStatus] = useState<GoogleMapsLoadStatus>(
-    hasApiKey ? "loading" : "error",
-  )
+type UseGoogleMapsLoadStateOptions = {
+  /**
+   * When false, skip timeout/auth hooks and treat the key as already usable
+   * (e.g. nested under an existing GoogleMapsApiProvider that finished loading).
+   */
+  enabled?: boolean
+}
+
+export function useGoogleMapsLoadState(
+  hasApiKey: boolean,
+  { enabled = true }: UseGoogleMapsLoadStateOptions = {},
+) {
+  const [status, setStatus] = useState<GoogleMapsLoadStatus>(() => {
+    if (!hasApiKey) return "error"
+    if (!enabled) return "ready"
+    return "loading"
+  })
   const previousAuthFailureRef = useRef<(() => void) | undefined>(undefined)
   const loadTimeoutRef = useRef<number | null>(null)
 
@@ -35,7 +48,7 @@ export function useGoogleMapsLoadState(hasApiKey: boolean) {
   }, [clearLoadTimeout])
 
   useLayoutEffect(() => {
-    if (!hasApiKey) return
+    if (!hasApiKey || !enabled) return
 
     previousAuthFailureRef.current = window.gm_authFailure
 
@@ -57,7 +70,7 @@ export function useGoogleMapsLoadState(hasApiKey: boolean) {
         window.gm_authFailure = previousAuthFailureRef.current
       }
     }
-  }, [clearLoadTimeout, hasApiKey, markFailed])
+  }, [clearLoadTimeout, enabled, hasApiKey, markFailed])
 
   return { status, markReady, markFailed }
 }

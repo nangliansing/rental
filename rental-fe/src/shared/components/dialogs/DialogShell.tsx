@@ -1,5 +1,11 @@
 import { Dialog } from "radix-ui"
-import { useCallback, useRef, type ComponentProps, type ReactNode } from "react"
+import {
+  useCallback,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -7,6 +13,8 @@ import {
   getFocusRestoreTarget,
 } from "@/shared/utils/focusHistory"
 import { getModalRoot } from "@/shared/utils/getModalRoot"
+
+import { ModalPortalHostProvider } from "../ModalPortalHost"
 
 type DialogShellProps = {
   children: ReactNode
@@ -28,11 +36,13 @@ export function DialogShell({
   ensureFocusTracking()
   const contentElementRef = useRef<HTMLDivElement | null>(null)
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null)
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
   const contentRef = useCallback((element: HTMLDivElement | null) => {
     if (element && !contentElementRef.current) {
       previouslyFocusedElementRef.current = getFocusRestoreTarget(element)
     }
     contentElementRef.current = element
+    setPortalHost(element)
   }, [])
 
   return (
@@ -81,7 +91,9 @@ export function DialogShell({
             event.preventDefault()
           }}
         >
-          {children}
+          <ModalPortalHostProvider host={portalHost}>
+            {children}
+          </ModalPortalHostProvider>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

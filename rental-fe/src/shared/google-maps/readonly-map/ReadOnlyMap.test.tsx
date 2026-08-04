@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     markFailed: vi.fn(),
   },
   hasKey: true,
+  hasParentScope: false,
   lastMapProps: null as null | Record<string, unknown>,
   mapMountCount: 0,
 }))
@@ -32,6 +33,7 @@ vi.mock("@/shared/google-maps/GoogleMapsApiProvider", () => ({
   GoogleMapsApiProvider: ({ children }: PropsWithChildren) => (
     <div data-testid="maps-provider">{children}</div>
   ),
+  useGoogleMapsApiScope: () => mocks.hasParentScope,
 }))
 
 vi.mock("@vis.gl/react-google-maps", () => ({
@@ -67,6 +69,7 @@ const pointGeo = {
 describe("ReadOnlyMap", () => {
   beforeEach(() => {
     mocks.hasKey = true
+    mocks.hasParentScope = false
     mocks.loadState.status = "ready"
     mocks.lastMapProps = null
     mocks.mapMountCount = 0
@@ -115,6 +118,14 @@ describe("ReadOnlyMap", () => {
 
     expect(screen.getByText("Map could not be loaded.")).toBeInTheDocument()
     expect(screen.queryByTestId("google-map")).not.toBeInTheDocument()
+  })
+
+  it("reuses a parent maps scope without nesting another provider", () => {
+    mocks.hasParentScope = true
+    render(<ReadOnlyMap geo={pointGeo} />)
+
+    expect(screen.queryByTestId("maps-provider")).not.toBeInTheDocument()
+    expect(screen.getByTestId("google-map")).toBeInTheDocument()
   })
 
   it("locks gestures by default and accepts className", () => {

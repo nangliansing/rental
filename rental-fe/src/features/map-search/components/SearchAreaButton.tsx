@@ -31,9 +31,9 @@ import {
   formatSearchRadius,
   NEARBY_RADIUS_OPTIONS,
 } from "../utils/search-radius"
+import { AgentMapActionsMenu } from "./agent-actions/AgentMapActionsMenu"
+import { MAP_CONTROL_BUTTON_CLASS_NAME } from "./map-control-styles"
 
-const toolButtonClassName =
-  "flex h-11 w-11 items-center justify-center rounded-xl border bg-white shadow-lg transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
 const LINE_REQUIREMENTS_ID = "line-search-requirements"
 
 export const SearchAreaButton = memo(function SearchAreaButton() {
@@ -190,7 +190,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
             <button
           type="button"
           className={cn(
-            toolButtonClassName,
+            MAP_CONTROL_BUTTON_CLASS_NAME,
             "border-slate-200 text-blue-600",
           )}
           onClick={handleUseCurrentLocation}
@@ -220,7 +220,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
             <button
           type="button"
           className={cn(
-            toolButtonClassName,
+            MAP_CONTROL_BUTTON_CLASS_NAME,
             isPinMode
               ? "border-slate-950 bg-slate-950 text-white ring-2 ring-slate-950 ring-offset-2 hover:bg-slate-800"
               : "border-slate-200 text-slate-700",
@@ -242,7 +242,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
             <button
               type="button"
               className={cn(
-                toolButtonClassName,
+                MAP_CONTROL_BUTTON_CLASS_NAME,
                 isLineMode
                   ? "border-violet-700 bg-violet-700 text-white ring-2 ring-violet-700 ring-offset-2 hover:bg-violet-600"
                   : "border-slate-200 text-slate-700",
@@ -269,7 +269,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
                   <button
                 type="button"
                 className={cn(
-                  toolButtonClassName,
+                  MAP_CONTROL_BUTTON_CLASS_NAME,
                   "border-slate-200 text-slate-700",
                 )}
                 aria-label={`${isLineMode ? "Line search distance" : "Search radius"}: ${radiusLabel}`}
@@ -331,7 +331,7 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className={cn(toolButtonClassName, "border-slate-200 text-slate-700")}
+                  className={cn(MAP_CONTROL_BUTTON_CLASS_NAME, "border-slate-200 text-slate-700")}
                   onClick={onUndoLinePoint}
                   disabled={linePoints.length === 0}
                   aria-label="Undo last line point"
@@ -343,6 +343,8 @@ export const SearchAreaButton = memo(function SearchAreaButton() {
             </Tooltip>
           </>
         )}
+
+        <AgentMapActionsMenu />
 
         {currentLocation.error && (
           <div

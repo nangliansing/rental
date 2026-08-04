@@ -2,7 +2,10 @@ import { memo, useId, useMemo, useRef } from "react"
 import { Map } from "@vis.gl/react-google-maps"
 
 import { useGoogleMapsLoadState } from "@/features/map-search/hooks/useGoogleMapsLoadState"
-import { GoogleMapsApiProvider } from "@/shared/google-maps/GoogleMapsApiProvider"
+import {
+  GoogleMapsApiProvider,
+  useGoogleMapsApiScope,
+} from "@/shared/google-maps/GoogleMapsApiProvider"
 import {
   GOOGLE_MAPS_API_KEY,
   GOOGLE_MAPS_MAP_ID,
@@ -54,11 +57,13 @@ const ReadOnlyMapCanvas = memo(function ReadOnlyMapCanvas({
   mapInstanceId,
   fitPadding,
   navigable,
+  onReady,
 }: {
   scene: NormalizedReadOnlyMapScene
   mapInstanceId: string
   fitPadding: number
   navigable: boolean
+  onReady?: () => void
 }) {
   const initialCamera = useMemo(
     () => getReadOnlyMapInitialCamera(scene),
@@ -76,6 +81,7 @@ const ReadOnlyMapCanvas = memo(function ReadOnlyMapCanvas({
       disableDefaultUI
       clickableIcons={false}
       className="h-full w-full [&_.gm-style-cc]:opacity-70"
+      onTilesLoaded={onReady}
     >
       <ReadOnlyMapCamera scene={scene} fitPadding={fitPadding} />
       <ReadOnlyMapOverlays scene={scene} />
@@ -89,6 +95,7 @@ type ReadOnlyMapFrameProps = {
   mapInstanceId: string
   fitPadding: number
   navigable: boolean
+  onReady?: () => void
 }
 
 function ReadOnlyMapFrame({
@@ -97,9 +104,10 @@ function ReadOnlyMapFrame({
   mapInstanceId,
   fitPadding,
   navigable,
+  onReady,
 }: ReadOnlyMapFrameProps) {
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full min-h-40">
       {status === "loading" && (
         <div
           className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/90 text-sm font-medium text-slate-600"
@@ -116,6 +124,7 @@ function ReadOnlyMapFrame({
           mapInstanceId={mapInstanceId}
           fitPadding={fitPadding}
           navigable={navigable}
+          onReady={onReady}
         />
       )}
     </div>
@@ -125,6 +134,10 @@ function ReadOnlyMapFrame({
 /**
  * Lightweight, defensive preview map for a single geo scene.
  * No edit handlers. Pan/zoom only when `navigable` is true.
+ *
+ * When nested under an existing {@link GoogleMapsApiProvider} (typical on map
+ * search), reuses that scope and does not start a second load timeout —
+ * otherwise `onLoad` never fires and the map falsely fails after 25s.
  */
 export function ReadOnlyMap({
   geo,
@@ -139,11 +152,13 @@ export function ReadOnlyMap({
     mapInstanceId?.trim() || `readonly-map-${reactId}`,
   )
   const scene = useStableReadOnlyMapScene(geo)
-  const { status, markReady, markFailed } = useGoogleMapsLoadState(
-    hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY),
-  )
+  const hasParentScope = useGoogleMapsApiScope()
+  const hasApiKey = hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)
+  const { status, markReady, markFailed } = useGoogleMapsLoadState(hasApiKey, {
+    enabled: !hasParentScope,
+  })
 
-  if (!hasGoogleMapsApiKey(GOOGLE_MAPS_API_KEY)) {
+  if (!hasApiKey) {
     return (
       <div className={className}>
         <ReadOnlyMapStatusMessage message="Map configuration is missing." />
@@ -159,17 +174,26 @@ export function ReadOnlyMap({
     )
   }
 
+  const frame = (
+    <ReadOnlyMapFrame
+      status={status}
+      scene={scene}
+      mapInstanceId={resolvedMapInstanceId}
+      fitPadding={fitPadding}
+      navigable={navigable}
+      onReady={hasParentScope ? undefined : markReady}
+    />
+  )
+
   return (
     <div className={className}>
-      <GoogleMapsApiProvider onLoad={markReady} onError={markFailed}>
-        <ReadOnlyMapFrame
-          status={status}
-          scene={scene}
-          mapInstanceId={resolvedMapInstanceId}
-          fitPadding={fitPadding}
-          navigable={navigable}
-        />
-      </GoogleMapsApiProvider>
+      {hasParentScope ? (
+        frame
+      ) : (
+        <GoogleMapsApiProvider onLoad={markReady} onError={markFailed}>
+          {frame}
+        </GoogleMapsApiProvider>
+      )}
     </div>
   )
 }

@@ -1,9 +1,42 @@
+import { existsSync, readFileSync } from "node:fs"
+import { resolve } from "node:path"
+
 import { defineConfig, devices } from "@playwright/test"
-import { loadEnv } from "vite"
 
 import { SMOKE_TEST_GEOLOCATION } from "./e2e/fixtures/test-geolocation"
 
-const env = loadEnv("development", process.cwd(), "")
+/** Minimal .env loader so Playwright does not depend on the Vite package resolution. */
+function loadDotEnvFile(fileName: string): Record<string, string> {
+  const filePath = resolve(process.cwd(), fileName)
+  if (!existsSync(filePath)) return {}
+
+  const env: Record<string, string> = {}
+  for (const rawLine of readFileSync(filePath, "utf8").split("\n")) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith("#")) continue
+
+    const separatorIndex = line.indexOf("=")
+    if (separatorIndex <= 0) continue
+
+    const key = line.slice(0, separatorIndex).trim()
+    let value = line.slice(separatorIndex + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    env[key] = value
+  }
+  return env
+}
+
+const env = {
+  ...loadDotEnvFile(".env"),
+  ...loadDotEnvFile(".env.local"),
+  ...loadDotEnvFile(".env.development"),
+  ...loadDotEnvFile(".env.development.local"),
+}
 const webServerEnv = {
   ...process.env,
   ...env,
