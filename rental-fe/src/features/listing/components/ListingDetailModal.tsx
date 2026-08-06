@@ -1,8 +1,6 @@
 import { FileQuestion } from "lucide-react"
 
-import { useAuth } from "@/features/auth/hooks/useAuth"
 import { NeighbourhoodExploreDialogProvider } from "@/features/buildings/neighbourhood-explore"
-import { useMyAgentProfile } from "@/features/profile/api"
 import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { ModalDismissHeader } from "@/shared/components/navigation/ModalDismissHeader"
 import { MOBILE_NAV_SCROLL_PADDING_CLASS } from "@/shared/components/navigation/mobileNavLayout"
@@ -25,10 +23,6 @@ export function ListingDetailModal({
   onListingSelect,
   trackBrowserHistory = true,
 }: ListingDetailModalProps) {
-  const { isAuthenticated } = useAuth()
-  const agentProfileQuery = useMyAgentProfile({
-    enabled: isAuthenticated,
-  })
   const { listing, isLoading, viewerUserId } = useListingDetailData({
     listingId,
   })
@@ -68,7 +62,6 @@ export function ListingDetailModal({
                 <ListingDetailContent
                   listing={listing}
                   currentUserId={viewerUserId}
-                  canCreateListing={agentProfileQuery.canCreateListing}
                   onDeleted={onClose}
                   onListingSelect={onListingSelect}
                 />

@@ -11,6 +11,14 @@ const mocks = vi.hoisted(() => ({
   selectPrediction: vi.fn(),
 }))
 
+vi.mock("@/features/saved-search", () => ({
+  SavedSearchesButton: () => null,
+}))
+
+vi.mock("@/features/agent/api/searchAgentProfiles", () => ({
+  searchAgentProfiles: mocks.searchAgentProfiles,
+}))
+
 vi.mock("@/features/agent", () => ({
   searchAgentProfiles: mocks.searchAgentProfiles,
 }))
@@ -18,7 +26,9 @@ vi.mock("@/features/agent", () => ({
 vi.mock("../../context/MapSearchFilterContext", () => ({
   useMapSearchFilters: () => ({
     selectedListerIds: [],
+    selectedListers: [],
     toggleLister: vi.fn(),
+    removeLister: vi.fn(),
   }),
 }))
 
@@ -185,7 +195,7 @@ describe("PlaceSearch typeahead", () => {
     expect(mocks.searchAgentProfiles).toHaveBeenCalledTimes(1)
     expect(mocks.searchAgentProfiles).toHaveBeenCalledWith({
       query: "nang",
-      limit: 10,
+      limit: 20,
       signal: expect.any(AbortSignal),
     })
   })
@@ -228,7 +238,7 @@ describe("PlaceSearch typeahead", () => {
     expect(mocks.searchAgentProfiles).toHaveBeenCalledTimes(1)
     expect(mocks.searchAgentProfiles).toHaveBeenCalledWith({
       query: "Bangkok",
-      limit: 10,
+      limit: 20,
       signal: expect.any(AbortSignal),
     })
   })
@@ -263,7 +273,7 @@ describe("PlaceSearch typeahead", () => {
     expect(mocks.searchAgentProfiles).toHaveBeenCalledTimes(2)
     expect(mocks.searchAgentProfiles).toHaveBeenLastCalledWith({
       query: "second",
-      limit: 10,
+      limit: 20,
       signal: expect.any(AbortSignal),
     })
   })
@@ -358,7 +368,7 @@ describe("PlaceSearch typeahead", () => {
     expect(mocks.searchAgentProfiles).toHaveBeenCalledTimes(1)
     expect(mocks.searchAgentProfiles).toHaveBeenCalledWith({
       query: "immediate",
-      limit: 10,
+      limit: 20,
       signal: expect.any(AbortSignal),
     })
 

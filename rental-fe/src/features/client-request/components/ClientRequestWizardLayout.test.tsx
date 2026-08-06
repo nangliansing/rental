@@ -78,7 +78,7 @@ describe("ClientRequestWizardLayout", () => {
       )
     })
 
-    it("exports dialog content classes for full-screen mobile / card desktop", () => {
+    it("exports dialog content classes for full-screen mobile / fixed-height desktop", () => {
       expect(CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME).toContain("h-dvh")
       expect(CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME).toContain(
         "rounded-none",
@@ -89,23 +89,37 @@ describe("ClientRequestWizardLayout", () => {
       expect(CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME).toContain(
         "sm:max-w-lg",
       )
+      expect(CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME).toContain(
+        "sm:h-[min(40rem,calc(100dvh-2rem))]",
+      )
+      expect(CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME).not.toContain(
+        "sm:h-auto",
+      )
     })
   })
 
   describe("step indicator", () => {
-    it("announces step 1 of 2", () => {
+    it("announces step 1 of 3", () => {
       renderLayout({ step: 1 })
 
       expect(
-        screen.getByRole("status", { name: "Step 1 of 2" }),
+        screen.getByRole("status", { name: "Step 1 of 3" }),
       ).toBeInTheDocument()
     })
 
-    it("announces step 2 of 2", () => {
+    it("announces step 2 of 3", () => {
       renderLayout({ step: 2 })
 
       expect(
-        screen.getByRole("status", { name: "Step 2 of 2" }),
+        screen.getByRole("status", { name: "Step 2 of 3" }),
+      ).toBeInTheDocument()
+    })
+
+    it("announces step 3 of 3", () => {
+      renderLayout({ step: 3 })
+
+      expect(
+        screen.getByRole("status", { name: "Step 3 of 3" }),
       ).toBeInTheDocument()
     })
   })
@@ -151,7 +165,7 @@ describe("ClientRequestWizardLayout", () => {
       expect(heroPanel).not.toBeNull()
       expect(
         within(heroPanel as HTMLElement).getByRole("status", {
-          name: "Step 1 of 2",
+          name: "Step 1 of 3",
         }),
       ).toBeInTheDocument()
       expect(
@@ -173,7 +187,7 @@ describe("ClientRequestWizardLayout", () => {
         document.querySelector('[aria-hidden="true"].h-12'),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("status", { name: "Step 1 of 2" }),
+        screen.getByRole("status", { name: "Step 1 of 3" }),
       ).toBeInTheDocument()
       expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument()
     })
@@ -286,7 +300,7 @@ describe("ClientRequestWizardLayout", () => {
 
       expect(screen.getByTestId("map-hero")).toBeInTheDocument()
       expect(
-        screen.getByRole("status", { name: "Step 1 of 2" }),
+        screen.getByRole("status", { name: "Step 1 of 3" }),
       ).toBeInTheDocument()
       expect(
         document.querySelector('[aria-hidden="true"].h-12'),
@@ -306,7 +320,7 @@ describe("ClientRequestWizardLayout", () => {
 
       expect(screen.queryByTestId("map-hero")).not.toBeInTheDocument()
       expect(
-        screen.getByRole("status", { name: "Step 2 of 2" }),
+        screen.getByRole("status", { name: "Step 2 of 3" }),
       ).toBeInTheDocument()
       expect(
         document.querySelector('[aria-hidden="true"].h-12'),
@@ -324,7 +338,7 @@ describe("ClientRequestWizardLayout", () => {
         hero: <div data-testid="map-hero">Map</div>,
       })
 
-      const dots = screen.getByRole("status", { name: "Step 1 of 2" })
+      const dots = screen.getByRole("status", { name: "Step 1 of 3" })
       expect(dots).toHaveClass("pointer-events-none")
       expect(dots.parentElement).toHaveClass("pointer-events-none")
       expect(screen.getByRole("button", { name: "Close" })).not.toBeDisabled()

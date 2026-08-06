@@ -16,6 +16,11 @@ import {
   type AdminContactRowProps,
 } from "./AdminContactRow"
 import { AdminUserCard } from "./AdminUserCard"
+import { cn } from "@/lib/utils"
+import {
+  DROPDOWN_MENU_CONTENT_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DANGER_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 
 export type AdminListerCardProfile = {
   displayName?: string | null
@@ -201,16 +206,21 @@ function ListerActionsMenu({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 z-20 w-52 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg">
+        <div
+          className={cn(
+            "absolute right-0 top-10 z-20",
+            DROPDOWN_MENU_CONTENT_CLASSNAME,
+          )}
+        >
           <button
             type="button"
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            className={DROPDOWN_MENU_ITEM_DANGER_CLASSNAME}
             onClick={() => {
               setIsOpen(false)
               onSuspend({ userId, name })
             }}
           >
-            <Ban className="h-4 w-4" />
+            <Ban className="h-5 w-5 shrink-0" />
             Suspend lister
           </button>
         </div>

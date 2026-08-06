@@ -52,8 +52,11 @@ export function ListingGridCardAvailabilityBadge({
 
 export function ListingGridCardBadge({
   listing,
+  positioned = true,
 }: {
   listing: ListingGridCardListing
+  /** When false, omit absolute corner positioning (for use inside a stack). */
+  positioned?: boolean
 }) {
   const isPrivate = listing.visibility === "PRIVATE"
 
@@ -61,7 +64,7 @@ export function ListingGridCardBadge({
     <div
       className={cn(
         listingGridCardCornerBadgeClassName,
-        listingGridCardCornerBadgeRightClassName,
+        positioned && listingGridCardCornerBadgeRightClassName,
         "overflow-hidden",
         isPrivate && "px-0",
       )}

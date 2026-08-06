@@ -4,10 +4,8 @@ import {
   Flag,
   Languages,
   Lock,
-  MessageSquareText,
   MoreHorizontal,
   Pencil,
-  Plus,
   ShieldCheck,
   Trash2,
 } from "lucide-react"
@@ -15,7 +13,14 @@ import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 
 import type { SearchListing } from "@/features/map-search/types"
+import { cn } from "@/lib/utils"
 import { Avatar } from "@/shared/components/data-display/Avatar"
+import {
+  DROPDOWN_MENU_CONTENT_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DANGER_CLASSNAME,
+  DROPDOWN_MENU_ITEM_ICON_CLASSNAME,
+  DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 
 import { formatUpdatedAt } from "../utils/listingDisplay"
 
@@ -24,13 +29,10 @@ type ListingPostHeaderProps = {
   updatedAt: string
   isPrivate: boolean
   isOwnListing: boolean
-  canCreateListing: boolean
   canReportListing: boolean
   listingUrl?: string
   profileHref?: string
   editHref: string
-  listInBuildingHref?: string
-  onReviewsRequest?: () => void
   onPrivacyRequest?: () => void
   onDeleteRequest: () => void
   onReportRequest: () => void
@@ -145,12 +147,9 @@ function ListerIdentity({
 
 function ListingActionsMenu({
   isOwnListing,
-  canCreateListing,
   canReportListing,
   listingUrl,
   editHref,
-  listInBuildingHref,
-  onReviewsRequest,
   onPrivacyRequest,
   onDeleteRequest,
   onReportRequest,
@@ -158,7 +157,6 @@ function ListingActionsMenu({
   const menuRef = useRef<HTMLDetailsElement | null>(null)
   const feedbackTimerRef = useRef<number | null>(null)
   const [copyLabel, setCopyLabel] = useState("Copy this link")
-  const showListInBuilding = canCreateListing && Boolean(listInBuildingHref)
 
   const closeMenu = () => {
     if (menuRef.current) menuRef.current.open = false
@@ -204,51 +202,40 @@ function ListingActionsMenu({
         <MoreHorizontal className="h-5 w-5" />
       </summary>
 
-      <div className="absolute right-0 top-10 z-20 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm font-medium text-slate-700 shadow-lg">
+      <div
+        className={cn(
+          "absolute right-0 top-10 z-20",
+          DROPDOWN_MENU_CONTENT_CLASSNAME,
+        )}
+        role="menu"
+      >
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
+          role="menuitem"
+          className={DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME}
           onClick={handleCopy}
         >
-          <Copy className="h-4 w-4" />
+          <Copy
+            className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME}
+            aria-hidden="true"
+          />
           {copyLabel}
         </button>
-
-        {showListInBuilding && listInBuildingHref && (
-          <Link
-            to={listInBuildingHref}
-            className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50"
-            onClick={closeMenu}
-          >
-            <Plus className="h-4 w-4" />
-            List in this building
-          </Link>
-        )}
-
-        {onReviewsRequest && (
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
-            onClick={() => {
-              closeMenu()
-              onReviewsRequest()
-            }}
-          >
-            <MessageSquareText className="h-4 w-4" />
-            View lister reviews
-          </button>
-        )}
 
         {canReportListing && (
           <button
             type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
+            role="menuitem"
+            className={DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME}
             onClick={() => {
               closeMenu()
               onReportRequest()
             }}
           >
-            <Flag className="h-4 w-4" />
+            <Flag
+              className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME}
+              aria-hidden="true"
+            />
             Report listing
           </button>
         )}
@@ -258,35 +245,47 @@ function ListingActionsMenu({
             {onPrivacyRequest && (
               <button
                 type="button"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
+                role="menuitem"
+                className={DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME}
                 onClick={() => {
                   closeMenu()
                   onPrivacyRequest()
                 }}
               >
-                <ShieldCheck className="h-4 w-4" />
+                <ShieldCheck
+                  className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME}
+                  aria-hidden="true"
+                />
                 Edit privacy
               </button>
             )}
 
             <Link
               to={editHref}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50"
+              role="menuitem"
+              className={DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME}
               onClick={closeMenu}
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil
+                className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME}
+                aria-hidden="true"
+              />
               Edit the listing
             </Link>
 
             <button
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-rose-600 hover:bg-rose-50"
+              role="menuitem"
+              className={DROPDOWN_MENU_ITEM_DANGER_CLASSNAME}
               onClick={() => {
                 closeMenu()
                 onDeleteRequest()
               }}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2
+                className="h-5 w-5 shrink-0"
+                aria-hidden="true"
+              />
               Delete listing
             </button>
           </>
@@ -315,12 +314,9 @@ export function ListingPostHeader(props: ListingPostHeaderProps) {
 
         <ListingActionsMenu
           isOwnListing={props.isOwnListing}
-          canCreateListing={props.canCreateListing}
           canReportListing={props.canReportListing}
           listingUrl={props.listingUrl}
           editHref={props.editHref}
-          listInBuildingHref={props.listInBuildingHref}
-          onReviewsRequest={props.onReviewsRequest}
           onPrivacyRequest={props.onPrivacyRequest}
           onDeleteRequest={props.onDeleteRequest}
           onReportRequest={props.onReportRequest}

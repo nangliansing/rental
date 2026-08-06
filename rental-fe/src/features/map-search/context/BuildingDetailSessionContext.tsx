@@ -37,14 +37,7 @@ export function BuildingDetailSessionProvider({
   )
 }
 
+/** Session explore control when wrapped by {@link BuildingDetailSessionProvider}. */
 export function useBuildingDetailSession() {
-  const context = useNeighbourhoodExploreDialogContext()
-
-  if (!context) {
-    throw new Error(
-      "useBuildingDetailSession must be used within BuildingDetailSessionProvider",
-    )
-  }
-
-  return context
+  return useNeighbourhoodExploreDialogContext()
 }

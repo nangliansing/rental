@@ -30,10 +30,10 @@ function renderListingTabs(
 }
 
 describe("MyProfileListingTabs section tabs", () => {
-  it("includes Requests and omits Saved among profile sections", () => {
+  it("shows Listings, Pending, and Reviews and omits Requests and Saved", () => {
     render(
       <MyProfileListingTabs
-        activeTab="requests"
+        activeTab="listings"
         activeListingFilter="all"
         activeListingSort="latest"
         activePendingFilter="all"
@@ -46,8 +46,17 @@ describe("MyProfileListingTabs section tabs", () => {
 
     const sections = screen.getByRole("tablist", { name: "Profile sections" })
     expect(
-      within(sections).getByRole("tab", { name: "Requests" }),
+      within(sections).getByRole("tab", { name: "Listings" }),
     ).toHaveAttribute("aria-selected", "true")
+    expect(
+      within(sections).getByRole("tab", { name: "Pending" }),
+    ).toBeInTheDocument()
+    expect(
+      within(sections).getByRole("tab", { name: "Reviews" }),
+    ).toBeInTheDocument()
+    expect(
+      within(sections).queryByRole("tab", { name: "Requests" }),
+    ).not.toBeInTheDocument()
     expect(
       within(sections).queryByRole("tab", { name: "Saved" }),
     ).not.toBeInTheDocument()

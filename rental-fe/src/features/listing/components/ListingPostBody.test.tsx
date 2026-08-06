@@ -6,6 +6,20 @@ import { createSearchListing } from "@/test/fixtures/listings"
 import { ListingPostBody } from "./ListingPostBody"
 import { LISTING_POST_BREAKOUT_CLASS } from "../utils/listingPostLayout"
 
+vi.mock("./ListingNearbySection", () => ({
+  LISTING_NEARBY_SECTION_TITLE: "What's nearby?",
+  ListingNearbySection: ({ buildingId }: { buildingId?: unknown }) => {
+    const id = typeof buildingId === "string" ? buildingId.trim() : ""
+    if (!id) return null
+
+    return (
+      <button type="button" aria-expanded="false">
+        What's nearby?
+      </button>
+    )
+  },
+}))
+
 describe("ListingPostBody", () => {
   afterEach(() => {
     vi.useRealTimers()
@@ -130,7 +144,7 @@ describe("ListingPostBody", () => {
     expect(chipRow).toHaveClass("overflow-x-auto", "flex-nowrap")
   })
 
-  it("renders listing media, pricing, details, and facilities", () => {
+  it("renders listing media, pricing, details, and facilities accordion", () => {
     const listing = createSearchListing({
       occupancy: 1,
       facilities: ["Wifi", "Balcony"],
@@ -142,8 +156,58 @@ describe("ListingPostBody", () => {
     expect(screen.getByText("฿14k")).toBeInTheDocument()
     expect(screen.getByText("1 person")).toBeInTheDocument()
     expect(screen.getByLabelText("Flexible")).toBeInTheDocument()
-    expect(screen.getByText("Wifi · Balcony")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "What's included in this space?" }),
+    ).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Wifi · Balcony")).not.toBeInTheDocument()
     expect(screen.getByText(/month with electricity and water/)).toBeInTheDocument()
+  })
+
+  it("expands listing facilities from the post body accordion", () => {
+    render(
+      <ListingPostBody
+        listing={createSearchListing({ facilities: ["Wifi", "Balcony"] })}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "What's included in this space?" }),
+    )
+
+    expect(screen.getByText("Wi-Fi")).toBeInTheDocument()
+    expect(screen.getByText("Balcony")).toBeInTheDocument()
+  })
+
+  it("renders a collapsed location accordion when map geo is provided", () => {
+    render(
+      <ListingPostBody
+        listing={createSearchListing()}
+        locationMapGeo={{
+          kind: "point",
+          position: { lat: 13.7654, lng: 100.6435 },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Where will I be?" }),
+    ).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("hides the location accordion when map geo is missing", () => {
+    render(<ListingPostBody listing={createSearchListing()} />)
+
+    expect(
+      screen.queryByRole("button", { name: "Where will I be?" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders a collapsed nearby accordion when the listing has a building id", () => {
+    render(<ListingPostBody listing={createSearchListing()} />)
+
+    expect(
+      screen.getByRole("button", { name: "What's nearby?" }),
+    ).toHaveAttribute("aria-expanded", "false")
   })
 
   it("renders multiline descriptions with preserved formatting", () => {
@@ -279,7 +343,10 @@ describe("ListingPostBody", () => {
 
     expect(screen.queryByText("A bright room.")).not.toBeInTheDocument()
     expect(screen.queryByText(/people|person/)).not.toBeInTheDocument()
-    expect(screen.getByText("Wifi")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "What's included in this space?" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Wi-Fi")).not.toBeInTheDocument()
     expect(screen.getByText("No photo")).toBeInTheDocument()
   })
 })

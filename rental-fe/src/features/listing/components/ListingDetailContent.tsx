@@ -9,6 +9,7 @@ import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 
 import type { ListingDetailListing } from "../types"
 import { buildListingDirectionsDestination } from "../utils/buildListingDirectionsDestination"
+import { listingBuildingToReadOnlyMapGeo } from "../utils/listingLocationMapGeo"
 import { getListingDetailPath } from "../utils/listingDisplay"
 import { ListingGridCard } from "./ListingGridCard"
 import {
@@ -24,7 +25,6 @@ const EMPTY_LISTING_FILTERS = {}
 type ListingDetailContentProps = {
   listing: ListingDetailListing
   currentUserId?: string
-  canCreateListing?: boolean
   onDeleted?: () => void
   onListingSelect?: (listingId: string) => void
   /** How sibling listings open from the more-rooms preview. */
@@ -34,7 +34,6 @@ type ListingDetailContentProps = {
 type ListingDetailSectionProps = {
   listing: ListingDetailListing
   currentUserId?: string
-  canCreateListing: boolean
   onDeleted?: () => void
   onListingSelect?: (listingId: string) => void
   siblingPreviewDetailMode: ListingGridPreviewPortalDetailConfig["detailMode"]
@@ -43,7 +42,6 @@ type ListingDetailSectionProps = {
 export function ListingDetailContent({
   listing,
   currentUserId,
-  canCreateListing = false,
   onDeleted,
   onListingSelect,
   siblingPreviewDetailMode = "modal",
@@ -51,7 +49,6 @@ export function ListingDetailContent({
   const sectionProps: ListingDetailSectionProps = {
     listing,
     currentUserId,
-    canCreateListing,
     onDeleted,
     onListingSelect,
     siblingPreviewDetailMode,
@@ -74,7 +71,6 @@ export function ListingDetailContent({
 function ListingDetailPostSection({
   listing,
   currentUserId,
-  canCreateListing,
   onDeleted,
 }: ListingDetailSectionProps) {
   return (
@@ -82,8 +78,8 @@ function ListingDetailPostSection({
       <ListingPostCard
         listing={listing}
         currentUserId={currentUserId}
-        canCreateListing={canCreateListing}
         directionsDestination={buildListingDirectionsDestination(listing.building)}
+        locationMapGeo={listingBuildingToReadOnlyMapGeo(listing.building)}
         onDeleted={onDeleted}
       />
     </div>

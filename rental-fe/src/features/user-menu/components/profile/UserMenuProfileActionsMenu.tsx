@@ -3,6 +3,7 @@ import { LogOut, UserPen } from "lucide-react"
 import { LogoutConfirmationHost } from "@/features/auth/components/LogoutConfirmationDialog"
 import { useLogoutConfirmation } from "@/features/auth/hooks/useLogoutConfirmation"
 
+import { DROPDOWN_MENU_ITEM_ICON_CLASSNAME } from "@/shared/components/menus/dropdownMenuStyles"
 import { useUserMenuProfileActionsMenu } from "../../hooks/useUserMenuProfileActionsMenu"
 import { UserMenuProfileActionsDropdown } from "./UserMenuProfileActionsDropdown"
 import { UserMenuProfileActionsMenuItem } from "./UserMenuProfileActionsMenuItem"
@@ -45,13 +46,20 @@ export function UserMenuProfileActionsMenu({
       >
         <UserMenuProfileActionsMenuItem
           to="/account/edit"
-          icon={<UserPen aria-hidden="true" className="h-4 w-4" />}
+          icon={
+            <UserPen
+              aria-hidden="true"
+              className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME}
+            />
+          }
           label="Edit account"
           onSelect={handleNavigate}
         />
 
         <UserMenuProfileActionsMenuItem
-          icon={<LogOut aria-hidden="true" className="h-4 w-4" />}
+          icon={
+            <LogOut aria-hidden="true" className="h-5 w-5 shrink-0" />
+          }
           label="Log out"
           tone="danger"
           isDisabled={logoutConfirmation.isSubmitting}

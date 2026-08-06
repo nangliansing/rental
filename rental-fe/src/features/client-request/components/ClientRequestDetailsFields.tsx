@@ -20,8 +20,8 @@ type ClientRequestDetailsFieldsProps = {
 }
 
 /**
- * Shared name + notes fields for create/edit client request flows.
- * `description` maps to the API description field (often used for client contact).
+ * Shared name + notes fields for create/edit saved-search flows.
+ * `description` maps to the API description field (personal notes).
  */
 export function ClientRequestDetailsFields({
   name,
@@ -40,7 +40,7 @@ export function ClientRequestDetailsFields({
           value={name}
           onChange={(event) => onNameChange(event.target.value)}
           maxLength={CLIENT_REQUEST_NAME_MAX_LENGTH}
-          placeholder="e.g. Family near Bang Kapi"
+          placeholder="e.g. Quiet 2BR near BTS"
           autoComplete="off"
           disabled={disabled}
         />
@@ -51,7 +51,7 @@ export function ClientRequestDetailsFields({
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
           maxLength={CLIENT_REQUEST_DESCRIPTION_MAX_LENGTH}
-          placeholder="Client contact — phone, LINE, email…"
+          placeholder="Reminders for yourself — must-haves, budget notes…"
           rows={3}
           disabled={disabled}
           className="min-h-20 rounded-lg border border-slate-200 bg-white px-2.5 py-2 focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-950/15"

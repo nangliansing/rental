@@ -173,6 +173,13 @@ export async function continueToClientRequestPreferences(page: Page) {
   ).toBeVisible({ timeout: 10_000 })
 }
 
+export async function continueToClientRequestListers(page: Page) {
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(
+    page.getByRole("heading", { name: "Preferred listers" }),
+  ).toBeVisible({ timeout: 10_000 })
+}
+
 export async function expectClientRequestCreatedToast(page: Page) {
   await expect(
     page

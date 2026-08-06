@@ -88,6 +88,15 @@ vi.mock("@/features/map-search/components/filters/MapSearchFiltersForm", () => (
     </div>
   ),
 }))
+vi.mock("@/features/lister-picker", () => ({
+  ListerPickerPanel: () => <div data-testid="lister-picker-panel" />,
+}))
+vi.mock(
+  "@/features/client-request/hooks/useHydrateClientRequestSelectedListers",
+  () => ({
+    useHydrateClientRequestSelectedListers: () => undefined,
+  }),
+)
 
 const snapshot = {
   geoSearch: {
@@ -126,6 +135,16 @@ async function goToPreferences(
   }
   await user.click(screen.getByRole("button", { name: "Continue" }))
   expect(await screen.findByTestId("preferences-form")).toBeInTheDocument()
+}
+
+async function goToListers(
+  user: ReturnType<typeof userEvent.setup>,
+  name = "Family search",
+  notes?: string,
+) {
+  await goToPreferences(user, name, notes)
+  await user.click(screen.getByRole("button", { name: "Continue" }))
+  expect(await screen.findByTestId("lister-picker-panel")).toBeInTheDocument()
 }
 
 describe("ConfirmCreateClientRequestModal", () => {
@@ -182,10 +201,10 @@ describe("ConfirmCreateClientRequestModal", () => {
         screen.getByText("The same area as Search this area on the map."),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("heading", { name: "Create client request" }),
+        screen.getByRole("heading", { name: "Save search" }),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("status", { name: "Step 1 of 2" }),
+        screen.getByRole("status", { name: "Step 1 of 3" }),
       ).toBeInTheDocument()
     })
 
@@ -202,7 +221,7 @@ describe("ConfirmCreateClientRequestModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Continue" }))
 
       expect(
-        screen.getByText("Enter a name for this request."),
+        screen.getByText("Enter a name for this search."),
       ).toBeInTheDocument()
       expect(screen.queryByTestId("preferences-form")).not.toBeInTheDocument()
     })
@@ -220,13 +239,13 @@ describe("ConfirmCreateClientRequestModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Continue" }))
       expect(
-        screen.getByText("Enter a name for this request."),
+        screen.getByText("Enter a name for this search."),
       ).toBeInTheDocument()
 
       await user.type(screen.getByLabelText(/^Name/), "F")
 
       expect(
-        screen.queryByText("Enter a name for this request."),
+        screen.queryByText("Enter a name for this search."),
       ).not.toBeInTheDocument()
     })
 
@@ -260,7 +279,7 @@ describe("ConfirmCreateClientRequestModal", () => {
       )
 
       await user.click(
-        screen.getByRole("button", { name: "Close create client request" }),
+        screen.getByRole("button", { name: "Close save search" }),
       )
 
       expect(onClose).toHaveBeenCalledTimes(1)
@@ -283,13 +302,16 @@ describe("ConfirmCreateClientRequestModal", () => {
 
       expect(screen.queryByTestId("readonly-map")).not.toBeInTheDocument()
       expect(
-        screen.getByRole("heading", { name: "Client preferences" }),
+        screen.getByRole("heading", { name: "Preferences" }),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("status", { name: "Step 2 of 2" }),
+        screen.getByRole("status", { name: "Step 2 of 3" }),
       ).toBeInTheDocument()
       expect(screen.getByTestId("max-rent")).toHaveTextContent("20000")
       expect(screen.getByTestId("min-rent")).toHaveTextContent("none")
+      expect(
+        screen.getByRole("button", { name: "Continue" }),
+      ).toBeInTheDocument()
     })
 
     it("creates with local draft filters and trimmed notes", async () => {
@@ -311,7 +333,15 @@ describe("ConfirmCreateClientRequestModal", () => {
       })
       await user.click(screen.getByRole("button", { name: "Continue" }))
       await user.click(await screen.findByRole("button", { name: "Set min rent" }))
-      await user.click(screen.getByRole("button", { name: "Create request" }))
+      await user.click(screen.getByRole("button", { name: "Continue" }))
+      expect(await screen.findByTestId("lister-picker-panel")).toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { name: "Preferred listers" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("status", { name: "Step 3 of 3" }),
+      ).toBeInTheDocument()
+      await user.click(screen.getByRole("button", { name: "Save search" }))
 
       expect(mutate).toHaveBeenCalledWith(
         {
@@ -335,8 +365,8 @@ describe("ConfirmCreateClientRequestModal", () => {
         />,
       )
 
-      await goToPreferences(user, "Family search")
-      await user.click(screen.getByRole("button", { name: "Create request" }))
+      await goToListers(user, "Family search")
+      await user.click(screen.getByRole("button", { name: "Save search" }))
 
       expect(mutate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -387,11 +417,13 @@ describe("ConfirmCreateClientRequestModal", () => {
       expect(await screen.findByTestId("readonly-map")).toBeInTheDocument()
       expect(screen.getByLabelText(/^Name/)).toHaveValue("Family search")
       expect(
-        screen.getByRole("status", { name: "Step 1 of 2" }),
+        screen.getByRole("status", { name: "Step 1 of 3" }),
       ).toBeInTheDocument()
     })
+  })
 
-    it("shows mutation errors on the preferences step", async () => {
+  describe("listers step", () => {
+    it("shows mutation errors on the listers step", async () => {
       const user = userEvent.setup()
       const onClose = vi.fn()
 
@@ -404,7 +436,7 @@ describe("ConfirmCreateClientRequestModal", () => {
         />,
       )
 
-      await goToPreferences(user)
+      await goToListers(user)
 
       createState.error = new Error("Network failed")
       rerender(
@@ -416,8 +448,28 @@ describe("ConfirmCreateClientRequestModal", () => {
         />,
       )
 
-      expect(screen.getByTestId("preferences-form")).toBeInTheDocument()
+      expect(screen.getByTestId("lister-picker-panel")).toBeInTheDocument()
       expect(screen.getByRole("alert")).toHaveTextContent("Network failed")
+    })
+
+    it("returns to preferences via Back", async () => {
+      const user = userEvent.setup()
+      render(
+        <ConfirmCreateClientRequestModal
+          isOpen
+          snapshot={snapshot}
+          filters={emptyFilters}
+          onClose={vi.fn()}
+        />,
+      )
+
+      await goToListers(user)
+      await user.click(screen.getByRole("button", { name: "Back" }))
+
+      expect(await screen.findByTestId("preferences-form")).toBeInTheDocument()
+      expect(
+        screen.getByRole("status", { name: "Step 2 of 3" }),
+      ).toBeInTheDocument()
     })
   })
 
@@ -438,12 +490,12 @@ describe("ConfirmCreateClientRequestModal", () => {
         />,
       )
 
-      await goToPreferences(user)
-      await user.click(screen.getByRole("button", { name: "Create request" }))
+      await goToListers(user)
+      await user.click(screen.getByRole("button", { name: "Save search" }))
 
       await waitFor(() => {
         expect(toast).toHaveBeenCalledWith({
-          title: "Client request created",
+          title: "Search saved",
           variant: "success-pill",
         })
       })
@@ -469,7 +521,7 @@ describe("ConfirmCreateClientRequestModal", () => {
         />,
       )
 
-      await goToPreferences(user)
+      await goToListers(user)
 
       createState.isPending = true
       rerender(
@@ -483,17 +535,14 @@ describe("ConfirmCreateClientRequestModal", () => {
 
       expect(screen.getByTestId("shell-dismiss")).toBeDisabled()
       expect(
-        screen.getByRole("button", { name: "Close create client request" }),
+        screen.getByRole("button", { name: "Close save search" }),
       ).toBeDisabled()
       expect(screen.getByRole("button", { name: "Back" })).toBeDisabled()
-      expect(screen.getByRole("button", { name: /Creating/ })).toBeDisabled()
-      expect(screen.getByTestId("filters-disabled")).toHaveTextContent(
-        "disabled",
-      )
+      expect(screen.getByRole("button", { name: /Saving/ })).toBeDisabled()
 
       await user.click(screen.getByTestId("shell-dismiss"))
       await user.click(
-        screen.getByRole("button", { name: "Close create client request" }),
+        screen.getByRole("button", { name: "Close save search" }),
       )
 
       expect(onClose).not.toHaveBeenCalled()
@@ -537,7 +586,7 @@ describe("ConfirmCreateClientRequestModal", () => {
       expect(screen.getByTestId("readonly-map")).toBeInTheDocument()
       expect(screen.getByLabelText(/^Name/)).toHaveValue("")
       expect(
-        screen.getByRole("status", { name: "Step 1 of 2" }),
+        screen.getByRole("status", { name: "Step 1 of 3" }),
       ).toBeInTheDocument()
 
       await goToPreferences(user, "New request")

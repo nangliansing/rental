@@ -1,6 +1,7 @@
 import type { ReactNode, RefObject } from "react"
 
 import { cn } from "@/lib/utils"
+import { DROPDOWN_MENU_CONTENT_CLASSNAME } from "@/shared/components/menus/dropdownMenuStyles"
 
 type UserMenuProfileActionsDropdownProps = {
   id: string
@@ -26,7 +27,8 @@ export function UserMenuProfileActionsDropdown({
       role="menu"
       aria-label="Account actions"
       className={cn(
-        "absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg",
+        "absolute right-0 top-full z-20 mt-1",
+        DROPDOWN_MENU_CONTENT_CLASSNAME,
         className,
       )}
       onClick={(event) => {

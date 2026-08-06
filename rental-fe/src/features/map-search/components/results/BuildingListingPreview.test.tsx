@@ -18,6 +18,27 @@ describe("BuildingListingPreview", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("฿14k")).toBeInTheDocument()
     expect(screen.getByLabelText("1 bed")).toHaveTextContent("1")
+    expect(
+      screen.getByRole("button", { name: "Copy listing link" }),
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the copy control outside the select activator", () => {
+    const onSelect = vi.fn()
+
+    render(
+      <BuildingListingPreview
+        listing={createSearchListing()}
+        onSelect={onSelect}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Open listing ฿14k" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Copy listing link" }),
+    ).toBeInTheDocument()
   })
 
   it("shows compact availability in the top-left corner", () => {

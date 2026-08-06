@@ -1,7 +1,9 @@
 import type { ReactNode } from "react"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { ModalPortal } from "@/shared/components/ModalPortal"
+import { ModalPortalHostProvider } from "@/shared/components/ModalPortalHost"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 import {
@@ -40,6 +42,7 @@ export function ResponsiveScreenModal({
   panelClassName,
   children,
 }: ResponsiveScreenModalProps) {
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
   const { containerRef, onBackdropClick, requestClose } =
     useAccessibleModal<HTMLElement>({
       isOpen,
@@ -52,20 +55,23 @@ export function ResponsiveScreenModal({
   return (
     <ModalPortal>
       <div
+        ref={setPortalHost}
         className={cn(RESPONSIVE_SCREEN_MODAL_BACKDROP_CLASS, backdropClassName)}
         role="dialog"
         aria-modal="true"
         aria-label={normalizeModalAriaLabel(ariaLabel)}
         onClick={onBackdropClick}
       >
-        <section
-          ref={containerRef}
-          tabIndex={-1}
-          className={getResponsiveScreenModalPanelClass(size, panelClassName)}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {children({ requestClose })}
-        </section>
+        <ModalPortalHostProvider host={portalHost}>
+          <section
+            ref={containerRef}
+            tabIndex={-1}
+            className={getResponsiveScreenModalPanelClass(size, panelClassName)}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {children({ requestClose })}
+          </section>
+        </ModalPortalHostProvider>
       </div>
     </ModalPortal>
   )

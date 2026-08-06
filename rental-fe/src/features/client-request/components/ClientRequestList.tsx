@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, type RefObject } from "react"
 
 import type { ClientRequest } from "@/features/client-request/api"
 import { cn } from "@/lib/utils"
@@ -24,6 +24,13 @@ type ClientRequestListProps = {
   onFetchNextPage: () => void
   emptyTitle: string
   emptyDescription: string
+  /**
+   * `page` — own scrolling pane (profile workspace).
+   * `drawer` — content lives in a parent scroller (FloatingActionPanel body).
+   */
+  layout?: "page" | "drawer"
+  /** Scroll root for infinite scroll; required for accurate `drawer` loading. */
+  rootRef?: RefObject<HTMLElement | null>
 }
 
 export function ClientRequestList({
@@ -39,22 +46,31 @@ export function ClientRequestList({
   onFetchNextPage,
   emptyTitle,
   emptyDescription,
+  layout = "page",
+  rootRef,
 }: ClientRequestListProps) {
-  const listRootRef = useRef<HTMLDivElement | null>(null)
+  const internalRootRef = useRef<HTMLDivElement | null>(null)
+  const listRootRef = rootRef ?? internalRootRef
+  const isDrawer = layout === "drawer"
 
   return (
     <div
-      ref={listRootRef}
+      ref={isDrawer ? undefined : internalRootRef}
       className={cn(
-        "min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white",
-        MOBILE_NAV_SCROLL_PADDING_CLASS,
+        "bg-white",
+        isDrawer
+          ? undefined
+          : cn(
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+              MOBILE_NAV_SCROLL_PADDING_CLASS,
+            ),
       )}
       data-testid="client-request-list-scroller"
     >
       <ClientRequestListState
         isLoading={isLoading}
         error={error && items.length === 0 ? error : null}
-        errorFallback="Could not load client requests."
+        errorFallback="Could not load saved searches."
         isEmpty={items.length === 0}
         emptyTitle={emptyTitle}
         emptyDescription={emptyDescription}
@@ -72,6 +88,7 @@ export function ClientRequestList({
             name={item.name}
             preview={formatClientRequestListPreview(item)}
             timestamp={formatClientRequestListTimestamp(item.updatedAt)}
+            matchingCount={item.matchingCount}
             selected={item._id === selectedId}
             onSelect={onSelect}
           />

@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ModalPortal } from "@/shared/components/ModalPortal"
+
 import { ResponsiveScreenModal } from "./ResponsiveScreenModal"
 
 describe("ResponsiveScreenModal", () => {
@@ -76,5 +78,20 @@ describe("ResponsiveScreenModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Close modal" }))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("exposes a portal host so nested overlays render inside the screen modal", () => {
+    render(
+      <ResponsiveScreenModal isOpen onClose={vi.fn()} ariaLabel="Test modal">
+        {() => (
+          <ModalPortal>
+            <p>Nested overlay</p>
+          </ModalPortal>
+        )}
+      </ResponsiveScreenModal>,
+    )
+
+    const dialog = screen.getByRole("dialog", { name: "Test modal" })
+    expect(dialog).toContainElement(screen.getByText("Nested overlay"))
   })
 })

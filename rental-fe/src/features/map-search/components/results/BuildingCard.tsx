@@ -121,14 +121,11 @@ export const BuildingCard = memo(function BuildingCard({
         <div className={BUILDING_CARD_LISTING_RAIL_CLASS}>
           <div className="flex gap-2">
             {building.listings.slice(0, 4).map((listing) => (
-              <button
+              <BuildingListingPreview
                 key={listing._id}
-                type="button"
-                className="text-left"
-                onClick={() => onSelect(building)}
-              >
-                <BuildingListingPreview listing={listing} />
-              </button>
+                listing={listing}
+                onSelect={() => onSelect(building)}
+              />
             ))}
           </div>
         </div>

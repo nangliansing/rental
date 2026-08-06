@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils"
 
 export const RESPONSIVE_SCREEN_MODAL_BACKDROP_CLASS =
-  // Above DialogShell content (z-[1001]) so pickers opened inside dialogs stay visible.
+  // Above standalone DialogShell (z-[1001]). Nested dialogs/menus portal into this
+  // host via ModalPortalHostProvider so they still stack on top.
   "fixed inset-0 z-[1100] bg-slate-950/45 md:flex md:items-center md:justify-center md:p-4"
 
 

@@ -7,6 +7,7 @@ import {
 } from "@/test/fixtures/listings"
 import { renderWithProviders } from "@/test/renderWithProviders"
 
+import * as neighbourhoodExplore from "@/features/buildings/neighbourhood-explore"
 import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuilding"
 import { BuildingDetailSessionProvider } from "../../context/BuildingDetailSessionContext"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
@@ -56,8 +57,8 @@ vi.mock("@/features/buildings/neighbourhood-explore", () => {
     }: {
       children: React.ReactNode
     }) => children,
-    useNeighbourhoodExploreDialog: () => exploreControl,
-    useNeighbourhoodExploreDialogContext: () => exploreControl,
+    useNeighbourhoodExploreDialog: vi.fn(() => exploreControl),
+    useNeighbourhoodExploreDialogContext: vi.fn(() => exploreControl),
   }
 })
 vi.mock("@/features/listing/components/ListingDetailModal", () => ({
@@ -71,7 +72,9 @@ vi.mock("@/features/listing/components/ListingDetailModal", () => ({
     listingId ? (
       <div role="dialog" aria-label="Listing details">
         <span>Selected {listingId}</span>
-        <button type="button" onClick={onClose}>Close details</button>
+        <button type="button" onClick={onClose}>
+          Close details
+        </button>
       </div>
     ) : null,
 }))
@@ -84,10 +87,12 @@ describe("BuildingDetailPage", () => {
     vi.mocked(useMapSearchFilters).mockReturnValue({ filters: {} } as never)
     vi.mocked(useSearchListingsInBuilding).mockReturnValue({
       data: {
-        pages: [{
-          data: { building, listings: [listing] },
-          pagination: { total: 1 },
-        }],
+        pages: [
+          {
+            data: { building, listings: [listing] },
+            pagination: { total: 1 },
+          },
+        ],
       },
       isPending: false,
       isError: false,
@@ -98,6 +103,13 @@ describe("BuildingDetailPage", () => {
       fetchNextPage: vi.fn(),
       refetch: vi.fn(),
     } as never)
+    vi.mocked(
+      neighbourhoodExplore.useNeighbourhoodExploreDialogContext,
+    ).mockReturnValue({
+      isOpen: false,
+      open: vi.fn(),
+      close: vi.fn(),
+    })
   })
 
   it("uses a compact preview to open the existing details modal and restores focus", async () => {
@@ -160,17 +172,24 @@ describe("BuildingDetailPage", () => {
       </BuildingDetailSessionProvider>,
     )
 
-    expect(screen.queryByRole("dialog", { name: "Listing details" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("dialog", { name: "Listing details" }),
+    ).not.toBeInTheDocument()
     expect(preview).toHaveFocus()
   })
 
   it("shows a background refresh loader while cached listings remain visible", () => {
     vi.mocked(useSearchListingsInBuilding).mockReturnValue({
       data: {
-        pages: [{
-          data: { building: createSearchBuilding(), listings: [createSearchListing()] },
-          pagination: { total: 1 },
-        }],
+        pages: [
+          {
+            data: {
+              building: createSearchBuilding(),
+              listings: [createSearchListing()],
+            },
+            pagination: { total: 1 },
+          },
+        ],
       },
       isPending: false,
       isError: false,
@@ -201,5 +220,26 @@ describe("BuildingDetailPage", () => {
     const status = screen.getByRole("status")
     expect(status).toHaveTextContent("1 available listings")
     expect(status.querySelector("svg")).toHaveClass("animate-spin")
+  })
+
+  it("still renders when the neighbourhood explore session is missing", () => {
+    vi.mocked(useMapSearchResults).mockReturnValue({
+      selectedBuilding: createSearchBuilding(),
+      canCreateListing: false,
+      isListingSearch: false,
+      pendingListingId: null,
+      onListingSelect: vi.fn(),
+      onListingClose: vi.fn(),
+    } as never)
+    vi.mocked(
+      neighbourhoodExplore.useNeighbourhoodExploreDialogContext,
+    ).mockReturnValue(null)
+
+    renderWithProviders(<BuildingDetailPage onBack={vi.fn()} />)
+
+    expect(screen.getByText("1 available listings")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Open listing ฿14k" }),
+    ).toBeInTheDocument()
   })
 })

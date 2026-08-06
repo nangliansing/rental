@@ -5,6 +5,7 @@ import {
 } from "./fixtures/authenticated-session"
 import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
 import {
+  continueToClientRequestListers,
   continueToClientRequestPreferences,
   expectClientRequestCreatedToast,
   fillClientRequestDetails,
@@ -59,7 +60,7 @@ test.describe("Create client request from map", () => {
     skipIfCiPlaceholderMapsKey(test)
   })
 
-  test("happy path: area search → details → preferences → create → toast", async ({
+  test("happy path: area search → details → preferences → listers → create → toast", async ({
     page,
   }) => {
     const createMocks = await prepareAgentMapPage(page, areaSearchUrl)
@@ -68,7 +69,7 @@ test.describe("Create client request from map", () => {
 
     await expect(page.getByText("Visible map area")).toBeVisible()
     await expect(
-      page.getByRole("status", { name: "Step 1 of 2" }),
+      page.getByRole("status", { name: "Step 1 of 3" }),
     ).toBeVisible()
 
     await fillClientRequestDetails(page, {
@@ -78,9 +79,14 @@ test.describe("Create client request from map", () => {
     await continueToClientRequestPreferences(page)
 
     await expect(
-      page.getByRole("status", { name: "Step 2 of 2" }),
+      page.getByRole("status", { name: "Step 2 of 3" }),
     ).toBeVisible()
     await expect(page.getByText("Visible map area")).toHaveCount(0)
+
+    await continueToClientRequestListers(page)
+    await expect(
+      page.getByRole("status", { name: "Step 3 of 3" }),
+    ).toBeVisible()
 
     await page.getByRole("button", { name: "Create request" }).click()
 
@@ -152,7 +158,7 @@ test.describe("Create client request from map", () => {
     ).toBeVisible()
     await expect(page.getByLabel(/^Name/)).toHaveValue("Keep my name")
     await expect(
-      page.getByRole("status", { name: "Step 1 of 2" }),
+      page.getByRole("status", { name: "Step 1 of 3" }),
     ).toBeVisible()
   })
 
@@ -166,6 +172,7 @@ test.describe("Create client request from map", () => {
 
     await fillClientRequestDetails(page, { name: "Near BTS pin" })
     await continueToClientRequestPreferences(page)
+    await continueToClientRequestListers(page)
     await page.getByRole("button", { name: "Create request" }).click()
 
     await expectClientRequestCreatedToast(page)
@@ -186,6 +193,7 @@ test.describe("Create client request from map", () => {
 
     await fillClientRequestDetails(page, { name: "Along line" })
     await continueToClientRequestPreferences(page)
+    await continueToClientRequestListers(page)
     await page.getByRole("button", { name: "Create request" }).click()
 
     await expectClientRequestCreatedToast(page)
@@ -196,7 +204,7 @@ test.describe("Create client request from map", () => {
     })
   })
 
-  test("shows create failure on preferences and allows retry", async ({
+  test("shows create failure on listers and allows retry", async ({
     page,
   }) => {
     const createMocks = await prepareAgentMapPage(page, areaSearchUrl, {
@@ -206,13 +214,14 @@ test.describe("Create client request from map", () => {
     await openCreateClientRequestFromMap(page)
     await fillClientRequestDetails(page, { name: "Retry request" })
     await continueToClientRequestPreferences(page)
+    await continueToClientRequestListers(page)
 
     await page.getByRole("button", { name: "Create request" }).click()
     await expect(page.getByRole("alert")).toContainText(
       "Unable to create client request.",
     )
     await expect(
-      page.getByRole("heading", { name: "Client preferences" }),
+      page.getByRole("heading", { name: "Preferred listers" }),
     ).toBeVisible()
 
     await page.getByRole("button", { name: "Create request" }).click()

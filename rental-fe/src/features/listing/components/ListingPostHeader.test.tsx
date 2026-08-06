@@ -10,7 +10,6 @@ const baseProps = {
   updatedAt: "2026-07-21T00:00:00.000Z",
   isPrivate: false,
   isOwnListing: false,
-  canCreateListing: false,
   canReportListing: false,
   listingUrl: "https://example.com/listings/one",
   editHref: "/listings/one/edit",
@@ -35,6 +34,8 @@ describe("ListingPostHeader", () => {
     expect(screen.queryByText("Edit the listing")).not.toBeInTheDocument()
     expect(screen.queryByText("Edit privacy")).not.toBeInTheDocument()
     expect(screen.queryByText("Delete listing")).not.toBeInTheDocument()
+    expect(screen.queryByText("List in this building")).not.toBeInTheDocument()
+    expect(screen.queryByText("View lister reviews")).not.toBeInTheDocument()
   })
 
   it("exposes owner actions and handles an unavailable clipboard", async () => {
@@ -50,9 +51,7 @@ describe("ListingPostHeader", () => {
           {...baseProps}
           isPrivate
           isOwnListing
-          canCreateListing
           canReportListing
-          listInBuildingHref="/listings/new?buildingId=one"
           onDeleteRequest={onDeleteRequest}
           onPrivacyRequest={onPrivacyRequest}
         />
@@ -61,7 +60,8 @@ describe("ListingPostHeader", () => {
 
     expect(screen.getByText("Private")).toBeInTheDocument()
     await user.click(screen.getByLabelText("Listing options"))
-    expect(screen.getByText("List in this building")).toBeInTheDocument()
+    expect(screen.queryByText("List in this building")).not.toBeInTheDocument()
+    expect(screen.queryByText("View lister reviews")).not.toBeInTheDocument()
     expect(screen.getByText("Report listing")).toBeInTheDocument()
     expect(screen.getByText("Edit the listing")).toBeInTheDocument()
     expect(screen.getByText("Edit privacy")).toBeInTheDocument()

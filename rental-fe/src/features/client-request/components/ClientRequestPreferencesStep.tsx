@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { ChevronLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { MapSearchFiltersForm } from "@/features/map-search/components/filters/MapSearchFiltersForm"
@@ -6,6 +7,7 @@ import type { MapSearchFilters } from "@/features/map-search/filters/types"
 import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 
 import type { ClientRequestFilters } from "../api"
+import { CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME } from "./ClientRequestWizardLayout"
 
 type ClientRequestPreferencesStepProps = {
   filters: ClientRequestFilters | MapSearchFilters
@@ -31,8 +33,8 @@ export function ClientRequestPreferencesStep({
   submitError,
   backLabel = "Back",
   clearLabel = "Clear",
-  primaryLabel = "Create request",
-  primaryPendingLabel = "Creating…",
+  primaryLabel = "Continue",
+  primaryPendingLabel = "Working…",
   footerStart,
   onFiltersChange,
   onBack,
@@ -56,31 +58,40 @@ export function ClientRequestPreferencesStep({
         ) : null}
       </div>
 
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-5 py-4">
-        <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 px-5 py-4">
+        <div className="flex items-center gap-3">
           {footerStart}
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
+            size="icon"
             disabled={disabled}
+            aria-label={backLabel}
+            className="h-12 w-12 rounded-full"
             onClick={onBack}
           >
-            {backLabel}
+            <ChevronLeft className="size-8" aria-hidden="true" />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             type="button"
             variant="ghost"
             disabled={disabled}
+            className={CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME}
             onClick={onClear}
           >
             {clearLabel}
           </Button>
-          <Button type="button" disabled={disabled} onClick={onPrimary}>
+          <Button
+            type="button"
+            disabled={disabled}
+            className={CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME}
+            onClick={onPrimary}
+          >
             {disabled ? (
               <>
-                <LoaderIcon className="h-4 w-4" aria-hidden="true" />
+                <LoaderIcon className="h-5 w-5" aria-hidden="true" />
                 {primaryPendingLabel}
               </>
             ) : (

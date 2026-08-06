@@ -1,12 +1,14 @@
 import type React from "react"
+import { useRef } from "react"
 import { Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { SearchAgentProfile } from "@/features/agent"
+import { SelectedListersRail } from "@/features/lister-picker"
 
 import type { PlacePrediction } from "../../hooks/usePlaceSearch"
-import { useTypeaheadKeyboardNavigation } from "../../hooks/useTypeaheadKeyboardNavigation"
+import { useTypeaheadKeyboardNavigation } from "@/shared/hooks/useTypeaheadKeyboardNavigation"
 import { ListerSuggestionList } from "./ListerSuggestionList"
 import { PlaceSuggestionList } from "./PlaceSuggestionList"
 import { SearchModeTabs, type SearchMode } from "./SearchModeTabs"
@@ -23,6 +25,9 @@ type DesktopPlaceSearchComboboxProps = {
   listerQuery: string
   listerSearchError: string | null
   isListerSearchLoading: boolean
+  hasMoreListers?: boolean
+  isFetchingMoreListers?: boolean
+  selectedListers: SearchAgentProfile[]
   selectedListerIds: string[]
   onFocus: () => void
   onDismiss: () => void
@@ -31,8 +36,10 @@ type DesktopPlaceSearchComboboxProps = {
   onSearchModeChange: (mode: SearchMode) => void
   onRetryPlaceSearch: () => void
   onRetryListerSearch: () => void
+  onFetchMoreListers?: () => void
   onSelectSuggestion: (prediction: PlacePrediction) => void
   onToggleLister: (lister: SearchAgentProfile) => void
+  onRemoveLister: (listerId: string) => void
 }
 
 export function DesktopPlaceSearchCombobox({
@@ -47,6 +54,9 @@ export function DesktopPlaceSearchCombobox({
   listerQuery,
   listerSearchError,
   isListerSearchLoading,
+  hasMoreListers = false,
+  isFetchingMoreListers = false,
+  selectedListers,
   selectedListerIds,
   onFocus,
   onDismiss,
@@ -55,9 +65,12 @@ export function DesktopPlaceSearchCombobox({
   onSearchModeChange,
   onRetryPlaceSearch,
   onRetryListerSearch,
+  onFetchMoreListers,
   onSelectSuggestion,
   onToggleLister,
+  onRemoveLister,
 }: DesktopPlaceSearchComboboxProps) {
+  const listScrollRef = useRef<HTMLDivElement | null>(null)
   const shouldShowSuggestions = isSuggestionsOpen
   const listboxId = "desktop-typeahead-listbox"
   const optionIdPrefix = "desktop-typeahead-option"
@@ -80,7 +93,7 @@ export function DesktopPlaceSearchCombobox({
   })
 
   return (
-    <div className="hidden md:block md:w-[min(520px,calc(100vw-2rem))] lg:w-[520px]">
+    <div className="w-full md:w-[min(520px,calc(100vw-2rem))] lg:w-[520px]">
       <div className="flex items-center gap-2 rounded-full bg-white p-2 shadow-lg">
         <Input
           id="desktop-place-search"
@@ -115,11 +128,29 @@ export function DesktopPlaceSearchCombobox({
         </Button>
       </div>
 
-      {shouldShowSuggestions && (
-        <div className="mt-2 overflow-hidden rounded-lg bg-white text-slate-950 shadow-lg">
-          <SearchModeTabs value={searchMode} onChange={onSearchModeChange} />
+      {shouldShowSuggestions ? (
+        <div className="mt-2 flex max-h-[min(24rem,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg bg-white text-slate-950 shadow-lg">
+          <div className="shrink-0">
+            <SearchModeTabs value={searchMode} onChange={onSearchModeChange} />
 
-          <div id={listboxId} role="listbox" className="p-2">
+            <div className="px-2 pt-2">
+              <SelectedListersRail
+                listers={selectedListers}
+                onRemove={onRemoveLister}
+                removeAriaLabel={(displayName) =>
+                  `Remove ${displayName} from search`
+                }
+              />
+            </div>
+          </div>
+
+          <div
+            ref={listScrollRef}
+            id={listboxId}
+            role="listbox"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2 pt-2"
+            data-testid="desktop-typeahead-scroll"
+          >
             {searchMode === "places" ? (
               <PlaceSuggestionList
                 predictions={predictions}
@@ -139,14 +170,18 @@ export function DesktopPlaceSearchCombobox({
                 query={listerQuery}
                 error={listerSearchError}
                 isLoading={isListerSearchLoading}
+                hasNextPage={hasMoreListers}
+                isFetchingNextPage={isFetchingMoreListers}
                 selectedListerIds={selectedListerIds}
+                scrollRootRef={listScrollRef}
                 onRetry={onRetryListerSearch}
+                onFetchNextPage={onFetchMoreListers}
                 onToggle={onToggleLister}
               />
             )}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

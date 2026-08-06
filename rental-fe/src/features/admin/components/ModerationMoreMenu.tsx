@@ -2,6 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { MoreHorizontal, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import {
+  DROPDOWN_MENU_CONTENT_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DANGER_CLASSNAME,
+  DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 
 type ModerationMoreMenuItem = {
   label: string
@@ -58,17 +63,21 @@ export function ModerationMoreMenu({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 z-20 w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg">
+        <div
+          className={cn(
+            "absolute right-0 top-10 z-20",
+            DROPDOWN_MENU_CONTENT_CLASSNAME,
+          )}
+        >
           {items.map((item) => (
             <button
               key={item.label}
               type="button"
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold transition",
+              className={
                 item.tone === "danger"
-                  ? "text-red-600 hover:bg-red-50"
-                  : "text-slate-700 hover:bg-slate-50",
-              )}
+                  ? DROPDOWN_MENU_ITEM_DANGER_CLASSNAME
+                  : DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME
+              }
               onClick={() => {
                 setIsOpen(false)
                 item.onSelect()
@@ -98,7 +107,7 @@ export function ListingModerationMenu({
       items={[
         {
           label: "Delete listing",
-          icon: <Trash2 className="h-4 w-4" />,
+          icon: <Trash2 className="h-5 w-5 shrink-0" />,
           tone: "danger",
           onSelect: onDelete,
         },
@@ -121,7 +130,7 @@ export function ReviewModerationMenu({
       items={[
         {
           label: "Delete this review",
-          icon: <Trash2 className="h-4 w-4" />,
+          icon: <Trash2 className="h-5 w-5 shrink-0" />,
           tone: "danger",
           onSelect: onDelete,
         },

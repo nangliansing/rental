@@ -51,11 +51,11 @@ describe("ClientRequestDetailsStep", () => {
 
     it("forwards field errors to the details fields", () => {
       renderStep({
-        errors: { name: "Enter a name for this request." },
+        errors: { name: "Enter a name for this search." },
       })
 
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Enter a name for this request.",
+        "Enter a name for this search.",
       )
       expect(screen.getByLabelText(/^Name/)).toHaveAttribute(
         "aria-invalid",

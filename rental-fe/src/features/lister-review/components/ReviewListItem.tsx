@@ -17,6 +17,12 @@ import { cn } from "@/lib/utils"
 import { Avatar } from "@/shared/components/data-display/Avatar"
 import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { ConfirmationDialog } from "@/shared/components/dialogs/ConfirmationDialog"
+import {
+  DROPDOWN_MENU_CONTENT_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DANGER_CLASSNAME,
+  DROPDOWN_MENU_ITEM_ICON_CLASSNAME,
+  DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 
 import {
   useDeleteListerReview,
@@ -408,15 +414,20 @@ function ReviewActionsMenu({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-slate-200 bg-white p-1.5 text-sm font-semibold text-slate-700 shadow-lg">
+        <div
+          className={cn(
+            "absolute right-0 top-9 z-20",
+            DROPDOWN_MENU_CONTENT_CLASSNAME,
+          )}
+        >
           {isOwnReview && (
             <>
               <ReviewActionButton onClick={handleEdit}>
-                <Pencil className="h-4 w-4" />
+                <Pencil className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME} />
                 Edit review
               </ReviewActionButton>
               <ReviewActionButton tone="danger" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-5 w-5 shrink-0" />
                 Delete review
               </ReviewActionButton>
             </>
@@ -425,9 +436,9 @@ function ReviewActionsMenu({
           {isProfileOwner && !isOwnReview && (
             <ReviewActionButton onClick={handleToggleCollapse}>
               {review.visibility?.isCollapsed ? (
-                <Eye className="h-4 w-4" />
+                <Eye className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME} />
               ) : (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME} />
               )}
               {review.visibility?.isCollapsed
                 ? "Show review"
@@ -437,7 +448,7 @@ function ReviewActionsMenu({
 
           {canReportReview && (
             <ReviewActionButton onClick={handleReport}>
-              <Flag className="h-4 w-4" />
+              <Flag className={DROPDOWN_MENU_ITEM_ICON_CLASSNAME} />
               Report review
             </ReviewActionButton>
           )}
@@ -459,12 +470,11 @@ function ReviewActionButton({
   return (
     <button
       type="button"
-      className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition",
+      className={
         tone === "danger"
-          ? "text-rose-600 hover:bg-rose-50"
-          : "hover:bg-slate-50",
-      )}
+          ? DROPDOWN_MENU_ITEM_DANGER_CLASSNAME
+          : DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME
+      }
       onClick={onClick}
     >
       {children}
