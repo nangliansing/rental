@@ -48,6 +48,7 @@ export const geoSearchSchemaDefinition = {
   coverage: {
     type: coverageGeometrySchema,
     required: true,
+    select: false,
   },
 
   placeName: {

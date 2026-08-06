@@ -221,6 +221,7 @@ describe("POST /api/v1/admin/saved-searches/overlaps", () => {
     assert.deepEqual(response.body.data.map(({ name }) => name), [
       "Overlapping",
     ]);
+    assert.equal(response.body.data[0].geoSearch.coverage, undefined);
     assert.deepEqual(response.body.pagination, {
       page: 1,
       limit: 20,
@@ -308,6 +309,7 @@ describe("GET /api/v1/saved-searches", () => {
     assert.equal(response.body.data.length, 1);
     assert.equal(response.body.data[0].name, "Mine");
     assert.equal(response.body.data[0].createdBy, owner.user._id.toString());
+    assert.equal(response.body.data[0].geoSearch.coverage, undefined);
     assert.deepEqual(response.body.pagination, {
       page: 1,
       limit: 20,

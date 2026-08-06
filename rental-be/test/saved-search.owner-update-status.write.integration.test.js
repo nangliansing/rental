@@ -206,10 +206,14 @@ describe("PATCH /api/v1/saved-searches/:savedSearchId/status", () => {
     assert.equal(response.body.data._id, created.body.data._id);
     assert.equal(response.body.data.createdBy, user._id.toString());
     assert.equal(response.body.data.status, SAVED_SEARCH_STATUSES.CLOSED);
+    assert.equal(response.body.data.geoSearch.coverage, undefined);
 
-    const saved = await SavedSearch.findById(created.body.data._id).lean();
+    const saved = await SavedSearch.findById(created.body.data._id)
+      .select("+geoSearch.coverage")
+      .lean();
     assert.equal(saved.status, SAVED_SEARCH_STATUSES.CLOSED);
     assert.equal(saved.isDeleted, false);
+    assert.equal(saved.geoSearch.coverage.type, "Polygon");
   });
 
   test("returns 409 when the saved search is already Closed", async () => {

@@ -49,6 +49,9 @@ Results are sorted by `createdAt` descending and `_id` ascending, then paginated
 The partial `active_saved_search_coverage_2dsphere` index contains only active,
 non-deleted documents.
 
+`geoSearch.coverage` is an internal persistence detail and is omitted from this
+response and every owner-facing SavedSearch response.
+
 ## Deployment
 
 1. Deploy code containing the coverage schema and write-path derivation.

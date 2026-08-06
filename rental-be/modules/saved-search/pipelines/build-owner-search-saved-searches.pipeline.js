@@ -40,6 +40,7 @@ export const buildOwnerSearchSavedSearchesPipeline = ({
         {
           $project: {
             _hasAvailableBy: 0,
+            "geoSearch.coverage": 0,
           },
         },
       ],

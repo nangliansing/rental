@@ -58,7 +58,19 @@ const savedSearchSchema = new Schema(
       default: null,
     },
   },
-  { timestamps: true, versionKey: false },
+  {
+    timestamps: true,
+    versionKey: false,
+    toJSON: {
+      transform: (_document, response) => {
+        if (response.geoSearch) {
+          delete response.geoSearch.coverage;
+        }
+
+        return response;
+      },
+    },
+  },
 );
 
 // Owner list with status filter (default Waiting): availableBy sooner-first.

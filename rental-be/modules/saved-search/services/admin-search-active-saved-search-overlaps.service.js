@@ -43,6 +43,7 @@ export const adminSearchActiveSavedSearchOverlapsService = async ({
   };
 
   let dataQuery = SavedSearch.find(match)
+    .select("-geoSearch.coverage")
     .sort({ createdAt: -1, _id: 1 })
     .skip((page - 1) * limit)
     .limit(limit)
