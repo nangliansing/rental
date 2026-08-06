@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react"
 
+import type { SearchAgentProfile } from "@/features/agent"
 import {
   useCreateOwnerClientRequest,
   type ClientRequestFilters,
@@ -7,17 +8,25 @@ import {
 import {
   CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME,
   ClientRequestDetailsStep,
+  ClientRequestListersStep,
   ClientRequestPreferencesStep,
   ClientRequestWizardLayout,
   validateClientRequestDetails,
   type ClientRequestDetailsErrors,
 } from "@/features/client-request/components"
+import {
+  clearClientRequestPreferenceFilters,
+  removeClientRequestSelectedLister,
+  toggleClientRequestSelectedLister,
+} from "@/features/client-request/components/clientRequestListerSelection"
+import { useHydrateClientRequestSelectedListers } from "@/features/client-request/hooks/useHydrateClientRequestSelectedListers"
 import { toast } from "@/hooks/use-toast"
 import { DialogShell } from "@/shared/components/dialogs/DialogShell"
 import { ReadOnlyMap } from "@/shared/google-maps/readonly-map"
 
 import type { MapSearchFilters } from "../../filters/types"
 import type { MapClientRequestGeoSnapshot } from "../../utils/client-request-geo-from-map"
+import { CREATE_SAVED_SEARCH_COPY } from "./agentMapActionsCopy"
 
 type ConfirmCreateClientRequestModalProps = {
   isOpen: boolean
@@ -27,10 +36,16 @@ type ConfirmCreateClientRequestModalProps = {
   onClose: () => void
 }
 
-type ModalStep = "details" | "preferences"
+type ModalStep = "details" | "preferences" | "listers"
 
 function cloneFilters(filters: ClientRequestFilters): MapSearchFilters {
   return { ...filters }
+}
+
+function wizardStepNumber(step: ModalStep): 1 | 2 | 3 {
+  if (step === "details") return 1
+  if (step === "preferences") return 2
+  return 3
 }
 
 export function ConfirmCreateClientRequestModal({
@@ -52,6 +67,9 @@ export function ConfirmCreateClientRequestModal({
   const [draftFilters, setDraftFilters] = useState<MapSearchFilters>(() =>
     cloneFilters(filters),
   )
+  const [selectedListers, setSelectedListers] = useState<SearchAgentProfile[]>(
+    [],
+  )
   const createMutation = useCreateOwnerClientRequest()
 
   useEffect(() => {
@@ -61,8 +79,15 @@ export function ConfirmCreateClientRequestModal({
     setDescription("")
     setDetailErrors({})
     setDraftFilters(cloneFilters(filters))
+    setSelectedListers([])
     createMutation.reset()
   }, [isOpen, filters, createMutation.reset])
+
+  useHydrateClientRequestSelectedListers({
+    enabled: isOpen,
+    filters,
+    onHydrated: setSelectedListers,
+  })
 
   if (!isOpen || !snapshot) return null
 
@@ -70,6 +95,8 @@ export function ConfirmCreateClientRequestModal({
   const submitError =
     createMutation.error instanceof Error ? createMutation.error.message : ""
   const isDetailsStep = step === "details"
+  const isPreferencesStep = step === "preferences"
+  const isListersStep = step === "listers"
 
   const handleClose = () => {
     if (isSubmitting) return
@@ -86,10 +113,15 @@ export function ConfirmCreateClientRequestModal({
     return result.value
   }
 
-  const handleContinue = () => {
+  const handleContinueFromDetails = () => {
     if (isSubmitting) return
     if (!validateDetails()) return
     setStep("preferences")
+  }
+
+  const handleContinueFromPreferences = () => {
+    if (isSubmitting) return
+    setStep("listers")
   }
 
   const handleCreate = () => {
@@ -111,11 +143,9 @@ export function ConfirmCreateClientRequestModal({
       {
         onSuccess: () => {
           onClose()
-          // Toast lives under `#root`; while DialogShell is open Radix hides that
-          // tree, so show the success toast after the dialog has closed.
           queueMicrotask(() => {
             toast({
-              title: "Client request created",
+              title: CREATE_SAVED_SEARCH_COPY.successToastTitle,
               variant: "success-pill",
             })
           })
@@ -123,6 +153,18 @@ export function ConfirmCreateClientRequestModal({
       },
     )
   }
+
+  const title = isDetailsStep
+    ? CREATE_SAVED_SEARCH_COPY.detailsTitle
+    : isPreferencesStep
+      ? CREATE_SAVED_SEARCH_COPY.preferencesTitle
+      : CREATE_SAVED_SEARCH_COPY.listersTitle
+
+  const descriptionCopy = isDetailsStep
+    ? CREATE_SAVED_SEARCH_COPY.detailsDescription
+    : isPreferencesStep
+      ? CREATE_SAVED_SEARCH_COPY.preferencesDescription
+      : CREATE_SAVED_SEARCH_COPY.listersDescription
 
   return (
     <DialogShell
@@ -133,18 +175,12 @@ export function ConfirmCreateClientRequestModal({
       contentClassName={CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME}
     >
       <ClientRequestWizardLayout
-        step={isDetailsStep ? 1 : 2}
-        title={
-          isDetailsStep ? "Create client request" : "Client preferences"
-        }
-        description={
-          isDetailsStep
-            ? "Confirm the search area, then name the request."
-            : "Optional filters used to match listings for this client."
-        }
+        step={wizardStepNumber(step)}
+        title={title}
+        description={descriptionCopy}
         onClose={handleClose}
         closeDisabled={isSubmitting}
-        closeAriaLabel="Close create client request"
+        closeAriaLabel={CREATE_SAVED_SEARCH_COPY.closeAriaLabel}
         headerSemantics="dialog"
         hero={
           isDetailsStep ? (
@@ -188,17 +224,47 @@ export function ConfirmCreateClientRequestModal({
               }
             }}
             onCancel={handleClose}
-            onContinue={handleContinue}
+            onContinue={handleContinueFromDetails}
           />
-        ) : (
+        ) : isPreferencesStep ? (
           <ClientRequestPreferencesStep
             filters={draftFilters}
             availableByFieldId={availableByFieldId}
             disabled={isSubmitting}
-            submitError={submitError}
+            primaryLabel="Continue"
             onFiltersChange={setDraftFilters}
             onBack={() => setStep("details")}
-            onClear={() => setDraftFilters({})}
+            onClear={() =>
+              setDraftFilters(clearClientRequestPreferenceFilters(draftFilters))
+            }
+            onPrimary={handleContinueFromPreferences}
+          />
+        ) : (
+          <ClientRequestListersStep
+            selectedListers={selectedListers}
+            disabled={isSubmitting}
+            submitError={isListersStep ? submitError : undefined}
+            primaryLabel={CREATE_SAVED_SEARCH_COPY.createLabel}
+            primaryPendingLabel={CREATE_SAVED_SEARCH_COPY.creatingLabel}
+            onToggleLister={(lister) => {
+              const next = toggleClientRequestSelectedLister(
+                selectedListers,
+                draftFilters,
+                lister,
+              )
+              setSelectedListers(next.selectedListers)
+              setDraftFilters(next.filters)
+            }}
+            onRemoveLister={(listerId) => {
+              const next = removeClientRequestSelectedLister(
+                selectedListers,
+                draftFilters,
+                listerId,
+              )
+              setSelectedListers(next.selectedListers)
+              setDraftFilters(next.filters)
+            }}
+            onBack={() => setStep("preferences")}
             onPrimary={handleCreate}
           />
         )}

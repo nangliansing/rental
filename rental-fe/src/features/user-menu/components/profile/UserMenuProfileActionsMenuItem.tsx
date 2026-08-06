@@ -2,6 +2,11 @@ import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
+import {
+  DROPDOWN_MENU_ITEM_DANGER_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DISABLED_CLASSNAME,
+  DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 
 type UserMenuProfileActionsMenuItemBaseProps = {
   icon: ReactNode
@@ -28,10 +33,10 @@ type UserMenuProfileActionsMenuItemProps =
 
 const itemClassName = (tone: "neutral" | "danger") =>
   cn(
-    "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
     tone === "danger"
-      ? "text-rose-600 hover:bg-rose-50"
-      : "text-slate-700 hover:bg-slate-50",
+      ? DROPDOWN_MENU_ITEM_DANGER_CLASSNAME
+      : DROPDOWN_MENU_ITEM_NEUTRAL_CLASSNAME,
+    DROPDOWN_MENU_ITEM_DISABLED_CLASSNAME,
   )
 
 export function UserMenuProfileActionsMenuItem(

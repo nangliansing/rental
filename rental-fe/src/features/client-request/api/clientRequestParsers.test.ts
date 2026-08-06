@@ -248,6 +248,27 @@ describe("parseClientRequest", () => {
     })
   })
 
+  it("parses an optional matchingCount when present", () => {
+    const parsed = parseClientRequest({
+      ...areaClientRequest,
+      matchingCount: 9,
+    })
+
+    expect(parsed.matchingCount).toBe(9)
+  })
+
+  it.each([undefined, null, "nine", -2] as const)(
+    "normalizes invalid matchingCount values to null (%j)",
+    (matchingCount) => {
+      const parsed = parseClientRequest({
+        ...areaClientRequest,
+        matchingCount,
+      })
+
+      expect(parsed.matchingCount).toBeNull()
+    },
+  )
+
   it("parses Closed status and soft-delete timestamps", () => {
     const parsed = parseClientRequest({
       ...areaClientRequest,

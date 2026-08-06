@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 
 import { ClientRequestDetailsFields } from "./ClientRequestDetailsFields"
 import { ClientRequestGeoSummaryCard } from "./ClientRequestGeoSummaryCard"
+import { CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME } from "./ClientRequestWizardLayout"
 import type { ClientRequestDetailsErrors } from "./validateClientRequestDetails"
 
 type ClientRequestDetailsStepProps = {
@@ -74,17 +75,22 @@ export function ClientRequestDetailsStep({
         />
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 px-5 py-4">
+      <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
         {footerStart}
         <Button
           type="button"
           variant="outline"
           disabled={disabled}
+          className={CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME}
           onClick={onCancel}
         >
           {cancelLabel}
         </Button>
-        <Button type="submit" disabled={disabled}>
+        <Button
+          type="submit"
+          disabled={disabled}
+          className={CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME}
+        >
           {continueLabel}
         </Button>
       </div>

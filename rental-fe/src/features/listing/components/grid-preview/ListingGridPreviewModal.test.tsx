@@ -38,6 +38,9 @@ describe("ListingGridPreviewModal", () => {
     ).toBeInTheDocument()
     expect(screen.queryByText("Flexible")).not.toBeInTheDocument()
     expect(screen.getByText(/^Dep /)).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Copy listing link" }),
+    ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {
@@ -54,6 +57,31 @@ describe("ListingGridPreviewModal", () => {
     await user.click(backdrop!)
 
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("does not open detail when the copy link control is clicked", async () => {
+    const user = userEvent.setup()
+    const onOpenDetail = vi.fn()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(
+      <ListingGridPreviewModal
+        listing={createSearchListing()}
+        onClose={vi.fn()}
+        detailMode={{ mode: "modal", onOpenDetail }}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Copy listing link" }))
+
+    expect(onOpenDetail).not.toHaveBeenCalled()
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}/listings/listing-1`,
+    )
   })
 
   it("renders nothing when listing is null", () => {

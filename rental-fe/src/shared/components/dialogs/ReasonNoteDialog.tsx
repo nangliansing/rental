@@ -10,6 +10,12 @@ import {
 } from "@/shared/components/inputs/SingleOptionSelector"
 
 import {
+  DIALOG_ACTION_BUTTON_DANGER_ALT_CLASSNAME,
+  DIALOG_ACTION_BUTTON_PRIMARY_CLASSNAME,
+  DIALOG_ACTION_BUTTON_SECONDARY_CLASSNAME,
+  DIALOG_ACTION_BUTTON_SUCCESS_CLASSNAME,
+} from "./dialogActionButtonStyles"
+import {
   DialogDescription,
   DialogShell,
   DialogTitle,
@@ -60,10 +66,9 @@ const iconToneClasses: Record<ReasonNoteDialogTone, string> = {
 }
 
 const confirmToneClasses: Record<ReasonNoteDialogTone, string> = {
-  neutral: "bg-slate-950 text-white hover:bg-slate-800 disabled:bg-slate-300",
-  red: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
-  green:
-    "bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-300",
+  neutral: DIALOG_ACTION_BUTTON_PRIMARY_CLASSNAME,
+  red: DIALOG_ACTION_BUTTON_DANGER_ALT_CLASSNAME,
+  green: DIALOG_ACTION_BUTTON_SUCCESS_CLASSNAME,
 }
 
 const reasonActiveColors: Record<
@@ -210,7 +215,7 @@ export function ReasonNoteDialog<TValue extends string>({
           <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
             <button
               type="button"
-              className="flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className={DIALOG_ACTION_BUTTON_SECONDARY_CLASSNAME}
               disabled={isSubmitting}
               onClick={onCancel}
             >
@@ -219,10 +224,7 @@ export function ReasonNoteDialog<TValue extends string>({
 
             <button
               type="button"
-              className={cn(
-                "flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition disabled:cursor-not-allowed",
-                confirmToneClasses[tone],
-              )}
+              className={cn(confirmToneClasses[tone])}
               disabled={isSubmitting || !canSubmit}
               onClick={onSubmit}
             >

@@ -5,8 +5,10 @@ import { ModalPortal } from "@/shared/components/ModalPortal"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 import type { ListingGridCardListing } from "../listingGridCardTypes"
+import { CopyListingLinkButton } from "../CopyListingLinkButton"
 import { ListingCoverImage } from "../ListingPresentationPrimitives"
 import { ListingAvailabilityDisplay } from "../ListingAvailabilityDisplay"
+import { ListingCardTopRightStack } from "../ListingGridCardPrimitives"
 import { formatCompactMoney, getSortedListingPhotos } from "../../utils/listingDisplay"
 import { LISTING_GRID_CARD_AVAILABILITY_VARIANT } from "../../utils/listingGridAvailabilityVariant"
 import { ListingGridCardOverlayContent } from "./ListingGridCardOverlayContent"
@@ -28,8 +30,8 @@ type ListingGridPreviewModalProps = {
   skipHistorySyncOnCloseRef?: RefObject<boolean>
 }
 
-const PREVIEW_CARD_CLASS_NAME =
-  "group relative block aspect-square w-full overflow-hidden text-left"
+const PREVIEW_ACTIVATOR_CLASS_NAME =
+  "group absolute inset-0 block h-full w-full overflow-hidden text-left"
 
 export function ListingGridPreviewModal({
   listing,
@@ -65,7 +67,6 @@ export function ListingGridPreviewModal({
         availableAt={listing.availableAt}
         variant={LISTING_GRID_CARD_AVAILABILITY_VARIANT}
       />
-      <ListingGridCardBadge listing={listing} />
       <ListingGridCardOverlayContent
         listing={listing}
         showBuildingName={showBuildingName}
@@ -90,13 +91,20 @@ export function ListingGridPreviewModal({
           className="relative w-full max-w-sm overflow-hidden rounded-xl bg-slate-950 shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
-          <ListingGridPreviewDetailActivator
-            detailMode={detailMode}
-            listingId={listingId}
-            detailLabel={detailLabel}
-          >
-            {previewCardContent}
-          </ListingGridPreviewDetailActivator>
+          <div className="relative aspect-square w-full overflow-hidden">
+            <ListingGridPreviewDetailActivator
+              detailMode={detailMode}
+              listingId={listingId}
+              detailLabel={detailLabel}
+            >
+              {previewCardContent}
+            </ListingGridPreviewDetailActivator>
+
+            <ListingCardTopRightStack>
+              <CopyListingLinkButton listingId={listingId} />
+              <ListingGridCardBadge listing={listing} positioned={false} />
+            </ListingCardTopRightStack>
+          </div>
         </div>
       </div>
     </ModalPortal>
@@ -121,7 +129,7 @@ function ListingGridPreviewDetailActivator({
       <Link
         to={detailMode.link.to}
         state={detailMode.link.state}
-        className={PREVIEW_CARD_CLASS_NAME}
+        className={PREVIEW_ACTIVATOR_CLASS_NAME}
         aria-label={detailLabel}
         onClick={() => detailMode.onLinkActivate?.()}
       >
@@ -142,7 +150,7 @@ function ListingGridPreviewDetailActivator({
   return (
     <button
       type="button"
-      className={PREVIEW_CARD_CLASS_NAME}
+      className={PREVIEW_ACTIVATOR_CLASS_NAME}
       aria-label={detailLabel}
       onClick={openDetailModal}
     >

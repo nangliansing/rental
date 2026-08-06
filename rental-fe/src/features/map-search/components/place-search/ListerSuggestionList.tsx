@@ -1,9 +1,13 @@
-import { BadgeCheck, Check, Languages, Plus, UserRound } from "lucide-react"
+import type { RefObject } from "react"
+import { Check, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import type { SearchAgentProfile } from "@/features/agent"
+import { ListerSearchResultDetails } from "@/features/agent/components/ListerSearchResultDetails"
 import { cn } from "@/lib/utils"
 import { Avatar } from "@/shared/components/data-display/Avatar"
+import { InfiniteScrollSentinel } from "@/shared/components/feedback/InfiniteScrollSentinel"
+
 import { useMapSearchPlace } from "../../context/MapSearchSessionContext"
 import { MIN_SEARCH_QUERY_LENGTH } from "./search.constants"
 import { TypeaheadStatus } from "./TypeaheadStatus"
@@ -12,11 +16,15 @@ type ListerSuggestionListProps = {
   listers: SearchAgentProfile[]
   error?: string | null
   isLoading?: boolean
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
   activeIndex?: number
   optionIdPrefix?: string
   query: string
   selectedListerIds?: string[]
+  scrollRootRef?: RefObject<HTMLElement | null>
   onRetry?: () => void
+  onFetchNextPage?: () => void
   onToggle: (lister: SearchAgentProfile) => void
 }
 
@@ -24,11 +32,15 @@ export function ListerSuggestionList({
   listers,
   error = null,
   isLoading = false,
+  hasNextPage = false,
+  isFetchingNextPage = false,
   activeIndex = -1,
   optionIdPrefix = "lister-option",
   query,
   selectedListerIds = [],
+  scrollRootRef,
   onRetry,
+  onFetchNextPage,
   onToggle,
 }: ListerSuggestionListProps) {
   const { currentAgentProfileId } = useMapSearchPlace()
@@ -42,9 +54,7 @@ export function ListerSuggestionList({
   }
 
   if (isLoading) {
-    return (
-      <TypeaheadStatus>Searching listers...</TypeaheadStatus>
-    )
+    return <TypeaheadStatus>Searching listers...</TypeaheadStatus>
   }
 
   if (error) {
@@ -68,18 +78,17 @@ export function ListerSuggestionList({
   }
 
   if (listers.length === 0) {
-    return (
-      <TypeaheadStatus>No listers found.</TypeaheadStatus>
-    )
+    return <TypeaheadStatus>No listers found.</TypeaheadStatus>
   }
 
   return (
-    <div className="space-y-1">
+    <div>
       <TypeaheadStatus visuallyHidden>
         {listers.length} {listers.length === 1 ? "lister" : "listers"} found.
       </TypeaheadStatus>
       {listers.map((lister, index) => {
         const isSelected = selectedListerIds.includes(lister._id)
+        const displayName = lister.displayName ?? "Lister"
         const profilePath =
           lister._id === currentAgentProfileId
             ? "/profile"
@@ -91,64 +100,35 @@ export function ListerSuggestionList({
             id={`${optionIdPrefix}-${index}`}
             role="option"
             aria-selected={activeIndex === index}
-            className="flex w-full items-center gap-3 rounded-lg bg-white px-3 py-3 text-left hover:bg-slate-100"
+            className="flex w-full items-start gap-3 bg-white px-3 py-3 text-left hover:bg-slate-100"
           >
             <Link
               to={profilePath}
-              className="flex min-w-0 flex-1 items-center gap-3"
+              className="flex min-w-0 flex-1 items-start gap-3"
             >
               <Avatar
                 displayName={lister.displayName}
                 photo={lister.profilePhoto}
                 colorKey={lister._id}
                 size="sm"
-                className="h-10 w-10"
+                className="mt-0.5 h-10 w-10"
               />
 
-              <span className="min-w-0 flex-1">
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate text-sm font-semibold text-slate-950">
-                    {lister.displayName ?? "Lister"}
-                  </span>
-
-                  {lister.isVerified && (
-                    <BadgeCheck
-                      className="h-4 w-4 shrink-0 fill-[#1d9bf0] text-white"
-                      strokeWidth={3}
-                    />
-                  )}
-                </span>
-
-                <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-slate-500">
-                  {lister.supportLanguages.length > 0 ? (
-                    <>
-                      <Languages className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">
-                        {lister.supportLanguages.join(" · ")}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <UserRound className="h-3.5 w-3.5 shrink-0" />
-                      <span>Lister</span>
-                    </>
-                  )}
-                </span>
-              </span>
+              <ListerSearchResultDetails lister={lister} />
             </Link>
 
             <button
               type="button"
               className={cn(
-                "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
                 isSelected
                   ? "bg-slate-950 text-white ring-4 ring-slate-100 hover:bg-slate-800"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-950",
               )}
               aria-label={
                 isSelected
-                  ? `Remove ${lister.displayName ?? "lister"} from search`
-                  : `Add ${lister.displayName ?? "lister"} to search`
+                  ? `Remove ${displayName} from search`
+                  : `Add ${displayName} to search`
               }
               onClick={() => onToggle(lister)}
             >
@@ -161,6 +141,17 @@ export function ListerSuggestionList({
           </div>
         )
       })}
+
+      {onFetchNextPage ? (
+        <InfiniteScrollSentinel
+          rootRef={scrollRootRef}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          onFetchNextPage={onFetchNextPage}
+          endMessage="No more listers"
+          errorMessage="Could not load more listers."
+        />
+      ) : null}
     </div>
   )
 }

@@ -13,7 +13,7 @@ describe("validateClientRequestDetails", () => {
         validateClientRequestDetails({ name: "", description: "" }),
       ).toEqual({
         ok: false,
-        errors: { name: "Enter a name for this request." },
+        errors: { name: "Enter a name for this search." },
       })
     })
 
@@ -22,7 +22,7 @@ describe("validateClientRequestDetails", () => {
         validateClientRequestDetails({ name: "  \t\n  ", description: "ok" }),
       ).toEqual({
         ok: false,
-        errors: { name: "Enter a name for this request." },
+        errors: { name: "Enter a name for this search." },
       })
     })
   })
@@ -179,7 +179,7 @@ describe("validateClientRequestDetails", () => {
       ).toEqual({
         ok: false,
         errors: {
-          name: "Enter a name for this request.",
+          name: "Enter a name for this search.",
           description: `Notes must be at most ${CLIENT_REQUEST_DESCRIPTION_MAX_LENGTH} characters.`,
         },
       })
@@ -208,7 +208,7 @@ describe("validateClientRequestDetails", () => {
         }),
       ).toEqual({
         ok: false,
-        errors: { name: "Enter a name for this request." },
+        errors: { name: "Enter a name for this search." },
       })
     })
   })

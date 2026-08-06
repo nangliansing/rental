@@ -19,7 +19,6 @@ import { ConfirmationDialog } from "@/shared/components/dialogs/ConfirmationDial
 import { useDeleteOwnerListing, useUpdateOwnerListing } from "../api"
 import type { ListingVisibility } from "../types"
 import { EditPrivacyDialog } from "./EditPrivacyDialog"
-import { ListerReviewsDialog } from "./ListerReviewsDialog"
 import { ReportListingDialog } from "./ReportListingDialog"
 
 const REPORT_SUCCESS_DURATION_MS = 1200
@@ -28,7 +27,6 @@ export type ListingPostCardDialogActions = {
   openDeleteDialog: () => void
   openPrivacyDialog: () => void
   openReportDialog: () => void
-  openReviewsDialog: () => void
 }
 
 type ListingPostCardDialogHostProps = {
@@ -58,7 +56,6 @@ export const ListingPostCardDialogHost = forwardRef<
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteError, setDeleteError] = useState("")
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
-  const [isReviewsDialogOpen, setIsReviewsDialogOpen] = useState(false)
   const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
   const [privacyError, setPrivacyError] = useState("")
   const [selectedReportReason, setSelectedReportReason] =
@@ -70,7 +67,6 @@ export const ListingPostCardDialogHost = forwardRef<
   const deleteMutation = useDeleteOwnerListing()
   const updateListingMutation = useUpdateOwnerListing()
   const reportMutation = useCreateListingReport()
-  const agent = listing.agentProfile
 
   const clearReportCloseTimer = useCallback(() => {
     if (reportCloseTimerRef.current === null) return
@@ -103,9 +99,6 @@ export const ListingPostCardDialogHost = forwardRef<
       openReportDialog: () => {
         resetReportState()
         setIsReportDialogOpen(true)
-      },
-      openReviewsDialog: () => {
-        setIsReviewsDialogOpen(true)
       },
     }),
     [resetReportState],
@@ -257,14 +250,6 @@ export const ListingPostCardDialogHost = forwardRef<
           )
         }}
       />
-
-      {agent && (
-        <ListerReviewsDialog
-          agent={agent}
-          isOpen={isReviewsDialogOpen}
-          onClose={() => setIsReviewsDialogOpen(false)}
-        />
-      )}
     </>
   )
 })

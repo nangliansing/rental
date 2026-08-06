@@ -10,7 +10,7 @@ export function ClientRequestListLoading() {
       <div className="text-center">
         <LoaderIcon className="mx-auto h-6 w-6 text-slate-400" />
         <p className="mt-3 text-sm font-medium text-slate-600">
-          Loading client requests...
+          Loading saved searches...
         </p>
       </div>
     </div>
@@ -112,10 +112,10 @@ export function ClientRequestListState({
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         isFetchNextPageError={isFetchNextPageError}
-        errorMessage="Could not load more client requests."
+        errorMessage="Could not load more saved searches."
         onFetchNextPage={onFetchNextPage}
         rootRef={rootRef}
-        endMessage="No more requests"
+        endMessage="No more searches"
       />
     </div>
   )

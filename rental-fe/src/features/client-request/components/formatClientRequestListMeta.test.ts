@@ -4,6 +4,7 @@ import {
   formatClientRequestGeoPreview,
   formatClientRequestListPreview,
   formatClientRequestListTimestamp,
+  formatSavedSearchMatchingCount,
 } from "./formatClientRequestListMeta"
 
 describe("formatClientRequestGeoPreview", () => {
@@ -61,5 +62,25 @@ describe("formatClientRequestListTimestamp", () => {
   it("formats earlier dates in the same year", () => {
     const earlier = new Date(2026, 2, 15, 12, 0, 0, 0).toISOString()
     expect(formatClientRequestListTimestamp(earlier, now)).toMatch(/Mar/)
+  })
+})
+
+describe("formatSavedSearchMatchingCount", () => {
+  it.each([undefined, null, 0, -1, Number.NaN] as const)(
+    "hides invalid or empty counts (%s)",
+    (value) => {
+      expect(formatSavedSearchMatchingCount(value)).toBeNull()
+    },
+  )
+
+  it("shows exact counts below the display cap", () => {
+    expect(formatSavedSearchMatchingCount(1)).toBe("1")
+    expect(formatSavedSearchMatchingCount(8)).toBe("8")
+    expect(formatSavedSearchMatchingCount(8.9)).toBe("8")
+  })
+
+  it("caps at 9+", () => {
+    expect(formatSavedSearchMatchingCount(9)).toBe("9+")
+    expect(formatSavedSearchMatchingCount(42)).toBe("9+")
   })
 })

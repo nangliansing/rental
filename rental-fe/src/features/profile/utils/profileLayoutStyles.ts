@@ -23,7 +23,7 @@ export const PROFILE_SECTION_TABLIST_BASE_CLASS =
 
 export const PROFILE_SECTION_TABLIST_2_CLASS = `grid grid-cols-2 ${PROFILE_SECTION_TABLIST_BASE_CLASS}`
 
-export const PROFILE_SECTION_TABLIST_4_CLASS = `grid grid-cols-4 ${PROFILE_SECTION_TABLIST_BASE_CLASS}`
+export const PROFILE_SECTION_TABLIST_3_CLASS = `grid grid-cols-3 ${PROFILE_SECTION_TABLIST_BASE_CLASS}`
 
 export const PROFILE_TAB_CONTROLS_CLASS =
   "mt-4 flex flex-col items-center gap-3 md:flex-row md:justify-between"

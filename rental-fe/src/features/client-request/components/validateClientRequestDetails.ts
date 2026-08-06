@@ -28,7 +28,7 @@ export function validateClientRequestDetails(
   const trimmedDescription = values.description.trim()
 
   if (!trimmedName) {
-    errors.name = "Enter a name for this request."
+    errors.name = "Enter a name for this search."
   } else if (trimmedName.length > CLIENT_REQUEST_NAME_MAX_LENGTH) {
     errors.name = `Name must be at most ${CLIENT_REQUEST_NAME_MAX_LENGTH} characters.`
   }

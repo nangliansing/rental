@@ -92,6 +92,24 @@ export const listingGridCardCornerBadgeLeftClassName =
 export const listingGridCardCornerBadgeRightClassName =
   "absolute right-2 top-2 z-10"
 
+/** Top-right overlays (actions + badges on one row). Sibling to card activators. */
+export const listingCardTopRightStackClassName =
+  "absolute right-2 top-2 z-20 flex items-center gap-1.5"
+
+export function ListingCardTopRightStack({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn(listingCardTopRightStackClassName, className)}>
+      {children}
+    </div>
+  )
+}
+
 /** @deprecated Use listingGridCardCornerBadgeClassName */
 export const listingGridCardBadgeClassName = listingGridCardCornerBadgeClassName
 

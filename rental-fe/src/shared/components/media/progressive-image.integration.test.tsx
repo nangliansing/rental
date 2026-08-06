@@ -8,6 +8,7 @@ import { ListingCoverImage } from "@/features/listing/components/ListingPresenta
 import { ListingPostBody } from "@/features/listing/components/ListingPostBody"
 import type { ListingMedia } from "@/features/map-search/types"
 import { createSearchListing } from "@/test/fixtures/listings"
+import { renderWithProviders } from "@/test/renderWithProviders"
 
 import {
   COVER_CAROUSEL_MAX_WIDTH,
@@ -127,7 +128,7 @@ describe("progressive image integration", () => {
 
   describe("listing post body integration", () => {
     it("keeps the carousel counter visible through the full load cycle", async () => {
-      render(
+      renderWithProviders(
         <ListingPostBody
           listing={createSearchListing({
             media: cloudinaryPhotos,

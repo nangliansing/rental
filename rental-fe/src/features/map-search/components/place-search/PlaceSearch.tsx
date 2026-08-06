@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { cn } from "@/lib/utils"
+import { SavedSearchesButton } from "@/features/saved-search"
 import { useBrowserBackDismiss } from "@/shared/hooks/useBrowserBackDismiss"
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import { useMapSearchPlace } from "../../context/MapSearchSessionContext"
@@ -19,7 +20,8 @@ import {
 import type { SearchMode } from "./SearchModeTabs"
 
 export const PlaceSearch = memo(function PlaceSearch() {
-  const { selectedListerIds, toggleLister } = useMapSearchFilters()
+  const { selectedListerIds, selectedListers, toggleLister, removeLister } =
+    useMapSearchFilters()
   const {
     searchedPlace,
     onPlaceFound,
@@ -42,12 +44,15 @@ export const PlaceSearch = memo(function PlaceSearch() {
     results: listers,
     error: listerSearchError,
     isLoading: isListerSearchLoading,
+    isFetchingNextPage: isFetchingMoreListers,
+    hasNextPage: hasMoreListers,
     setQuery: setListerQuery,
     clearError: clearListerSearchError,
     clearResults: clearListers,
     cancelRequest: cancelListerRequest,
     stopSearch: stopListerSearch,
     search: searchListers,
+    fetchNextPage: fetchMoreListers,
   } = useAgentTypeahead()
 
   const {
@@ -309,35 +314,47 @@ export const PlaceSearch = memo(function PlaceSearch() {
         isMobileSearchOpen && "z-[100]",
       )}
     >
-      <MobilePlaceSearchButton
-        buttonRef={mobileSearchButtonRef}
-        label={selectedPlaceName}
-        onClick={handleOpenMobileSearch}
-      />
+      <div className="flex items-center gap-2 md:hidden">
+        <MobilePlaceSearchButton
+          buttonRef={mobileSearchButtonRef}
+          label={selectedPlaceName}
+          className="flex h-12 min-w-0 flex-1 items-center justify-start gap-2 rounded-full border border-slate-200 bg-white px-4 text-left text-sm text-slate-600 shadow-lg"
+          onClick={handleOpenMobileSearch}
+        />
+        <SavedSearchesButton variant="mobileFullscreen" />
+      </div>
 
-      <DesktopPlaceSearchCombobox
-        inputRef={inputRef}
-        searchMode={searchMode}
-        isSuggestionsOpen={isDesktopSuggestionsOpen}
-        predictions={predictions}
-        placeQuery={placeQuery}
-        placeSearchError={predictionError}
-        isPlaceSearchLoading={isPlaceSearchLoading}
-        listers={listers}
-        listerQuery={listerQuery}
-        listerSearchError={listerSearchError}
-        isListerSearchLoading={isListerSearchLoading}
-        selectedListerIds={selectedListerIds}
-        onFocus={handleDesktopFocus}
-        onDismiss={closeSearchUi}
-        onInputChange={handleDesktopInputChange}
-        onSearch={handleSearch}
-        onSearchModeChange={handleSearchModeChange}
-        onRetryPlaceSearch={handleRetryPlaceSearch}
-        onRetryListerSearch={handleRetryListerSearch}
-        onSelectSuggestion={handleSelectSuggestion}
-        onToggleLister={toggleLister}
-      />
+      <div className="hidden items-start gap-2 md:flex">
+        <DesktopPlaceSearchCombobox
+          inputRef={inputRef}
+          searchMode={searchMode}
+          isSuggestionsOpen={isDesktopSuggestionsOpen}
+          predictions={predictions}
+          placeQuery={placeQuery}
+          placeSearchError={predictionError}
+          isPlaceSearchLoading={isPlaceSearchLoading}
+          listers={listers}
+          listerQuery={listerQuery}
+          listerSearchError={listerSearchError}
+          isListerSearchLoading={isListerSearchLoading}
+          hasMoreListers={hasMoreListers}
+          isFetchingMoreListers={isFetchingMoreListers}
+          selectedListers={selectedListers}
+          selectedListerIds={selectedListerIds}
+          onFocus={handleDesktopFocus}
+          onDismiss={closeSearchUi}
+          onInputChange={handleDesktopInputChange}
+          onSearch={handleSearch}
+          onSearchModeChange={handleSearchModeChange}
+          onRetryPlaceSearch={handleRetryPlaceSearch}
+          onRetryListerSearch={handleRetryListerSearch}
+          onFetchMoreListers={fetchMoreListers}
+          onSelectSuggestion={handleSelectSuggestion}
+          onToggleLister={toggleLister}
+          onRemoveLister={removeLister}
+        />
+        <SavedSearchesButton variant="desktop" />
+      </div>
 
       {isMobileSearchOpen && (
         <MobilePlaceSearchOverlay
@@ -352,15 +369,20 @@ export const PlaceSearch = memo(function PlaceSearch() {
           listerQuery={listerQuery}
           listerSearchError={listerSearchError}
           isListerSearchLoading={isListerSearchLoading}
+          hasMoreListers={hasMoreListers}
+          isFetchingMoreListers={isFetchingMoreListers}
+          selectedListers={selectedListers}
           selectedListerIds={selectedListerIds}
           onInputChange={handleMobileInputChange}
           onSearch={handleSearch}
           onSearchModeChange={handleSearchModeChange}
           onRetryPlaceSearch={handleRetryPlaceSearch}
           onRetryListerSearch={handleRetryListerSearch}
+          onFetchMoreListers={fetchMoreListers}
           onClose={closeSearchUi}
           onSelectSuggestion={handleSelectSuggestion}
           onToggleLister={toggleLister}
+          onRemoveLister={removeLister}
         />
       )}
     </div>

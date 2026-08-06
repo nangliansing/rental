@@ -4,6 +4,10 @@ import { ChevronLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import {
+  DIALOG_ACTION_BUTTON_PRIMARY_CLASSNAME,
+  DIALOG_ACTION_BUTTON_SECONDARY_CLASSNAME,
+} from "@/shared/components/dialogs/dialogActionButtonStyles"
 
 import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
 import type { MapSearchFilters } from "../../filters/types"
@@ -64,7 +68,7 @@ export function FilterConfigPage({
 
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-3 border-t border-slate-100 bg-white/95 px-4 pb-[calc(0.5rem+4rem)] pt-2 backdrop-blur lg:pb-3">
         <Button
-          className="h-11 flex-1 rounded-full bg-slate-950 text-white hover:bg-slate-800"
+          className={cn(DIALOG_ACTION_BUTTON_PRIMARY_CLASSNAME, "flex-1")}
           onClick={handleApply}
         >
           Apply filters
@@ -72,7 +76,7 @@ export function FilterConfigPage({
 
         <Button
           variant="outline"
-          className="h-11 rounded-full px-4 text-slate-500 hover:bg-slate-100 hover:text-slate-950"
+          className={DIALOG_ACTION_BUTTON_SECONDARY_CLASSNAME}
           onClick={handleClear}
         >
           Clear

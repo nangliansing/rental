@@ -120,7 +120,7 @@ describe("ClientRequestPreferencesStep", () => {
 
       await user.click(screen.getByRole("button", { name: "Back" }))
       await user.click(screen.getByRole("button", { name: "Clear" }))
-      await user.click(screen.getByRole("button", { name: "Create request" }))
+      await user.click(screen.getByRole("button", { name: "Continue" }))
 
       expect(onBack).toHaveBeenCalledTimes(1)
       expect(onClear).toHaveBeenCalledTimes(1)
@@ -143,7 +143,7 @@ describe("ClientRequestPreferencesStep", () => {
       expect(onClear).toHaveBeenCalledTimes(1)
       expect(onPrimary).toHaveBeenCalledTimes(1)
       expect(
-        screen.queryByRole("button", { name: "Create request" }),
+        screen.queryByRole("button", { name: "Continue" }),
       ).not.toBeInTheDocument()
     })
 
@@ -172,15 +172,15 @@ describe("ClientRequestPreferencesStep", () => {
       expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled()
       expect(screen.getByRole("button", { name: /Saving/ })).toBeDisabled()
       expect(
-        screen.queryByRole("button", { name: "Create request" }),
+        screen.queryByRole("button", { name: "Continue" }),
       ).not.toBeInTheDocument()
     })
 
-    it("defaults the pending label to Creating…", () => {
+    it("defaults the pending label to Working…", () => {
       renderStep({ disabled: true })
 
       expect(
-        screen.getByRole("button", { name: /Creating/ }),
+        screen.getByRole("button", { name: /Working/ }),
       ).toBeInTheDocument()
     })
 
@@ -190,7 +190,7 @@ describe("ClientRequestPreferencesStep", () => {
 
       await user.click(screen.getByRole("button", { name: "Back" }))
       await user.click(screen.getByRole("button", { name: "Clear" }))
-      await user.click(screen.getByRole("button", { name: /Creating/ }))
+      await user.click(screen.getByRole("button", { name: /Working/ }))
 
       expect(onBack).not.toHaveBeenCalled()
       expect(onClear).not.toHaveBeenCalled()

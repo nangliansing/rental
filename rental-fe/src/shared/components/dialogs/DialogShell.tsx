@@ -12,9 +12,11 @@ import {
   ensureFocusTracking,
   getFocusRestoreTarget,
 } from "@/shared/utils/focusHistory"
-import { getModalRoot } from "@/shared/utils/getModalRoot"
 
-import { ModalPortalHostProvider } from "../ModalPortalHost"
+import {
+  ModalPortalHostProvider,
+  useModalPortalContainer,
+} from "../ModalPortalHost"
 
 type DialogShellProps = {
   children: ReactNode
@@ -34,6 +36,7 @@ export function DialogShell({
   onDismiss,
 }: DialogShellProps) {
   ensureFocusTracking()
+  const portalContainer = useModalPortalContainer()
   const contentElementRef = useRef<HTMLDivElement | null>(null)
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null)
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
@@ -52,7 +55,7 @@ export function DialogShell({
         if (!open && !isDismissDisabled) onDismiss()
       }}
     >
-      <Dialog.Portal container={getModalRoot()}>
+      <Dialog.Portal container={portalContainer}>
         <Dialog.Overlay
           data-slot="dialog-overlay"
           className={cn(

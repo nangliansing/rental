@@ -2,7 +2,6 @@ import type { ComponentType } from "react"
 import {
     ArrowDownUp,
     ChevronDown,
-    ClipboardList,
     Clock3,
     Grid3X3,
     Star,
@@ -16,7 +15,7 @@ import { SegmentedTabs } from "@/shared/components/inputs/SegmentedTabs"
 
 import { ProfileSectionTab } from "./ProfileSectionTab"
 import {
-  PROFILE_SECTION_TABLIST_4_CLASS,
+  PROFILE_SECTION_TABLIST_3_CLASS,
   PROFILE_TAB_CONTROLS_CENTERED_CLASS,
   PROFILE_TAB_CONTROLS_CLASS,
 } from "../utils/profileLayoutStyles"
@@ -25,7 +24,6 @@ export type MyProfileMainTab =
     | "listings"
     | "pending"
     | "reviews"
-    | "requests"
 export type MyProfilePendingFilter =
     | "all"
     | "pending"
@@ -48,11 +46,6 @@ const PROFILE_TABS: ProfileTabConfig[] = [
         id: "pending",
         label: "Pending",
         icon: Clock3,
-    },
-    {
-        id: "requests",
-        label: "Requests",
-        icon: ClipboardList,
     },
     {
         id: "reviews",
@@ -143,7 +136,7 @@ export function MyProfileListingTabs({
     return (
         <>
             <div
-                className={PROFILE_SECTION_TABLIST_4_CLASS}
+                className={PROFILE_SECTION_TABLIST_3_CLASS}
                 role="tablist"
                 aria-label="Profile sections"
             >

@@ -8,13 +8,20 @@ import {
   Zap,
 } from "lucide-react"
 
+import { CopyListingLinkButton } from "@/features/listing/components/CopyListingLinkButton"
 import {
   ListingCoverImage,
   ListingPrice,
 } from "@/features/listing/components/ListingPresentationPrimitives"
 import { ListingAvailabilityDisplay } from "@/features/listing/components/ListingAvailabilityDisplay"
-import { ListingGridCardCornerBadge } from "@/features/listing/components/ListingGridCardPrimitives"
-import { formatBedroom } from "@/features/listing/utils/listingDisplay"
+import {
+  ListingCardTopRightStack,
+  ListingGridCardCornerBadge,
+} from "@/features/listing/components/ListingGridCardPrimitives"
+import {
+  formatBedroom,
+  formatCompactMoney,
+} from "@/features/listing/utils/listingDisplay"
 import { LISTING_GRID_CARD_AVAILABILITY_VARIANT } from "@/features/listing/utils/listingGridAvailabilityVariant"
 import type { BuildingListing } from "../../types"
 import {
@@ -27,17 +34,23 @@ import {
 
 type BuildingListingPreviewProps = {
   listing: BuildingListing
+  /** When set, wraps visuals in a sibling activator (keeps copy control outside). */
+  onSelect?: () => void
 }
 
 function PreviewSeparator() {
   return <span className="shrink-0 text-white/50">·</span>
 }
 
-export function BuildingListingPreview({ listing }: BuildingListingPreviewProps) {
+export function BuildingListingPreview({
+  listing,
+  onSelect,
+}: BuildingListingPreviewProps) {
   const photoUrl = getListingCoverUrl(listing)
+  const selectLabel = `Open listing ${formatCompactMoney(listing.rent)}`
 
-  return (
-    <div className="relative h-[200px] w-[280px] shrink-0 overflow-hidden rounded-md bg-slate-800">
+  const visuals = (
+    <>
       <ListingCoverImage
         photo={photoUrl ? { secureUrl: photoUrl } : null}
         altFallback="Room preview"
@@ -49,10 +62,6 @@ export function BuildingListingPreview({ listing }: BuildingListingPreviewProps)
         availableAt={listing.availableAt}
         variant={LISTING_GRID_CARD_AVAILABILITY_VARIANT}
       />
-
-      <ListingGridCardCornerBadge position="right">
-        {formatContract(listing.contractMonths)}
-      </ListingGridCardCornerBadge>
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/92 via-slate-950/60 to-transparent px-2.5 pb-2 pt-11 text-white">
         <p className="text-lg font-semibold leading-none">
@@ -131,6 +140,30 @@ export function BuildingListingPreview({ listing }: BuildingListingPreviewProps)
           )}
         </div>
       </div>
+    </>
+  )
+
+  return (
+    <div className="relative h-[200px] w-[280px] shrink-0 overflow-hidden rounded-md bg-slate-800">
+      {onSelect ? (
+        <button
+          type="button"
+          className="absolute inset-0 block h-full w-full text-left"
+          aria-label={selectLabel}
+          onClick={onSelect}
+        >
+          {visuals}
+        </button>
+      ) : (
+        visuals
+      )}
+
+      <ListingCardTopRightStack>
+        <CopyListingLinkButton listingId={listing._id} />
+        <ListingGridCardCornerBadge position="inline">
+          {formatContract(listing.contractMonths)}
+        </ListingGridCardCornerBadge>
+      </ListingCardTopRightStack>
     </div>
   )
 }

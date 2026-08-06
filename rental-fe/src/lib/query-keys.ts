@@ -73,6 +73,7 @@ const roots = {
   adminPlatformAdmins: key("admin-platform-admins"),
   adminUserDetails: key("admin-user"),
   geocode: key("geocode"),
+  agentProfileSearch: key("agent-profile-search"),
 } as const
 
 export const queryKeys = {
@@ -320,5 +321,11 @@ export const queryKeys = {
     invalid: childKey(roots.geocode, "invalid"),
     reverse: (lat: number, lng: number) =>
       childKey(roots.geocode, "reverse", lat, lng),
+  },
+  agentProfileSearch: {
+    all: roots.agentProfileSearch,
+    lists: roots.agentProfileSearch,
+    list: ({ query, limit }: { query: string; limit: number }) =>
+      childKey(roots.agentProfileSearch, query, limit),
   },
 } as const

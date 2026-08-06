@@ -66,7 +66,7 @@ export function PlaceSuggestionList({
   }
 
   return (
-    <div className="space-y-1">
+    <div>
       <TypeaheadStatus visuallyHidden>
         {predictions.length} {predictions.length === 1 ? "place" : "places"}{" "}
         found.
@@ -78,7 +78,7 @@ export function PlaceSuggestionList({
           id={`${optionIdPrefix}-${index}`}
           role="option"
           aria-selected={activeIndex === index}
-          className="flex w-full items-center gap-3 rounded-lg bg-white px-3 py-3 text-left text-sm text-slate-950 hover:bg-slate-100"
+          className="flex w-full items-center gap-3 bg-white px-3 py-3 text-left text-sm text-slate-950 hover:bg-slate-100"
           onClick={() => onSelect(prediction)}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100">

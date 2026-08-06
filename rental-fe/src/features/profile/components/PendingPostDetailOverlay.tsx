@@ -30,6 +30,10 @@ import { cn } from "@/lib/utils"
 import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
 import { ModalPortal } from "@/shared/components/ModalPortal"
 import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
+import {
+  DROPDOWN_MENU_CONTENT_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DANGER_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 import { useAccessibleModal } from "@/shared/hooks/useAccessibleModal"
 
 import {
@@ -152,16 +156,21 @@ export function PendingPostDetailOverlay({
                     aria-label="Close submission actions"
                     onClick={() => setIsActionsMenuOpen(false)}
                   />
-                  <div className="absolute right-0 top-11 z-20 w-44 overflow-hidden rounded-xl bg-white py-1 shadow-lg ring-1 ring-slate-200">
+                  <div
+                    className={cn(
+                      "absolute right-0 top-11 z-20",
+                      DROPDOWN_MENU_CONTENT_CLASSNAME,
+                    )}
+                  >
                     <button
                       type="button"
-                      className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                      className={DROPDOWN_MENU_ITEM_DANGER_CLASSNAME}
                       onClick={() => {
                         setIsActionsMenuOpen(false)
                         setIsConfirmingDelete(true)
                       }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5 shrink-0" />
                       Delete
                     </button>
                   </div>

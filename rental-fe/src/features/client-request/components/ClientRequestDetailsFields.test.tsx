@@ -47,10 +47,12 @@ describe("ClientRequestDetailsFields", () => {
       renderFields()
 
       expect(
-        screen.getByPlaceholderText("e.g. Family near Bang Kapi"),
+        screen.getByPlaceholderText("e.g. Quiet 2BR near BTS"),
       ).toBeInTheDocument()
       expect(
-        screen.getByPlaceholderText("Client contact — phone, LINE, email…"),
+        screen.getByPlaceholderText(
+          "Reminders for yourself — must-haves, budget notes…",
+        ),
       ).toBeInTheDocument()
     })
   })
@@ -110,11 +112,11 @@ describe("ClientRequestDetailsFields", () => {
   describe("errors", () => {
     it("shows a name error and marks the name field invalid", () => {
       renderFields({
-        errors: { name: "Enter a name for this request." },
+        errors: { name: "Enter a name for this search." },
       })
 
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Enter a name for this request.",
+        "Enter a name for this search.",
       )
       expect(screen.getByLabelText(/^Name/)).toHaveAttribute(
         "aria-invalid",
@@ -145,7 +147,7 @@ describe("ClientRequestDetailsFields", () => {
     it("can show name and notes errors together", () => {
       renderFields({
         errors: {
-          name: "Enter a name for this request.",
+          name: "Enter a name for this search.",
           description: `Notes must be at most ${CLIENT_REQUEST_DESCRIPTION_MAX_LENGTH} characters.`,
         },
       })
@@ -169,7 +171,7 @@ describe("ClientRequestDetailsFields", () => {
 
     it("associates error text with the field via aria-describedby", () => {
       renderFields({
-        errors: { name: "Enter a name for this request." },
+        errors: { name: "Enter a name for this search." },
       })
 
       const name = screen.getByLabelText(/^Name/)
@@ -177,7 +179,7 @@ describe("ClientRequestDetailsFields", () => {
 
       expect(describedBy).toBeTruthy()
       expect(document.getElementById(describedBy!)).toHaveTextContent(
-        "Enter a name for this request.",
+        "Enter a name for this search.",
       )
     })
   })

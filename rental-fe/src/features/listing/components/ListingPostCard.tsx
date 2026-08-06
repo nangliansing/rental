@@ -15,6 +15,7 @@ import { toContactValues } from "@/features/contacts/utils/toContactValues"
 import type { SearchListing } from "@/features/map-search/types"
 import { SaveListingButton } from "@/features/saved-listing/components/SaveListingButton"
 import { useOptimisticSavedListingToggle } from "@/features/saved-listing/hooks/useOptimisticSavedListingToggle"
+import type { ReadOnlyMapGeo } from "@/shared/google-maps/readonly-map"
 
 import type { ListingVisibility } from "../types"
 import { useUpdateOwnerListing } from "../api"
@@ -32,16 +33,16 @@ import { ListingPostHeader } from "./ListingPostHeader"
 type ListingPostCardProps = {
   listing: SearchListing
   currentUserId?: string
-  canCreateListing?: boolean
   directionsDestination?: DirectionsDestination | null
+  locationMapGeo?: ReadOnlyMapGeo | null
   onDeleted?: (listing: SearchListing) => void
 }
 
 export function ListingPostCard({
   listing,
   currentUserId,
-  canCreateListing = false,
   directionsDestination,
+  locationMapGeo = null,
   onDeleted,
 }: ListingPostCardProps) {
   const dialogActionsRef = useRef<ListingPostCardDialogActions>(null)
@@ -66,8 +67,8 @@ export function ListingPostCard({
         <ListingPostCardArticle
           listing={listing}
           currentUserId={currentUserId}
-          canCreateListing={canCreateListing}
           directionsDestination={directionsDestination}
+          locationMapGeo={locationMapGeo}
           currentVisibility={visibilityOverride ?? listing.visibility}
           currentAvailableAt={currentAvailableAt}
           onAvailableAtUpdated={setAvailableAtOverride}
@@ -78,8 +79,8 @@ export function ListingPostCard({
         <ListingPostCardArticleWithLocalExplore
           listing={listing}
           currentUserId={currentUserId}
-          canCreateListing={canCreateListing}
           directionsDestination={directionsDestination}
+          locationMapGeo={locationMapGeo}
           currentVisibility={visibilityOverride ?? listing.visibility}
           currentAvailableAt={currentAvailableAt}
           onAvailableAtUpdated={setAvailableAtOverride}
@@ -105,8 +106,8 @@ export function ListingPostCard({
 type ListingPostCardArticleProps = {
   listing: SearchListing
   currentUserId?: string
-  canCreateListing: boolean
   directionsDestination?: DirectionsDestination | null
+  locationMapGeo?: ReadOnlyMapGeo | null
   currentVisibility: ListingVisibility
   currentAvailableAt: string | null
   onAvailableAtUpdated: (availableAt: string | null) => void
@@ -139,8 +140,8 @@ function ListingPostCardArticleWithLocalExplore(
 function ListingPostCardArticle({
   listing,
   currentUserId,
-  canCreateListing,
   directionsDestination,
+  locationMapGeo = null,
   currentVisibility,
   currentAvailableAt,
   onAvailableAtUpdated,
@@ -165,9 +166,6 @@ function ListingPostCardArticle({
   const isSavedByMe = savedListingToggle.isSaved
   const listingUrl = buildListingUrl(listing._id)
   const editHref = `/listings/${listing._id}/edit`
-  const listInBuildingHref = listing.buildingId
-    ? `/listings/new?buildingId=${encodeURIComponent(listing.buildingId)}`
-    : undefined
   const profileHref = isOwnListing
     ? "/profile"
     : agent
@@ -239,15 +237,10 @@ function ListingPostCardArticle({
         updatedAt={listing.updatedAt}
         isPrivate={currentVisibility === "PRIVATE"}
         isOwnListing={isOwnListing}
-        canCreateListing={canCreateListing}
         canReportListing={hasActiveAccount}
         listingUrl={listingUrl}
         profileHref={profileHref}
         editHref={editHref}
-        listInBuildingHref={listInBuildingHref}
-        onReviewsRequest={
-          agent ? () => openDialog("openReviewsDialog") : undefined
-        }
         onPrivacyRequest={() => openDialog("openPrivacyDialog")}
         onDeleteRequest={() => openDialog("openDeleteDialog")}
         onReportRequest={() => openDialog("openReportDialog")}
@@ -255,6 +248,7 @@ function ListingPostCardArticle({
 
       <ListingPostBody
         listing={listing}
+        locationMapGeo={locationMapGeo}
         availableAt={currentAvailableAt}
         isOwnListing={isOwnListing}
         isAvailabilitySubmitting={updateListingMutation.isPending}

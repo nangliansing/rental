@@ -2,8 +2,6 @@ import { useCallback, useEffect, type ReactNode } from "react"
 import { FileQuestion } from "lucide-react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import { useAuth } from "@/features/auth/hooks/useAuth"
-import { useMyAgentProfile } from "@/features/profile/api"
 import { useStandalonePageBack } from "@/shared/components/navigation/StandalonePageBackContext"
 import { useNavigateBack } from "@/shared/hooks/useNavigateBack"
 import { LoaderIcon } from "@/shared/components/feedback/LoaderIcon"
@@ -21,10 +19,6 @@ export function ListingDetailPage() {
   const navigate = useNavigate()
   const navigateBack = useNavigateBack("/")
   useStandalonePageBack(navigateBack)
-  const { isAuthenticated } = useAuth()
-  const agentProfileQuery = useMyAgentProfile({
-    enabled: isAuthenticated,
-  })
   const { listing, isLoading, viewerUserId } = useListingDetailData({
     listingId,
   })
@@ -73,7 +67,6 @@ export function ListingDetailPage() {
       <ListingDetailContent
         listing={listing}
         currentUserId={viewerUserId}
-        canCreateListing={agentProfileQuery.canCreateListing}
         onDeleted={navigateBack}
         onListingSelect={handleListingSelect}
         siblingPreviewDetailMode="link"

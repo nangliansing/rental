@@ -22,12 +22,6 @@ vi.mock("@/features/auth/hooks/useAuth", () => ({
   }),
 }))
 
-vi.mock("@/features/profile/api", () => ({
-  useMyAgentProfile: () => ({
-    canCreateListing: false,
-  }),
-}))
-
 vi.mock("../../hooks/useListingDetailData", () => ({
   useListingDetailData: () => ({
     listing: createSearchListing({ _id: "listing-1" }),

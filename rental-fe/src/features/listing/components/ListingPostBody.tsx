@@ -15,8 +15,12 @@ import type { ReactNode } from "react"
 import type { SearchListing } from "@/features/map-search/types"
 import { ExpandableFormattedText } from "@/shared/components/data-display/ExpandableFormattedText"
 import { getEdgeToEdgeHorizontalScrollRowClass } from "@/shared/components/layout/horizontalScrollRow"
+import type { ReadOnlyMapGeo } from "@/shared/google-maps/readonly-map"
 
 import { ListingAvailabilityBadge } from "./ListingAvailabilityBadge"
+import { ListingFacilitiesSection } from "./ListingFacilitiesSection"
+import { ListingLocationSection } from "./ListingLocationSection"
+import { ListingNearbySection } from "./ListingNearbySection"
 import { ListingPhotoCarousel } from "./ListingPhotoCarousel"
 import { MonthlyCostAdvice } from "./MonthlyCostAdvice"
 import {
@@ -34,6 +38,8 @@ import {
 
 type ListingPostBodyProps = {
   listing: SearchListing
+  /** Validated building pin for the location accordion. Omit/null hides the section. */
+  locationMapGeo?: ReadOnlyMapGeo | null
   availableAt?: string | null
   isOwnListing?: boolean
   isAvailabilitySubmitting?: boolean
@@ -69,15 +75,6 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : ""
 }
 
-function normalizeFacilities(value: unknown) {
-  if (!Array.isArray(value)) return []
-
-  return value.flatMap((facility) => {
-    const normalizedFacility = normalizeText(facility)
-    return normalizedFacility ? [normalizedFacility] : []
-  })
-}
-
 function normalizeOccupancy(value: unknown) {
   return typeof value === "number" && Number.isInteger(value) && value > 0
     ? value
@@ -100,6 +97,7 @@ function DetailChipRow({ children }: { children: ReactNode }) {
 
 export function ListingPostBody({
   listing,
+  locationMapGeo = null,
   availableAt = listing.availableAt,
   isOwnListing = false,
   isAvailabilitySubmitting = false,
@@ -112,7 +110,6 @@ export function ListingPostBody({
   )
   const description = listing.description
   const privateNote = normalizeText(listing.privateNote)
-  const facilities = normalizeFacilities(listing.facilities)
   const occupancy = normalizeOccupancy(listing.occupancy)
   const kitchenType = normalizeText(listing.kitchenType)
 
@@ -245,11 +242,12 @@ export function ListingPostBody({
           </DetailChipRow>
         )}
 
-        {facilities.length > 0 && (
-          <p className="text-xs leading-5 text-slate-400">
-            {facilities.join(" · ")}
-          </p>
-        )}
+        <ListingFacilitiesSection facilities={listing.facilities} />
+        <ListingLocationSection
+          geo={locationMapGeo}
+          mapInstanceId={`listing-location-${listing._id}`}
+        />
+        <ListingNearbySection buildingId={listing.buildingId} />
       </section>
 
       <MonthlyCostAdvice

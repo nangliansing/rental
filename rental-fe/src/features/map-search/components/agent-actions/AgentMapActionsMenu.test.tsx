@@ -3,11 +3,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AgentMapActionsMenu } from "./AgentMapActionsMenu"
+import {
+  MAP_LISTING_MODE_ACTION,
+  MAP_SAVE_SEARCH_ACTION,
+} from "./agentMapActionsCopy"
 
 const toast = vi.hoisted(() => vi.fn())
 const getCurrentBounds = vi.hoisted(() => vi.fn())
 const onEnterListingSearch = vi.hoisted(() => vi.fn())
 const onExitListingSearch = vi.hoisted(() => vi.fn())
+const mockUseAuth = vi.hoisted(() => vi.fn())
 
 const controlsState = vi.hoisted(() => ({
   canCreateListing: true,
@@ -27,6 +32,10 @@ const canvasState = vi.hoisted(() => ({
     name: "Bang Kapi",
     position: { lat: 13.7, lng: 100.6 },
   } as { name: string; position: { lat: number; lng: number } } | null,
+  committedBounds: null as {
+    northEast: { lat: number; lng: number }
+    southWest: { lat: number; lng: number }
+  } | null,
 }))
 
 const filtersState = vi.hoisted(() => ({
@@ -61,6 +70,9 @@ const modalPropsSpy = vi.hoisted(() =>
   ),
 )
 
+vi.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: mockUseAuth,
+}))
 vi.mock("@/hooks/use-toast", () => ({ toast }))
 vi.mock("../../context/MapSearchSessionContext", () => ({
   useMapSearchControls: () => ({
@@ -70,6 +82,7 @@ vi.mock("../../context/MapSearchSessionContext", () => ({
   }),
   useMapSearchCanvas: () => ({
     searchedPlace: canvasState.searchedPlace,
+    committedBounds: canvasState.committedBounds,
   }),
 }))
 vi.mock("../../context/MapInteractionContext", () => ({
@@ -116,13 +129,19 @@ vi.mock("radix-ui", () => {
   const Item = ({
     children,
     onSelect,
+    disabled,
   }: {
     children: ReactNode
     onSelect?: (event: Event) => void
+    disabled?: boolean
   }) => (
     <button
       type="button"
-      onClick={() => onSelect?.(new Event("select", { cancelable: true }))}
+      disabled={disabled}
+      onClick={() => {
+        if (disabled) return
+        onSelect?.(new Event("select", { cancelable: true }))
+      }}
     >
       {children}
     </button>
@@ -152,6 +171,12 @@ const bounds = {
   southWest: { lat: 13.7, lng: 100.5 },
 }
 
+const activeAuth = {
+  user: { status: "ACTIVE" },
+  isAuthenticated: true,
+  isLoading: false,
+}
+
 describe("AgentMapActionsMenu", () => {
   beforeEach(() => {
     toast.mockReset()
@@ -160,6 +185,7 @@ describe("AgentMapActionsMenu", () => {
     getCurrentBounds.mockReset()
     modalPropsSpy.mockClear()
     getCurrentBounds.mockReturnValue(bounds)
+    mockUseAuth.mockReturnValue(activeAuth)
 
     controlsState.canCreateListing = true
     controlsState.isListingSearch = false
@@ -174,12 +200,17 @@ describe("AgentMapActionsMenu", () => {
       name: "Bang Kapi",
       position: { lat: 13.7, lng: 100.6 },
     }
+    canvasState.committedBounds = null
     filtersState.submittedFilters = { minRent: 5_000 }
   })
 
   describe("visibility", () => {
-    it("renders nothing when the agent cannot create listings", () => {
-      controlsState.canCreateListing = false
+    it("renders nothing when the user is not authenticated", () => {
+      mockUseAuth.mockReturnValue({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      })
 
       const { container } = render(<AgentMapActionsMenu />)
 
@@ -189,11 +220,24 @@ describe("AgentMapActionsMenu", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("renders the agent actions trigger when listing create is allowed", () => {
+    it("renders for an active authenticated user without a lister profile", () => {
+      controlsState.canCreateListing = false
       render(<AgentMapActionsMenu />)
 
       expect(
-        screen.getByRole("button", { name: "Agent map actions" }),
+        screen.getByRole("button", { name: "Map actions" }),
+      ).toBeInTheDocument()
+      expect(screen.getByTestId("agent-map-actions")).toBeInTheDocument()
+      expect(
+        screen.getByText(MAP_SAVE_SEARCH_ACTION.title),
+      ).toBeInTheDocument()
+    })
+
+    it("renders the map actions trigger when listing create is allowed", () => {
+      render(<AgentMapActionsMenu />)
+
+      expect(
+        screen.getByRole("button", { name: "Map actions" }),
       ).toBeInTheDocument()
       expect(screen.getByTestId("agent-map-actions")).toBeInTheDocument()
     })
@@ -203,7 +247,7 @@ describe("AgentMapActionsMenu", () => {
     it("enters listing mode from the dropdown", () => {
       render(<AgentMapActionsMenu />)
 
-      fireEvent.click(screen.getByText("Enter listing mode"))
+      fireEvent.click(screen.getByText(MAP_LISTING_MODE_ACTION.enterTitle))
 
       expect(onEnterListingSearch).toHaveBeenCalledOnce()
       expect(onExitListingSearch).not.toHaveBeenCalled()
@@ -213,19 +257,37 @@ describe("AgentMapActionsMenu", () => {
       controlsState.isListingSearch = true
       render(<AgentMapActionsMenu />)
 
-      expect(screen.getByText("Exit listing mode")).toBeInTheDocument()
-      fireEvent.click(screen.getByText("Exit listing mode"))
+      expect(
+        screen.getByText(MAP_LISTING_MODE_ACTION.exitTitle),
+      ).toBeInTheDocument()
+      fireEvent.click(screen.getByText(MAP_LISTING_MODE_ACTION.exitTitle))
 
       expect(onExitListingSearch).toHaveBeenCalledOnce()
       expect(onEnterListingSearch).not.toHaveBeenCalled()
     })
+
+    it("mutes enter listing mode when the user has no agent profile", () => {
+      controlsState.canCreateListing = false
+      render(<AgentMapActionsMenu />)
+
+      const listingAction = screen.getByText(MAP_LISTING_MODE_ACTION.enterTitle)
+        .closest("button")
+      expect(listingAction).toBeDisabled()
+      expect(
+        screen.getByText(MAP_LISTING_MODE_ACTION.requiresProfileDescription),
+      ).toBeInTheDocument()
+
+      fireEvent.click(listingAction!)
+
+      expect(onEnterListingSearch).not.toHaveBeenCalled()
+    })
   })
 
-  describe("make a client request", () => {
+  describe("save this search", () => {
     it("opens the confirm modal with the visible area snapshot", async () => {
       render(<AgentMapActionsMenu />)
 
-      fireEvent.click(screen.getByText("Make a client request"))
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
 
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument()
@@ -243,7 +305,7 @@ describe("AgentMapActionsMenu", () => {
       controlsState.nearbyRadiusMeters = 1_000
 
       render(<AgentMapActionsMenu />)
-      fireEvent.click(screen.getByText("Make a client request"))
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
 
       await waitFor(() => {
         expect(screen.getByTestId("modal-title")).toHaveTextContent(
@@ -259,7 +321,7 @@ describe("AgentMapActionsMenu", () => {
       controlsState.lineDistanceMeters = 500
 
       render(<AgentMapActionsMenu />)
-      fireEvent.click(screen.getByText("Make a client request"))
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
 
       await waitFor(() => {
         expect(screen.getByTestId("modal-title")).toHaveTextContent(
@@ -271,9 +333,10 @@ describe("AgentMapActionsMenu", () => {
 
     it("toasts when the map snapshot cannot be built", () => {
       getCurrentBounds.mockReturnValue(null)
+      canvasState.committedBounds = null
       render(<AgentMapActionsMenu />)
 
-      fireEvent.click(screen.getByText("Make a client request"))
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
 
       expect(toast).toHaveBeenCalledWith({
         title: "Map area not ready",
@@ -282,10 +345,24 @@ describe("AgentMapActionsMenu", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
 
+    it("falls back to committed search bounds when live bounds are missing", async () => {
+      getCurrentBounds.mockReturnValue(null)
+      canvasState.committedBounds = bounds
+      render(<AgentMapActionsMenu />)
+
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
+
+      await waitFor(() => {
+        expect(screen.getByRole("dialog")).toBeInTheDocument()
+      })
+      expect(toast).not.toHaveBeenCalled()
+      expect(screen.getByTestId("modal-geo-mode")).toHaveTextContent("area")
+    })
+
     it("closes the confirm modal through onClose", async () => {
       render(<AgentMapActionsMenu />)
 
-      fireEvent.click(screen.getByText("Make a client request"))
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument()
       })
@@ -299,7 +376,7 @@ describe("AgentMapActionsMenu", () => {
       filtersState.submittedFilters = { minRent: 8_000, maxRent: 25_000 }
       render(<AgentMapActionsMenu />)
 
-      fireEvent.click(screen.getByText("Make a client request"))
+      fireEvent.click(screen.getByText(MAP_SAVE_SEARCH_ACTION.title))
 
       await waitFor(() => {
         expect(modalPropsSpy).toHaveBeenCalledWith(

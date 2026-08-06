@@ -4,6 +4,8 @@ import {
   type ReactNode,
 } from "react"
 
+import { getModalRoot } from "@/shared/utils/getModalRoot"
+
 const ModalPortalHostContext = createContext<HTMLElement | null>(null)
 
 type ModalPortalHostProviderProps = {
@@ -12,8 +14,8 @@ type ModalPortalHostProviderProps = {
 }
 
 /**
- * Nest portaled UI (pickers, screen modals) inside an open dialog content node
- * so Radix does not treat them as outside / non-interactive siblings.
+ * Nest portaled UI (pickers, dialogs, menus) inside an open screen-modal /
+ * dialog host so they stack above their parent instead of under `#modal`.
  */
 export function ModalPortalHostProvider({
   host,
@@ -28,4 +30,9 @@ export function ModalPortalHostProvider({
 
 export function useModalPortalHost() {
   return useContext(ModalPortalHostContext)
+}
+
+/** Prefer an open modal/dialog host so nested overlays stack above their parent. */
+export function useModalPortalContainer() {
+  return useModalPortalHost() ?? getModalRoot()
 }

@@ -57,3 +57,22 @@ export function formatClientRequestListTimestamp(
     year: "numeric",
   }).format(date)
 }
+
+/** Cap shown on saved-search list rows (9 → `9+`, higher values stay capped). */
+export const SAVED_SEARCH_MATCHING_COUNT_DISPLAY_CAP = 9
+
+/**
+ * Formats a matching-building count for list rows.
+ * Returns `null` when the count should be hidden (missing / zero / invalid).
+ */
+export function formatSavedSearchMatchingCount(
+  matchingCount: number | null | undefined,
+): string | null {
+  if (matchingCount == null || !Number.isFinite(matchingCount)) return null
+  const count = Math.floor(matchingCount)
+  if (count <= 0) return null
+  if (count >= SAVED_SEARCH_MATCHING_COUNT_DISPLAY_CAP) {
+    return `${SAVED_SEARCH_MATCHING_COUNT_DISPLAY_CAP}+`
+  }
+  return String(count)
+}

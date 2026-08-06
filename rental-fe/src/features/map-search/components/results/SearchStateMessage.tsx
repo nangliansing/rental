@@ -16,6 +16,7 @@ import {
   getSearchScopeShortLabel,
   getSearchScopeVisualPhrase,
 } from "../../utils/map-search-presentation"
+import { EmptyResultsSaveSearchCta } from "./EmptyResultsSaveSearchCta"
 
 type SearchStateMessageProps = {
   status: MapSearchStatus
@@ -131,6 +132,8 @@ export function SearchStateMessage({
                 ? "Edit the line or try a wider search distance."
                 : "Try moving the map or searching a wider area."}
         </p>
+
+        {!isListingSearch && <EmptyResultsSaveSearchCta />}
       </div>
     )
   }

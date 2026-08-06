@@ -1,49 +1,62 @@
 import { memo, useState } from "react"
 import { DropdownMenu } from "radix-ui"
-import { ListPlus, Plus, SendHorizontal } from "lucide-react"
+import { Bookmark, ListPlus, Plus } from "lucide-react"
 
-import { toast } from "@/hooks/use-toast"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import {
+  DROPDOWN_MENU_CONTENT_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DESCRIPTION_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DISABLED_CLASSNAME,
+  DROPDOWN_MENU_ITEM_ICON_CLASSNAME,
+  DROPDOWN_MENU_ITEM_STACKED_CLASSNAME,
+  DROPDOWN_MENU_ITEM_TITLE_CLASSNAME,
+} from "@/shared/components/menus/dropdownMenuStyles"
 import { getModalRoot } from "@/shared/utils/getModalRoot"
 
-import { useMapInteraction } from "../../context/MapInteractionContext"
-import { useMapSearchFilters } from "../../context/MapSearchFilterContext"
-import { useMapSearchCanvas, useMapSearchControls } from "../../context/MapSearchSessionContext"
-import { useMapBounds } from "../../hooks/useMapBounds"
-import {
-  buildMapClientRequestGeoSnapshot,
-  type MapClientRequestGeoSnapshot,
-} from "../../utils/client-request-geo-from-map"
+import { useMapSearchControls } from "../../context/MapSearchSessionContext"
+import { useSaveMapSearch } from "../../hooks/useSaveMapSearch"
 import { MAP_CONTROL_BUTTON_CLASS_NAME } from "../map-control-styles"
+import {
+  MAP_ACTIONS_TRIGGER,
+  MAP_LISTING_MODE_ACTION,
+  MAP_SAVE_SEARCH_ACTION,
+} from "./agentMapActionsCopy"
 import { ConfirmCreateClientRequestModal } from "./ConfirmCreateClientRequestModal"
+
+const menuItemClassName = cn(
+  DROPDOWN_MENU_ITEM_STACKED_CLASSNAME,
+  DROPDOWN_MENU_ITEM_DISABLED_CLASSNAME,
+)
 
 export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
   const {
     canCreateListing,
     isListingSearch,
-    nearbyRadiusMeters,
-    linePoints,
-    lineDistanceMeters,
     onEnterListingSearch,
     onExitListingSearch,
   } = useMapSearchControls()
-  const { mode, selectedPin } = useMapInteraction()
-  const { searchedPlace } = useMapSearchCanvas()
-  const { getCurrentBounds } = useMapBounds()
-  const { submittedFilters } = useMapSearchFilters()
+  const {
+    canSaveSearch,
+    openSaveSearch,
+    closeSaveSearch,
+    requestSnapshot,
+    submittedFilters,
+    isSaveSearchOpen,
+  } = useSaveMapSearch()
 
   const [menuOpen, setMenuOpen] = useState(false)
-  const [requestSnapshot, setRequestSnapshot] =
-    useState<MapClientRequestGeoSnapshot | null>(null)
+  const isListingModeDisabled = !canCreateListing && !isListingSearch
 
-  if (!canCreateListing) return null
+  if (!canSaveSearch) return null
 
   const handleToggleListingMode = () => {
+    if (isListingModeDisabled) return
+
     if (isListingSearch) {
       onExitListingSearch()
     } else {
@@ -53,27 +66,8 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
   }
 
   const handleOpenCreateRequest = () => {
-    const snapshot = buildMapClientRequestGeoSnapshot({
-      mode,
-      selectedPin,
-      nearbyRadiusMeters,
-      linePoints,
-      lineDistanceMeters,
-      visibleBounds: getCurrentBounds(),
-      placeName: searchedPlace?.name ?? null,
-    })
-
     setMenuOpen(false)
-
-    if (!snapshot) {
-      toast({
-        title: "Map area not ready",
-        description: "Wait for the map to load, then try again.",
-      })
-      return
-    }
-
-    setRequestSnapshot(snapshot)
+    openSaveSearch()
   }
 
   return (
@@ -90,66 +84,76 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
                   menuOpen &&
                     "border-slate-950 bg-slate-950 text-white ring-2 ring-slate-950 ring-offset-2 hover:bg-slate-800",
                 )}
-                aria-label="Agent map actions"
+                aria-label={MAP_ACTIONS_TRIGGER.ariaLabel}
                 data-testid="agent-map-actions"
               >
                 <Plus className="h-5 w-5" aria-hidden="true" />
               </button>
             </DropdownMenu.Trigger>
           </TooltipTrigger>
-          <TooltipContent side="left">Agent actions</TooltipContent>
+          <TooltipContent side="left">
+            {MAP_ACTIONS_TRIGGER.tooltip}
+          </TooltipContent>
         </Tooltip>
 
         <DropdownMenu.Portal container={getModalRoot()}>
           <DropdownMenu.Content
             side="left"
-            align="start"
+            align="end"
             sideOffset={10}
-            className="z-[70] min-w-56 rounded-xl border border-slate-200 bg-white p-1.5 text-slate-950 shadow-xl outline-none"
-            aria-label="Agent map actions"
+            collisionPadding={16}
+            className={cn(
+              "z-[70] w-[min(17.5rem,calc(100vw-5rem))] max-w-[calc(100vw-5rem)]",
+              DROPDOWN_MENU_CONTENT_CLASSNAME,
+            )}
+            aria-label={MAP_ACTIONS_TRIGGER.menuAriaLabel}
           >
             <DropdownMenu.Item
-              className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none data-[highlighted]:bg-slate-100"
+              className={menuItemClassName}
+              disabled={isListingModeDisabled}
               onSelect={(event) => {
                 event.preventDefault()
+                if (isListingModeDisabled) return
                 handleToggleListingMode()
               }}
             >
               <ListPlus
-                className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+                className={cn("mt-0.5", DROPDOWN_MENU_ITEM_ICON_CLASSNAME)}
                 aria-hidden="true"
               />
               <span className="min-w-0">
-                <span className="block text-sm font-semibold">
+                <span className={DROPDOWN_MENU_ITEM_TITLE_CLASSNAME}>
                   {isListingSearch
-                    ? "Exit listing mode"
-                    : "Enter listing mode"}
+                    ? MAP_LISTING_MODE_ACTION.exitTitle
+                    : MAP_LISTING_MODE_ACTION.enterTitle}
                 </span>
-                <span className="mt-0.5 block text-xs leading-4 text-slate-500">
-                  {isListingSearch
-                    ? "Return to normal map search."
-                    : "Find buildings to list a room."}
+                <span className={DROPDOWN_MENU_ITEM_DESCRIPTION_CLASSNAME}>
+                  {isListingModeDisabled
+                    ? MAP_LISTING_MODE_ACTION.requiresProfileDescription
+                    : isListingSearch
+                      ? MAP_LISTING_MODE_ACTION.exitDescription
+                      : MAP_LISTING_MODE_ACTION.enterDescription}
                 </span>
               </span>
             </DropdownMenu.Item>
 
             <DropdownMenu.Item
-              className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none data-[highlighted]:bg-slate-100"
+              className={menuItemClassName}
               onSelect={(event) => {
                 event.preventDefault()
                 handleOpenCreateRequest()
               }}
             >
-              <SendHorizontal
-                className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+              <Bookmark
+                className={cn("mt-0.5", DROPDOWN_MENU_ITEM_ICON_CLASSNAME)}
                 aria-hidden="true"
               />
               <span className="min-w-0">
-                <span className="block text-sm font-semibold">
-                  Make a client request
+                <span className={DROPDOWN_MENU_ITEM_TITLE_CLASSNAME}>
+                  {MAP_SAVE_SEARCH_ACTION.title}
                 </span>
-                <span className="mt-0.5 block text-xs leading-4 text-slate-500">
-                  Use the current pin, line, or visible area.
+                <span className={DROPDOWN_MENU_ITEM_DESCRIPTION_CLASSNAME}>
+                  {MAP_SAVE_SEARCH_ACTION.description}
                 </span>
               </span>
             </DropdownMenu.Item>
@@ -160,10 +164,10 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
       </DropdownMenu.Root>
 
       <ConfirmCreateClientRequestModal
-        isOpen={requestSnapshot !== null}
+        isOpen={isSaveSearchOpen}
         snapshot={requestSnapshot}
         filters={submittedFilters}
-        onClose={() => setRequestSnapshot(null)}
+        onClose={closeSaveSearch}
       />
     </>
   )

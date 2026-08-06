@@ -3,6 +3,7 @@ import { Home, User } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
+import { canUsePersonalActions } from "@/features/auth/utils/canUsePersonalActions"
 import { UserMenuButton } from "@/features/user-menu"
 import { NotificationBellButton } from "@/features/notifications"
 import { SavedListingsButton } from "@/features/saved-listing/components/SavedListingsButton"
@@ -46,8 +47,11 @@ function MobileNavLink({ item }: { item: (typeof navItems)[number] }) {
 
 export function AppNavigation() {
     const { user, isAuthenticated, isLoading } = useAuth()
-    const canUsePersonalActions =
-        !isLoading && isAuthenticated && user?.status === "ACTIVE"
+    const canUsePersonalActionsNav = canUsePersonalActions({
+        user,
+        isAuthenticated,
+        isLoading,
+    })
 
     return (
         <>
@@ -58,22 +62,22 @@ export function AppNavigation() {
                 <div
                     className={cn(
                         "grid h-16",
-                        canUsePersonalActions ? "grid-cols-5" : "grid-cols-2"
+                        canUsePersonalActionsNav ? "grid-cols-5" : "grid-cols-2"
                     )}
                 >
                     <MobileNavLink item={navItems[0]} />
-                    {canUsePersonalActions && (
+                    {canUsePersonalActionsNav && (
                         <div className="flex items-center justify-center">
                             <SavedListingsButton variant="mobile" />
                         </div>
                     )}
-                    {canUsePersonalActions && (
+                    {canUsePersonalActionsNav && (
                         <div className="flex items-center justify-center">
                             <NotificationBellButton variant="mobile" />
                         </div>
                     )}
                     <MobileNavLink item={navItems[1]} />
-                    {canUsePersonalActions && <UserMenuButton variant="mobile" />}
+                    {canUsePersonalActionsNav && <UserMenuButton variant="mobile" />}
                 </div>
             </nav>
 
@@ -81,7 +85,7 @@ export function AppNavigation() {
                 aria-label="Primary navigation"
                 className="fixed right-4 top-4 z-[70] hidden rounded-full border border-slate-200 bg-white p-1 shadow-lg md:flex"
             >
-                {canUsePersonalActions && (
+                {canUsePersonalActionsNav && (
                     <>
                         <SavedListingsButton variant="desktop" />
                         <NotificationBellButton variant="desktop" />
@@ -108,7 +112,7 @@ export function AppNavigation() {
                         </NavLink>
                     )
                 })}
-                {canUsePersonalActions && <UserMenuButton variant="desktop" />}
+                {canUsePersonalActionsNav && <UserMenuButton variant="desktop" />}
             </nav>
         </>
     )

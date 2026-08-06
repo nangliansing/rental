@@ -80,3 +80,4 @@ export {
   type UpdateOwnerClientRequestStatusInput,
 } from "./updateOwnerClientRequestStatus"
 export { useUpdateOwnerClientRequestStatus } from "./useUpdateOwnerClientRequestStatus"
+export { useClientRequestMatchingBuildings } from "./useClientRequestMatchingBuildings"

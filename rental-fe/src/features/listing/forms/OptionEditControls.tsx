@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { DIALOG_ACTION_BUTTON_PRIMARY_CLASSNAME } from "@/shared/components/dialogs/dialogActionButtonStyles"
 
 type OptionRadioCardProps = {
   id: string
@@ -135,7 +136,10 @@ export function OptionEditFormShell({
       <footer className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:flex md:justify-end md:px-5">
         <Button
           type="submit"
-          className="h-11 w-full rounded-full bg-slate-950 text-white hover:bg-slate-800 md:h-9 md:w-auto md:min-w-24 md:px-5"
+          className={cn(
+            DIALOG_ACTION_BUTTON_PRIMARY_CLASSNAME,
+            "w-full md:w-auto md:min-w-28",
+          )}
           disabled={isSubmitting || !hasChanged}
         >
           {isSubmitting && <LoaderIcon className="h-4 w-4" />}

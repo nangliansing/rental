@@ -2,16 +2,23 @@ import type { ReactNode } from "react"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { DIALOG_ACTION_BUTTON_BASE_CLASSNAME } from "@/shared/components/dialogs/dialogActionButtonStyles"
 
 import { ClientRequestFormHeader } from "./ClientRequestFormHeader"
 import { ClientRequestStepDots } from "./ClientRequestStepDots"
 
-/** DialogShell `contentClassName` for full-screen mobile / card desktop wizards. */
+/** DialogShell `contentClassName` for full-screen mobile / fixed-height desktop wizards. */
 export const CLIENT_REQUEST_WIZARD_DIALOG_CONTENT_CLASSNAME =
-  "flex h-dvh max-h-dvh w-full max-w-none flex-col overflow-hidden rounded-none p-0 text-left shadow-xl sm:h-auto sm:max-h-[min(40rem,calc(100dvh-2rem))] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl"
+  "flex h-dvh max-h-dvh w-full max-w-none flex-col overflow-hidden rounded-none p-0 text-left shadow-xl sm:h-[min(40rem,calc(100dvh-2rem))] sm:max-h-[min(40rem,calc(100dvh-2rem))] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl"
+
+/** Shared footing actions for Cancel / Continue / Back / Save in the wizard. */
+export const CLIENT_REQUEST_WIZARD_ACTION_BUTTON_CLASSNAME = cn(
+  DIALOG_ACTION_BUTTON_BASE_CLASSNAME,
+  "min-w-[7.5rem]",
+)
 
 type ClientRequestWizardLayoutProps = {
-  step: 1 | 2
+  step: 1 | 2 | 3
   title: string
   description: string
   onClose: () => void
@@ -29,7 +36,7 @@ type ClientRequestWizardLayoutProps = {
 }
 
 /**
- * Shared chrome for the two-step client-request wizard:
+ * Shared chrome for the three-step client-request wizard:
  * step dots, close control, optional hero, header, and scrollable body.
  */
 export function ClientRequestWizardLayout({

@@ -5,6 +5,11 @@ import type React from "react"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { BuildingFollowersSection } from "@/features/building-follow/components/BuildingFollowersSection"
 import { BuildingPanelSummarySection } from "@/features/buildings/components/BuildingPanelSummarySection"
+import {
+  BuildingNeighbourhoodExploreModal,
+  useNeighbourhoodExploreDialog,
+  useNeighbourhoodExploreDialogContext,
+} from "@/features/buildings/neighbourhood-explore"
 import { ListingGridCard } from "@/features/listing/components/ListingGridCard"
 import {
   ListingGridPreviewPortal,
@@ -19,7 +24,6 @@ import { flattenUniqueInfiniteItems } from "@/shared/utils/infinitePages"
 import { DEFAULT_LISTING_PAGE_SIZE } from "@/shared/constants/pagination"
 
 import { useSearchListingsInBuilding } from "../../api/useSearchListingsInBuilding"
-import { useBuildingDetailSession } from "../../context/BuildingDetailSessionContext"
 import { useMapSearchResults } from "../../context/MapSearchSessionContext"
 import { CollectionRefreshErrorBanner } from "./CollectionRefreshErrorBanner"
 import { BuildingListingsSectionHeader } from "./BuildingListingsSectionHeader"
@@ -52,7 +56,10 @@ export function BuildingDetailPage({
   )
 
   const { user } = useAuth()
-  const exploreNeighbourhood = useBuildingDetailSession()
+  const sharedExploreNeighbourhood = useNeighbourhoodExploreDialogContext()
+  const localExploreNeighbourhood = useNeighbourhoodExploreDialog()
+  const exploreNeighbourhood =
+    sharedExploreNeighbourhood ?? localExploreNeighbourhood
   const {
     selectedBuilding: building,
     buildingDetailFilters,
@@ -196,6 +203,15 @@ export function BuildingDetailPage({
         detailMode="modal"
         onOpenDetail={openListing}
       />
+
+      {!sharedExploreNeighbourhood ? (
+        <BuildingNeighbourhoodExploreModal
+          buildingId={building._id}
+          isOpen={exploreNeighbourhood.isOpen}
+          onClose={exploreNeighbourhood.close}
+          trackBrowserHistory={false}
+        />
+      ) : null}
     </>
   )
 }

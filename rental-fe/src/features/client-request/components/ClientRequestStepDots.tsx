@@ -1,9 +1,11 @@
 import { cn } from "@/lib/utils"
 
 type ClientRequestStepDotsProps = {
-  step: 1 | 2
+  step: 1 | 2 | 3
   className?: string
 }
+
+const TOTAL_STEPS = 3
 
 /** Shared step indicator for create / edit client-request wizards. */
 export function ClientRequestStepDots({
@@ -17,9 +19,9 @@ export function ClientRequestStepDots({
         className,
       )}
       role="status"
-      aria-label={`Step ${step} of 2`}
+      aria-label={`Step ${step} of ${TOTAL_STEPS}`}
     >
-      {([1, 2] as const).map((dotStep) => {
+      {([1, 2, 3] as const).map((dotStep) => {
         const isActive = dotStep === step
 
         return (

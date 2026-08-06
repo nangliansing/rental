@@ -43,6 +43,11 @@ export type ClientRequest = {
   status: ClientRequestStatus
   geoSearch: ClientRequestGeoSearch
   filters: ClientRequestFilters
+  /**
+   * Buildings currently matching this saved search.
+   * Absent/null when the API has not computed a count yet.
+   */
+  matchingCount?: number | null
   isDeleted: boolean
   deletedAt: string | null
   createdAt: string
@@ -227,6 +232,16 @@ export const parseClientRequestFilters = (
   return filters
 }
 
+/** Optional list-row match tally; invalid / missing values become `null`. */
+export const parseClientRequestMatchingCount = (
+  value: unknown,
+): number | null => {
+  if (value == null) return null
+  const count = readNumber(value)
+  if (count == null || !Number.isFinite(count) || count < 0) return null
+  return Math.floor(count)
+}
+
 export const parseClientRequest = (value: unknown): ClientRequest => {
   const clientRequest = readRecord(value)
   const id = readString(clientRequest._id)
@@ -251,6 +266,7 @@ export const parseClientRequest = (value: unknown): ClientRequest => {
     status: parseClientRequestStatus(clientRequest.status),
     geoSearch: parseClientRequestGeoSearch(clientRequest.geoSearch),
     filters: parseClientRequestFilters(clientRequest.filters),
+    matchingCount: parseClientRequestMatchingCount(clientRequest.matchingCount),
     isDeleted: readBoolean(clientRequest.isDeleted),
     deletedAt: readNullableString(clientRequest.deletedAt),
     createdAt,
