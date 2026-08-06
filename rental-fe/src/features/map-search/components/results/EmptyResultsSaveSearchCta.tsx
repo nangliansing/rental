@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 
 import { useCommittedSaveMapSearch } from "../../hooks/useSaveMapSearch"
 import { MAP_SAVE_SEARCH_ACTION } from "../agent-actions/agentMapActionsCopy"
-import { ConfirmCreateClientRequestModal } from "../agent-actions/ConfirmCreateClientRequestModal"
+import { ConfirmCreateSavedSearchModal } from "../agent-actions/ConfirmCreateSavedSearchModal"
 
 /** Primary empty-state CTA for eligible users to watch the current search. */
 export function EmptyResultsSaveSearchCta() {
@@ -12,7 +12,7 @@ export function EmptyResultsSaveSearchCta() {
     canSaveSearch,
     openSaveSearch,
     closeSaveSearch,
-    requestSnapshot,
+    savedSearchSnapshot,
     submittedFilters,
     isSaveSearchOpen,
   } = useCommittedSaveMapSearch()
@@ -35,9 +35,9 @@ export function EmptyResultsSaveSearchCta() {
         </p>
       </div>
 
-      <ConfirmCreateClientRequestModal
+      <ConfirmCreateSavedSearchModal
         isOpen={isSaveSearchOpen}
-        snapshot={requestSnapshot}
+        snapshot={savedSearchSnapshot}
         filters={submittedFilters}
         onClose={closeSaveSearch}
       />

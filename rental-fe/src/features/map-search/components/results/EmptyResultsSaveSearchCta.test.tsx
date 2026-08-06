@@ -78,8 +78,8 @@ vi.mock("../../context/MapSearchFilterContext", () => ({
     submittedFilters: filtersState.submittedFilters,
   }),
 }))
-vi.mock("../agent-actions/ConfirmCreateClientRequestModal", () => ({
-  ConfirmCreateClientRequestModal: (
+vi.mock("../agent-actions/ConfirmCreateSavedSearchModal", () => ({
+  ConfirmCreateSavedSearchModal: (
     props: Parameters<typeof modalPropsSpy>[0],
   ) => modalPropsSpy(props),
 }))

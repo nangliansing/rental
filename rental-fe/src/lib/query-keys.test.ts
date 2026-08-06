@@ -167,15 +167,15 @@ describe("queryKeys", () => {
         expected: ["owner-pending-posts", "PENDING", 10],
       },
       {
-        actual: queryKeys.clientRequests.ownerList({
+        actual: queryKeys.savedSearches.ownerList({
           status: "Waiting",
           limit: 10,
         }),
-        expected: ["owner-client-requests", "Waiting", 10],
+        expected: ["owner-saved-searches", "Waiting", 10],
       },
       {
-        actual: queryKeys.clientRequests.ownerDetail("request-1"),
-        expected: ["owner-client-request", "request-1"],
+        actual: queryKeys.savedSearches.ownerDetail("request-1"),
+        expected: ["owner-saved-search", "request-1"],
       },
       {
         actual: queryKeys.savedListings.list({ limit: 10 }),
@@ -342,15 +342,15 @@ describe("queryKeys", () => {
         }),
       },
       {
-        family: queryKeys.clientRequests.ownerLists,
-        member: queryKeys.clientRequests.ownerList({
+        family: queryKeys.savedSearches.ownerLists,
+        member: queryKeys.savedSearches.ownerList({
           status: "Waiting",
           limit: 10,
         }),
       },
       {
-        family: queryKeys.clientRequests.ownerDetails,
-        member: queryKeys.clientRequests.ownerDetail("request-1"),
+        family: queryKeys.savedSearches.ownerDetails,
+        member: queryKeys.savedSearches.ownerDetail("request-1"),
       },
       {
         family: queryKeys.savedListings.lists,

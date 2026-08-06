@@ -48,8 +48,8 @@ const roots = {
   profiles: key("agent-profiles"),
   notifications: key("notifications"),
   ownerPendingPosts: key("owner-pending-posts"),
-  ownerClientRequests: key("owner-client-requests"),
-  ownerClientRequestDetails: key("owner-client-request"),
+  ownerSavedSearches: key("owner-saved-searches"),
+  ownerSavedSearchDetails: key("owner-saved-search"),
   savedListings: key("saved-listings"),
   buildingFollows: key("building-follows"),
   listerReviews: key("lister-reviews"),
@@ -98,14 +98,14 @@ export const queryKeys = {
     ownerList: ({ status, limit }: { status: string; limit: number }) =>
       childKey(roots.ownerPendingPosts, status, limit),
   },
-  clientRequests: {
-    all: roots.ownerClientRequests,
-    ownerLists: roots.ownerClientRequests,
+  savedSearches: {
+    all: roots.ownerSavedSearches,
+    ownerLists: roots.ownerSavedSearches,
     ownerList: ({ status, limit }: { status: string; limit: number }) =>
-      childKey(roots.ownerClientRequests, status, limit),
-    ownerDetails: roots.ownerClientRequestDetails,
-    ownerDetail: (clientRequestId: string | undefined) =>
-      childKey(roots.ownerClientRequestDetails, clientRequestId),
+      childKey(roots.ownerSavedSearches, status, limit),
+    ownerDetails: roots.ownerSavedSearchDetails,
+    ownerDetail: (savedSearchId: string | undefined) =>
+      childKey(roots.ownerSavedSearchDetails, savedSearchId),
   },
   savedListings: {
     all: roots.savedListings,
