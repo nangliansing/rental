@@ -118,6 +118,16 @@ describe("createSavedSearchService", () => {
       mode: GEO_SEARCH_MODES.AREA,
       bounds: validBounds,
       placeName: "Phrom Phong",
+      coverage: {
+        type: "Polygon",
+        coordinates: [[
+          [100.62, 13.75],
+          [100.66, 13.75],
+          [100.66, 13.78],
+          [100.62, 13.78],
+          [100.62, 13.75],
+        ]],
+      },
     });
     assert.equal(record.filters.minRent, 15_000);
     assert.equal(record.filters.maxRent, 35_000);

@@ -71,6 +71,19 @@ savedSearchSchema.index({
   _id: 1,
 });
 
+savedSearchSchema.index(
+  {
+    "geoSearch.coverage": "2dsphere",
+  },
+  {
+    name: "active_saved_search_coverage_2dsphere",
+    partialFilterExpression: {
+      status: SAVED_SEARCH_STATUSES.WAITING,
+      isDeleted: false,
+    },
+  },
+);
+
 const SavedSearch =
   mongoose.models[MODEL_NAMES.SavedSearch] ||
   mongoose.model(

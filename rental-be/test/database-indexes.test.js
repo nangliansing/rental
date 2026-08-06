@@ -109,6 +109,17 @@ describe("database index contracts", () => {
       { buildingId: 1, requestedBy: 1, status: 1 },
       { unique: true },
     );
+    assertSchemaIndex(
+      "SavedSearch",
+      { "geoSearch.coverage": "2dsphere" },
+      {
+        name: "active_saved_search_coverage_2dsphere",
+        partialFilterExpression: {
+          status: "Waiting",
+          isDeleted: false,
+        },
+      },
+    );
   });
 
   test("normalizes actual and expected index metadata consistently", () => {

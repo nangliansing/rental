@@ -10,6 +10,7 @@ import {
   buildOwnerSavedSearchFilter,
   throwSavedSearchClosed,
   throwSavedSearchNotFound,
+  withSavedSearchCoverage,
 } from "../utils/index.js";
 
 export const ownerUpdateSavedSearchService = async ({
@@ -51,6 +52,10 @@ export const ownerUpdateSavedSearchService = async ({
     body,
     savedSearch: existingSavedSearch,
   });
+
+  if (update.geoSearch) {
+    update.geoSearch = withSavedSearchCoverage(update.geoSearch);
+  }
 
   const updateFilter = {
     ...ownerFilter,

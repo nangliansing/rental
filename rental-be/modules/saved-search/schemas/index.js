@@ -10,6 +10,7 @@ export {
   lineGeometrySchema,
   lineGeometrySchemaDefinition,
 } from "./line-geometry.schema.js";
+export { coverageGeometrySchema } from "./coverage-geometry.schema.js";
 export {
   geoSearchSchema,
   geoSearchSchemaDefinition,

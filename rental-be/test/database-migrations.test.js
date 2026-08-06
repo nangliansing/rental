@@ -17,6 +17,7 @@ import {
   MigrationLockError,
   runMigrations,
 } from "../shared/database/migrations/index.js";
+import { up as addSavedSearchCoverage } from "../scripts/migrations/20260806T060000Z_add-saved-search-coverage.js";
 
 const quietLogger = { info() {} };
 let mongoServer;
@@ -51,6 +52,54 @@ after(async () => {
 });
 
 describe("database migrations", () => {
+  test("saved-search coverage backfill is complete and idempotent", async () => {
+    const collection = db.collection("client_requests");
+    await collection.insertMany([
+      {
+        name: "Area",
+        geoSearch: {
+          mode: "area",
+          bounds: {
+            northEast: { lat: 13.78, lng: 100.66 },
+            southWest: { lat: 13.75, lng: 100.62 },
+          },
+        },
+      },
+      {
+        name: "Nearby",
+        geoSearch: {
+          mode: "nearby",
+          position: { lat: 13.75, lng: 100.64 },
+          radiusMeters: 500,
+        },
+      },
+      {
+        name: "Line",
+        geoSearch: {
+          mode: "line",
+          geometry: {
+            type: "LineString",
+            coordinates: [[100.62, 13.75], [100.66, 13.78]],
+          },
+          distanceMeters: 250,
+        },
+      },
+    ]);
+
+    await addSavedSearchCoverage({ db });
+    const firstPass = await collection.find().sort({ name: 1 }).toArray();
+    await addSavedSearchCoverage({ db });
+    const secondPass = await collection.find().sort({ name: 1 }).toArray();
+
+    assert.deepEqual(secondPass, firstPass);
+    assert.equal(
+      firstPass.every(({ geoSearch }) =>
+        ["Polygon", "MultiPolygon"].includes(geoSearch.coverage.type),
+      ),
+      true,
+    );
+  });
+
   test("applies migrations in order and skips completed migrations", async () => {
     const executionOrder = [];
     const migrations = [

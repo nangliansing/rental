@@ -16,6 +16,7 @@ import adminReportRoutes from "../modules/report/admin-report.routes.js";
 import adminReviewReportRoutes from "../modules/review-report/admin-review-report.routes.js";
 import adminSuspensionRoutes from "../modules/suspension/admin-suspension.routes.js";
 import adminUserRoutes from "../modules/user/admin-user.routes.js";
+import adminSavedSearchRoutes from "../modules/saved-search/admin-saved-search.routes.js";
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use("/reports", adminReportRoutes);
 router.use("/review-reports", adminReviewReportRoutes);
 router.use("/suspensions", adminSuspensionRoutes);
 router.use("/users", adminUserRoutes);
+router.use("/saved-searches", adminSavedSearchRoutes);
 
 export default router;
