@@ -339,7 +339,12 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
     });
     await SavedSearch.collection.updateOne(
       { _id: opportunity._id },
-      { $set: { title: "Legacy title", description: "Private description" } },
+      {
+        $set: {
+          title: "Legacy title",
+          description: "Private description",
+        },
+      },
     );
     await seedSavedSearch({
       user: owner.user,
@@ -363,8 +368,13 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
     const response = await searchOpportunities(agent.token);
 
     assert.equal(response.status, 200);
-    assert.deepEqual(response.body.data.map(({ name }) => name), ["Opportunity"]);
+    assert.equal(response.body.data.length, 1);
+    assert.equal(
+      response.body.data[0]._id,
+      opportunity._id.toString(),
+    );
     assert.deepEqual(response.body.pagination, { page: 1, limit: 20, total: 1 });
+    assert.equal(response.body.data[0].name, undefined);
     assert.equal(response.body.data[0].createdBy, undefined);
     assert.equal(response.body.data[0].isDeleted, undefined);
     assert.equal(response.body.data[0].title, undefined);
@@ -399,7 +409,10 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
   test("supports every area geometry through the HTTP endpoint", async () => {
     const agent = await createAgent();
     const owner = await createUser();
-    await seedSavedSearch({ user: owner.user, name: "Geometry opportunity" });
+    const opportunity = await seedSavedSearch({
+      user: owner.user,
+      name: "Geometry opportunity",
+    });
 
     const areas = [
       {
@@ -435,9 +448,11 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
         pagination: { page: 1, limit: 20 },
       });
       assert.equal(response.status, 200);
-      assert.deepEqual(response.body.data.map(({ name }) => name), [
-        "Geometry opportunity",
-      ]);
+      assert.deepEqual(
+        response.body.data.map(({ _id }) => _id),
+        [opportunity._id.toString()],
+      );
+      assert.equal(response.body.data[0].name, undefined);
     }
   });
 
@@ -570,8 +585,11 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
   test("ranks unmatched opportunities first and applies matchStatus before pagination", async () => {
     const agent = await createAgent();
     const owner = await createUser();
-    await seedSavedSearch({ user: owner.user, name: "Matched opportunity" });
-    await seedSavedSearch({
+    const matchedOpportunity = await seedSavedSearch({
+      user: owner.user,
+      name: "Matched opportunity",
+    });
+    const unmatchedOpportunity = await seedSavedSearch({
       user: owner.user,
       name: "Unmatched opportunity",
       filters: { minRent: 0, maxRent: 1_000 },
@@ -597,10 +615,14 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
 
     const all = await searchOpportunities(agent.token);
     assert.equal(all.status, 200);
-    assert.deepEqual(all.body.data.map(({ name }) => name), [
-      "Unmatched opportunity",
-      "Matched opportunity",
-    ]);
+    assert.deepEqual(
+      all.body.data.map(({ _id }) => _id),
+      [
+        unmatchedOpportunity._id.toString(),
+        matchedOpportunity._id.toString(),
+      ],
+    );
+    assert.equal(all.body.data[0].name, undefined);
     assert.deepEqual(all.body.data[0].opportunityRanking, {
       score: 1,
       inventoryGapScore: 1,
@@ -614,9 +636,10 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
       matchStatus: "unmatched",
       pagination: { page: 1, limit: 1 },
     });
-    assert.deepEqual(unmatched.body.data.map(({ name }) => name), [
-      "Unmatched opportunity",
-    ]);
+    assert.deepEqual(
+      unmatched.body.data.map(({ _id }) => _id),
+      [unmatchedOpportunity._id.toString()],
+    );
     assert.deepEqual(unmatched.body.pagination, { page: 1, limit: 1, total: 1 });
 
     const matched = await searchOpportunities(agent.token, {
@@ -624,9 +647,10 @@ describe("POST /api/v1/agent-demand-opportunities/search", () => {
       matchStatus: "matched",
       pagination: { page: 1, limit: 1 },
     });
-    assert.deepEqual(matched.body.data.map(({ name }) => name), [
-      "Matched opportunity",
-    ]);
+    assert.deepEqual(
+      matched.body.data.map(({ _id }) => _id),
+      [matchedOpportunity._id.toString()],
+    );
     assert.deepEqual(matched.body.pagination, { page: 1, limit: 1, total: 1 });
   });
 

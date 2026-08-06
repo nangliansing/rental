@@ -1,24 +1,22 @@
 import { memo, useState } from "react"
 import { DropdownMenu } from "radix-ui"
-import { Bookmark, ListPlus, Plus } from "lucide-react"
+import { Bookmark, ListPlus, Plus, Radar } from "lucide-react"
 
+import {
+  EXPLORE_OPPORTUNITIES_ACTION,
+  ExploreOpportunitiesPanelModal,
+} from "@/features/explore-opportunities-panel"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import {
-  DROPDOWN_MENU_CONTENT_CLASSNAME,
-  DROPDOWN_MENU_ITEM_DESCRIPTION_CLASSNAME,
-  DROPDOWN_MENU_ITEM_DISABLED_CLASSNAME,
-  DROPDOWN_MENU_ITEM_ICON_CLASSNAME,
-  DROPDOWN_MENU_ITEM_STACKED_CLASSNAME,
-  DROPDOWN_MENU_ITEM_TITLE_CLASSNAME,
-} from "@/shared/components/menus/dropdownMenuStyles"
+import { DROPDOWN_MENU_CONTENT_CLASSNAME } from "@/shared/components/menus/dropdownMenuStyles"
 import { getModalRoot } from "@/shared/utils/getModalRoot"
 
 import { useMapSearchControls } from "../../context/MapSearchSessionContext"
+import { useExploreMapOpportunities } from "../../hooks/useExploreMapOpportunities"
 import { useSaveMapSearch } from "../../hooks/useSaveMapSearch"
 import { MAP_CONTROL_BUTTON_CLASS_NAME } from "../map-control-styles"
 import {
@@ -26,12 +24,8 @@ import {
   MAP_LISTING_MODE_ACTION,
   MAP_SAVE_SEARCH_ACTION,
 } from "./agentMapActionsCopy"
+import { AgentMapStackedMenuItem } from "./AgentMapStackedMenuItem"
 import { ConfirmCreateSavedSearchModal } from "./ConfirmCreateSavedSearchModal"
-
-const menuItemClassName = cn(
-  DROPDOWN_MENU_ITEM_STACKED_CLASSNAME,
-  DROPDOWN_MENU_ITEM_DISABLED_CLASSNAME,
-)
 
 export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
   const {
@@ -48,9 +42,19 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
     submittedFilters,
     isSaveSearchOpen,
   } = useSaveMapSearch()
+  const {
+    canExploreOpportunities,
+    openExploreOpportunities,
+    closeExploreOpportunities,
+    exploreSession,
+    isExploreOpportunitiesOpen,
+  } = useExploreMapOpportunities()
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tooltipOpen, setTooltipOpen] = useState(false)
   const isListingModeDisabled = !canCreateListing && !isListingSearch
+  const suppressTooltip =
+    menuOpen || isExploreOpportunitiesOpen || isSaveSearchOpen
 
   if (!canSaveSearch) return null
 
@@ -67,13 +71,30 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
 
   const handleOpenCreateRequest = () => {
     setMenuOpen(false)
+    setTooltipOpen(false)
     openSaveSearch()
+  }
+
+  const handleOpenExploreOpportunities = () => {
+    if (!canExploreOpportunities) return
+    setMenuOpen(false)
+    setTooltipOpen(false)
+    openExploreOpportunities()
   }
 
   return (
     <>
       <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <Tooltip>
+        <Tooltip
+          open={suppressTooltip ? false : tooltipOpen}
+          onOpenChange={(open) => {
+            if (suppressTooltip) {
+              setTooltipOpen(false)
+              return
+            }
+            setTooltipOpen(open)
+          }}
+        >
           <TooltipTrigger asChild>
             <DropdownMenu.Trigger asChild>
               <button
@@ -108,55 +129,39 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
             )}
             aria-label={MAP_ACTIONS_TRIGGER.menuAriaLabel}
           >
-            <DropdownMenu.Item
-              className={menuItemClassName}
+            <AgentMapStackedMenuItem
+              icon={ListPlus}
+              title={
+                isListingSearch
+                  ? MAP_LISTING_MODE_ACTION.exitTitle
+                  : MAP_LISTING_MODE_ACTION.enterTitle
+              }
+              description={
+                isListingModeDisabled
+                  ? MAP_LISTING_MODE_ACTION.requiresProfileDescription
+                  : isListingSearch
+                    ? MAP_LISTING_MODE_ACTION.exitDescription
+                    : MAP_LISTING_MODE_ACTION.enterDescription
+              }
               disabled={isListingModeDisabled}
-              onSelect={(event) => {
-                event.preventDefault()
-                if (isListingModeDisabled) return
-                handleToggleListingMode()
-              }}
-            >
-              <ListPlus
-                className={cn("mt-0.5", DROPDOWN_MENU_ITEM_ICON_CLASSNAME)}
-                aria-hidden="true"
-              />
-              <span className="min-w-0">
-                <span className={DROPDOWN_MENU_ITEM_TITLE_CLASSNAME}>
-                  {isListingSearch
-                    ? MAP_LISTING_MODE_ACTION.exitTitle
-                    : MAP_LISTING_MODE_ACTION.enterTitle}
-                </span>
-                <span className={DROPDOWN_MENU_ITEM_DESCRIPTION_CLASSNAME}>
-                  {isListingModeDisabled
-                    ? MAP_LISTING_MODE_ACTION.requiresProfileDescription
-                    : isListingSearch
-                      ? MAP_LISTING_MODE_ACTION.exitDescription
-                      : MAP_LISTING_MODE_ACTION.enterDescription}
-                </span>
-              </span>
-            </DropdownMenu.Item>
+              onSelect={handleToggleListingMode}
+            />
 
-            <DropdownMenu.Item
-              className={menuItemClassName}
-              onSelect={(event) => {
-                event.preventDefault()
-                handleOpenCreateRequest()
-              }}
-            >
-              <Bookmark
-                className={cn("mt-0.5", DROPDOWN_MENU_ITEM_ICON_CLASSNAME)}
-                aria-hidden="true"
+            <AgentMapStackedMenuItem
+              icon={Bookmark}
+              title={MAP_SAVE_SEARCH_ACTION.title}
+              description={MAP_SAVE_SEARCH_ACTION.description}
+              onSelect={handleOpenCreateRequest}
+            />
+
+            {canExploreOpportunities ? (
+              <AgentMapStackedMenuItem
+                icon={Radar}
+                title={EXPLORE_OPPORTUNITIES_ACTION.title}
+                description={EXPLORE_OPPORTUNITIES_ACTION.description}
+                onSelect={handleOpenExploreOpportunities}
               />
-              <span className="min-w-0">
-                <span className={DROPDOWN_MENU_ITEM_TITLE_CLASSNAME}>
-                  {MAP_SAVE_SEARCH_ACTION.title}
-                </span>
-                <span className={DROPDOWN_MENU_ITEM_DESCRIPTION_CLASSNAME}>
-                  {MAP_SAVE_SEARCH_ACTION.description}
-                </span>
-              </span>
-            </DropdownMenu.Item>
+            ) : null}
 
             <DropdownMenu.Arrow className="fill-white" />
           </DropdownMenu.Content>
@@ -168,6 +173,12 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
         snapshot={savedSearchSnapshot}
         filters={submittedFilters}
         onClose={closeSaveSearch}
+      />
+
+      <ExploreOpportunitiesPanelModal
+        isOpen={isExploreOpportunitiesOpen}
+        session={exploreSession}
+        onClose={closeExploreOpportunities}
       />
     </>
   )

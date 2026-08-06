@@ -13,6 +13,7 @@ import { buildDemandOpportunityCoverage } from "../utils/build-demand-opportunit
 import { filterOpportunitiesByMatchStatus } from "../utils/filter-opportunities-by-match-status.js";
 import { resolveOpportunityAgentUserIds } from "../utils/resolve-opportunity-agent-user-ids.js";
 import { translateInvalidGeoQueryError } from "../utils/translate-invalid-geo-query-error.js";
+import { toPublicAgentDemandOpportunity } from "../mappers/to-public-agent-demand-opportunity.js";
 import { enrichOpportunitiesWithMatchingBuildingCounts } from "./enrich-opportunities-with-matching-building-counts.service.js";
 import { rankAgentDemandOpportunities } from "./rank-agent-demand-opportunities.service.js";
 
@@ -70,7 +71,7 @@ export const searchAgentDemandOpportunitiesService = async ({
   );
   const pageOpportunities = filtered.slice((page - 1) * limit, page * limit);
 
-  const opportunities = await enrichOpportunitiesWithMatchingBuildingCounts({
+  const enriched = await enrichOpportunitiesWithMatchingBuildingCounts({
     opportunities: pageOpportunities,
     callerUserId,
     agentUserIdsByProfileId,
@@ -78,7 +79,7 @@ export const searchAgentDemandOpportunitiesService = async ({
   });
 
   return {
-    opportunities,
+    opportunities: enriched.map(toPublicAgentDemandOpportunity),
     pagination: normalizePagination(
       { page, limit, total: filtered.length },
       page,

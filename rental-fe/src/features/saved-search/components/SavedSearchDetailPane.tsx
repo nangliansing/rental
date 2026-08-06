@@ -11,12 +11,9 @@ import { getFormErrorMessage } from "@/features/listing/utils/formFieldUtils"
 import { cn } from "@/lib/utils"
 import { ConfirmationDialog } from "@/shared/components/dialogs/ConfirmationDialog"
 
-import { SavedSearchDetailFiltersSection } from "./SavedSearchDetailFiltersSection"
-import { SavedSearchDetailHeader } from "./SavedSearchDetailHeader"
-import { SavedSearchDetailListersSection } from "./SavedSearchDetailListersSection"
-import { SavedSearchDetailLocationSection } from "./SavedSearchDetailLocationSection"
-import { SavedSearchMatchingBuildingsSection } from "./SavedSearchMatchingBuildingsSection"
 import { ConfirmEditSavedSearchModal } from "./ConfirmEditSavedSearchModal"
+import { SavedSearchDetailBody } from "./SavedSearchDetailBody"
+import { SavedSearchDetailHeader } from "./SavedSearchDetailHeader"
 
 type SavedSearchDetailPaneProps = {
   selected: SavedSearch | null
@@ -137,16 +134,8 @@ export function SavedSearchDetailPane({
           </p>
         ) : null}
 
-        <SavedSearchDetailLocationSection
-          geoSearch={selected.geoSearch}
-          mapInstanceId={`saved-search-detail-${selected._id}`}
-        />
-
-        <SavedSearchDetailFiltersSection filters={selected.filters} />
-
-        <SavedSearchDetailListersSection filters={selected.filters} />
-
-        <SavedSearchMatchingBuildingsSection
+        <SavedSearchDetailBody
+          id={selected._id}
           geoSearch={selected.geoSearch}
           filters={selected.filters}
           scrollRootRef={scrollRootRef}

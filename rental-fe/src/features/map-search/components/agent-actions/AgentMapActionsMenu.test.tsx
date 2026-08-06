@@ -2,6 +2,10 @@ import type { ReactNode } from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  EXPLORE_OPPORTUNITIES_ACTION,
+} from "@/features/explore-opportunities-panel"
+
 import { AgentMapActionsMenu } from "./AgentMapActionsMenu"
 import {
   MAP_LISTING_MODE_ACTION,
@@ -104,6 +108,38 @@ vi.mock("./ConfirmCreateSavedSearchModal", () => ({
     props: Parameters<typeof modalPropsSpy>[0],
   ) => modalPropsSpy(props),
 }))
+vi.mock("@/features/explore-opportunities-panel", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/features/explore-opportunities-panel")
+  >("@/features/explore-opportunities-panel")
+
+  return {
+    ...actual,
+    ExploreOpportunitiesPanelModal: ({
+      isOpen,
+      session,
+      onClose,
+    }: {
+      isOpen: boolean
+      session: {
+        areaTitle: string
+        demandArea: { type: string }
+      } | null
+      onClose: () => void
+    }) =>
+      isOpen && session ? (
+        <div role="dialog" aria-label="explore-opportunities">
+          <span data-testid="explore-modal-title">{session.areaTitle}</span>
+          <span data-testid="explore-modal-kind">
+            {session.demandArea.type}
+          </span>
+          <button type="button" onClick={onClose}>
+            Close explore
+          </button>
+        </div>
+      ) : null,
+  }
+})
 vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: ReactNode }) => children,
   TooltipContent: () => null,
@@ -231,6 +267,9 @@ describe("AgentMapActionsMenu", () => {
       expect(
         screen.getByText(MAP_SAVE_SEARCH_ACTION.title),
       ).toBeInTheDocument()
+      expect(
+        screen.queryByText(EXPLORE_OPPORTUNITIES_ACTION.title),
+      ).not.toBeInTheDocument()
     })
 
     it("renders the map actions trigger when listing create is allowed", () => {
@@ -386,6 +425,54 @@ describe("AgentMapActionsMenu", () => {
           }),
         )
       })
+    })
+  })
+
+  describe("explore opportunities", () => {
+    it("shows the action when the viewer has an agent profile", () => {
+      render(<AgentMapActionsMenu />)
+
+      expect(
+        screen.getByText(EXPLORE_OPPORTUNITIES_ACTION.title),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(EXPLORE_OPPORTUNITIES_ACTION.description),
+      ).toBeInTheDocument()
+    })
+
+    it("opens a coordinates preview for the selected area", async () => {
+      render(<AgentMapActionsMenu />)
+
+      fireEvent.click(screen.getByText(EXPLORE_OPPORTUNITIES_ACTION.title))
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("dialog", { name: "explore-opportunities" }),
+        ).toBeInTheDocument()
+      })
+      expect(screen.getByTestId("explore-modal-title")).toHaveTextContent(
+        "Visible map area",
+      )
+      expect(screen.getByTestId("explore-modal-kind")).toHaveTextContent(
+        "Polygon",
+      )
+    })
+
+    it("closes the explore preview through onClose", async () => {
+      render(<AgentMapActionsMenu />)
+
+      fireEvent.click(screen.getByText(EXPLORE_OPPORTUNITIES_ACTION.title))
+      await waitFor(() => {
+        expect(
+          screen.getByRole("dialog", { name: "explore-opportunities" }),
+        ).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole("button", { name: "Close explore" }))
+
+      expect(
+        screen.queryByRole("dialog", { name: "explore-opportunities" }),
+      ).not.toBeInTheDocument()
     })
   })
 })

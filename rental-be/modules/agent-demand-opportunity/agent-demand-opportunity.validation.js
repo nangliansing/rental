@@ -4,6 +4,7 @@ import {
   validateIntegerRange,
   validateLimit,
   validateLineGeometry,
+  validateMongooseId,
   validateObject,
   validatePage,
   validatePolygonGeometry,
@@ -48,6 +49,9 @@ const validateMatchStatus = (input) => {
   }
   return input;
 };
+
+export const validateAgentDemandOpportunityId = (input) =>
+  validateMongooseId(input, "opportunityId");
 
 export const validateDemandOpportunityArea = (input) => {
   const area = validateObject(input, "area");

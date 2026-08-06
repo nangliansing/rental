@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import { adminQueries } from "@/features/admin/api/adminQueryOptions"
+import { agentDemandOpportunitiesQueryOptions } from "@/features/agent-demand-opportunity/api/useSearchAgentDemandOpportunities"
+import { agentDemandOpportunityQueryOptions } from "@/features/agent-demand-opportunity/api/useAgentDemandOpportunityById"
 import { listerProfileQueryOptions } from "@/features/agent/api/useListerProfileById"
 import { agentListingsQueryOptions } from "@/features/agent/api/useSearchListingsByAgent"
 import { currentUserQueryOptions } from "@/features/auth/auth-query"
 import { buildingQueryOptions } from "@/features/buildings/api/useBuildingById"
 import { buildingNeighbourhoodQueryOptions } from "@/features/buildings/api/useBuildingNeighbourhood"
+import { reverseGeocodeQueryOptions } from "@/features/geocode/api/useReverseGeocode"
 import { listerReviewsQueryOptions } from "@/features/lister-review/api/useSearchListerReviews"
 import { listerReviewTeasersQueryOptions } from "@/features/listing/api/useListerReviewTeasers"
 import { ownerListingQueryOptions } from "@/features/listing/api/useOwnerListingById"
@@ -15,12 +18,11 @@ import { buildingsInMapQueryOptions } from "@/features/map-search/api/useSearchB
 import { buildingsNearLinesQueryOptions } from "@/features/map-search/api/useSearchBuildingsNearLines"
 import { buildingsNearbyQueryOptions } from "@/features/map-search/api/useSearchBuildingsNearby"
 import { listingsInBuildingQueryOptions } from "@/features/map-search/api/useSearchListingsInBuilding"
-import { reverseGeocodeQueryOptions } from "@/features/geocode/api/useReverseGeocode"
 import { notificationsQueryOptions } from "@/features/notifications/api/notificationQueryOptions"
-import { ownerSavedSearchQueryOptions } from "@/features/saved-search/api/useOwnerSavedSearchById"
 import { ownerPendingPostsQueryOptions } from "@/features/pending-post/api/useSearchOwnerPendingPosts"
 import { myAgentProfileQueryOptions } from "@/features/profile/api/useMyAgentProfile"
 import { savedListingsQueryOptions } from "@/features/saved-listing/api/useSearchSavedListings"
+import { ownerSavedSearchQueryOptions } from "@/features/saved-search/api/useOwnerSavedSearchById"
 import { queryKeys } from "@/lib/query-keys"
 
 describe("query-options factories", () => {
@@ -53,6 +55,10 @@ describe("query-options factories", () => {
       [
         ownerSavedSearchQueryOptions("request-1"),
         queryKeys.savedSearches.ownerDetail("request-1"),
+      ],
+      [
+        agentDemandOpportunityQueryOptions("opportunity-1"),
+        queryKeys.agentDemandOpportunities.detail("opportunity-1"),
       ],
       [
         publicListingQueryOptions({
@@ -90,6 +96,8 @@ describe("query-options factories", () => {
       ownerListingQueryOptions(" "),
       ownerSavedSearchQueryOptions(undefined),
       ownerSavedSearchQueryOptions(" "),
+      agentDemandOpportunityQueryOptions(undefined),
+      agentDemandOpportunityQueryOptions(" "),
       publicListingQueryOptions({ listingId: undefined }),
       publicListingQueryOptions({ listingId: "   " }),
       reverseGeocodeQueryOptions({ lat: undefined, lng: 100.501765 }),
@@ -114,6 +122,7 @@ describe("query-options factories", () => {
       buildingQueryOptions("building-1", false),
       ownerListingQueryOptions("listing-1", false),
       ownerSavedSearchQueryOptions("request-1", false),
+      agentDemandOpportunityQueryOptions("opportunity-1", false),
       myAgentProfileQueryOptions(false),
       notificationsQueryOptions(false),
       savedListingsQueryOptions({ enabled: false }),
@@ -130,6 +139,14 @@ describe("query-options factories", () => {
       reverseGeocodeQueryOptions({
         lat: 13.756331,
         lng: 100.501765,
+        enabled: false,
+      }),
+      agentDemandOpportunitiesQueryOptions({
+        area: {
+          type: "Point",
+          coordinates: [100.5018, 13.7563],
+          coverageMeters: 3000,
+        },
         enabled: false,
       }),
       adminQueries.pendingPosts("PENDING", false),
@@ -167,6 +184,15 @@ describe("query-options factories", () => {
         filters: {},
         enabled: true,
       }),
+      agentDemandOpportunitiesQueryOptions({
+        area: {
+          type: "Point",
+          coordinates: [100.5018, 13.7563],
+          coverageMeters: 3000,
+        },
+        matchStatus: "unmatched",
+        enabled: true,
+      }),
       adminQueries.pendingPosts("PENDING"),
       adminQueries.buildingEditRequests("PENDING"),
       adminQueries.reports("OPEN"),
@@ -189,6 +215,15 @@ describe("query-options factories", () => {
     expect(listerReviewTeasersQueryOptions({
       listerProfileId: "profile-1",
     }).staleTime).toBe(60_000)
+    expect(
+      agentDemandOpportunitiesQueryOptions({
+        area: {
+          type: "Point",
+          coordinates: [100.5018, 13.7563],
+          coverageMeters: 3000,
+        },
+      }).staleTime,
+    ).toBe(60_000)
 
     const reviewDetail = adminQueries.reviewReportDetail("report-1")
     expect(reviewDetail.retry).toBeTypeOf("function")

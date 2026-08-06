@@ -284,7 +284,6 @@ Ranking and match-status filtering occur before pagination.
   "data": [
     {
       "_id": "6a743568c2bb601801284355",
-      "name": "Siam renter demand",
       "status": "Waiting",
       "geoSearch": {
         "mode": "area",
@@ -323,8 +322,9 @@ Ranking and match-status filtering occur before pagination.
 
 The endpoint uses an explicit response allowlist. It does not return:
 
+- `name`
 - `title`
-- `description`
+- `description` / note
 - `createdBy`
 - `isDeleted`, `deletedAt`, or other deletion metadata
 - `geoSearch.coverage`

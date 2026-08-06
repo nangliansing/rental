@@ -185,6 +185,7 @@ test("demand opportunity candidate pipeline uses active geo match and a hard gua
     },
   });
   assert.equal(pipeline[1].$limit, 101);
+  assert.equal(pipeline[2].$project.name, undefined);
   assert.equal(pipeline[2].$project.createdBy, undefined);
   assert.equal(pipeline[2].$project.title, undefined);
   assert.equal(pipeline[2].$project.description, undefined);

@@ -9,10 +9,21 @@ import {
 } from "../utils/resolve-opportunity-agent-user-ids.js";
 import { countMatchingBuildingsForOpportunity } from "./count-matching-buildings-for-opportunity.service.js";
 
-const omitInternalCoverage = (opportunity) => {
-  const { hasCallerMatch: _hasCallerMatch, ...publicOpportunity } = opportunity;
-  const { coverage: _coverage, ...geoSearch } = publicOpportunity.geoSearch;
-  return { ...publicOpportunity, geoSearch };
+/**
+ * Adds matching-building counts and strips internal ranking/geo fields.
+ * Does not strip owner fields (name, createdBy, …) — callers that need a
+ * public allowlist should map with `toPublicAgentDemandOpportunity`.
+ */
+const omitInternalOpportunityFields = (opportunity) => {
+  const { hasCallerMatch: _hasCallerMatch, ...rest } = opportunity;
+  const geoSearch = rest.geoSearch;
+
+  if (!geoSearch || typeof geoSearch !== "object") {
+    return rest;
+  }
+
+  const { coverage: _coverage, ...safeGeoSearch } = geoSearch;
+  return { ...rest, geoSearch: safeGeoSearch };
 };
 
 export const enrichOpportunitiesWithMatchingBuildingCounts = async ({
@@ -42,7 +53,10 @@ export const enrichOpportunitiesWithMatchingBuildingCounts = async ({
         session,
       });
 
-      return { ...omitInternalCoverage(opportunity), ...counts };
+      return {
+        ...omitInternalOpportunityFields(opportunity),
+        ...counts,
+      };
     },
   );
 };

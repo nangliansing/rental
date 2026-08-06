@@ -322,6 +322,31 @@ describe("queryKeys", () => {
         actual: queryKeys.admin.users.detail("user-1"),
         expected: ["admin-user", "user-1"],
       },
+      {
+        actual: queryKeys.agentDemandOpportunities.list({
+          area: {
+            type: "Point",
+            coordinates: [100.5, 13.7],
+            coverageMeters: 1000,
+          },
+          matchStatus: "unmatched",
+          limit: 20,
+        }),
+        expected: [
+          "agent-demand-opportunities",
+          {
+            type: "Point",
+            coordinates: [100.5, 13.7],
+            coverageMeters: 1000,
+          },
+          "unmatched",
+          20,
+        ],
+      },
+      {
+        actual: queryKeys.agentDemandOpportunities.detail("opportunity-1"),
+        expected: ["agent-demand-opportunity", "opportunity-1"],
+      },
     ]
 
     cases.forEach(({ actual, expected }) => {
@@ -420,6 +445,22 @@ describe("queryKeys", () => {
       {
         family: queryKeys.admin.users.details,
         member: queryKeys.admin.users.detail("user-1"),
+      },
+      {
+        family: queryKeys.agentDemandOpportunities.lists,
+        member: queryKeys.agentDemandOpportunities.list({
+          area: {
+            type: "Point",
+            coordinates: [100.5, 13.7],
+            coverageMeters: 1000,
+          },
+          matchStatus: null,
+          limit: 20,
+        }),
+      },
+      {
+        family: queryKeys.agentDemandOpportunities.details,
+        member: queryKeys.agentDemandOpportunities.detail("opportunity-1"),
       },
     ]
 

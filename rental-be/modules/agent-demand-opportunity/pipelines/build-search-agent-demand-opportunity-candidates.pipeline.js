@@ -15,7 +15,6 @@ export const buildSearchAgentDemandOpportunityCandidatesPipeline = ({
   {
     $project: {
       _id: 1,
-      name: 1,
       status: 1,
       filters: 1,
       geoSearch: 1,

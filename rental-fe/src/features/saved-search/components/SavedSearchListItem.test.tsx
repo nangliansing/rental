@@ -51,7 +51,7 @@ describe("SavedSearchListItem", () => {
     expect(screen.queryByText("20+ total")).not.toBeInTheDocument()
   })
 
-  it("shows zero counts when the backend computed an empty match", () => {
+  it("hides zero matching-count chips", () => {
     render(
       <SavedSearchListItem
         id="cr-1"
@@ -65,9 +65,27 @@ describe("SavedSearchListItem", () => {
       />,
     )
 
-    expect(screen.getByLabelText(/0 matching buildings from your/i)).toBeVisible()
+    expect(screen.queryByText("Yours")).not.toBeInTheDocument()
+    expect(screen.queryByText("Platform")).not.toBeInTheDocument()
+  })
+
+  it("shows only non-zero matching-count chips", () => {
+    render(
+      <SavedSearchListItem
+        id="cr-1"
+        name="Sukhumvit 2BR"
+        preview="Near BTS"
+        timestamp="3:00 PM"
+        myMatchingBuildingCount={0}
+        platformMatchingBuildingCount={4}
+        selected={false}
+        onSelect={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText("Yours")).not.toBeInTheDocument()
     expect(
-      screen.getByLabelText(/0 matching buildings from platform/i),
+      screen.getByLabelText(/4 matching buildings from platform/i),
     ).toBeVisible()
   })
 

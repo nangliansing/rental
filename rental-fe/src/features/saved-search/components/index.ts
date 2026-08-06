@@ -1,6 +1,7 @@
 export { SavedSearchDetailsFields } from "./SavedSearchDetailsFields"
 export { SavedSearchDetailsStep } from "./SavedSearchDetailsStep"
 export { SavedSearchDetailPane } from "./SavedSearchDetailPane"
+export { SavedSearchDetailBody } from "./SavedSearchDetailBody"
 export { SavedSearchDetailCollapsibleSection } from "./SavedSearchDetailCollapsibleSection"
 export { SavedSearchDetailModal } from "./SavedSearchDetailModal"
 export { SavedSearchDetailListersSection } from "./SavedSearchDetailListersSection"

@@ -7,6 +7,7 @@ import {
   compareDateOnlyKeys,
   formatCalendarMonthLabel,
   formatDateOnlyLabel,
+  formatFlexibleDateOnlyLabel,
   getCalendarDateKeyInTimeZone,
   getCalendarMonthFromDateOnlyKey,
   getDaysInMonth,
@@ -84,6 +85,12 @@ describe("calendarDate", () => {
     it("formats readable labels and compares keys", () => {
       expect(formatDateOnlyLabel("2026-08-15")).toBe("Aug 15, 2026")
       expect(formatDateOnlyLabel(" bad ")).toBeNull()
+      expect(formatFlexibleDateOnlyLabel("2026-08-08")).toBe("Aug 8, 2026")
+      expect(
+        formatFlexibleDateOnlyLabel("2026-08-07T17:00:00.000Z"),
+      ).toBe("Aug 8, 2026")
+      expect(formatFlexibleDateOnlyLabel("not-a-date")).toBeNull()
+      expect(formatFlexibleDateOnlyLabel(null)).toBeNull()
       expect(compareDateOnlyKeys("2026-08-15", "2026-08-15")).toBe(0)
       expect(compareDateOnlyKeys("2026-08-14", "2026-08-15")).toBe(-1)
       expect(compareDateOnlyKeys("2026-08-16", "2026-08-15")).toBe(1)

@@ -143,6 +143,29 @@ export function formatDateOnlyLabel(
   }).format(utcNoon)
 }
 
+/**
+ * Formats a YYYY-MM-DD key or an ISO instant as a civil date label.
+ * Instant values resolve in the Thailand calendar timezone.
+ */
+export function formatFlexibleDateOnlyLabel(
+  value: unknown,
+  options?: Intl.DateTimeFormatOptions,
+): string | null {
+  if (typeof value !== "string") return null
+
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const dateOnlyKey = normalizeDateOnlyKey(trimmed)
+  if (dateOnlyKey) return formatDateOnlyLabel(dateOnlyKey, options)
+
+  const instant = new Date(trimmed)
+  if (Number.isNaN(instant.getTime())) return null
+
+  const key = getCalendarDateKeyInTimeZone(instant)
+  return key ? formatDateOnlyLabel(key, options) : null
+}
+
 export function compareDateOnlyKeys(left: string, right: string) {
   if (left === right) {
     return 0

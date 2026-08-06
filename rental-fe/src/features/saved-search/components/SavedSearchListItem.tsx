@@ -3,7 +3,7 @@ import { Search } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-import { formatCappedSavedSearchMatchingTotal } from "./formatSavedSearchListMeta"
+import { MatchingBuildingCountChips } from "./MatchingBuildingCountChips"
 
 type SavedSearchListItemProps = {
   id: string
@@ -28,10 +28,6 @@ function SavedSearchListItemComponent({
   selected,
   onSelect,
 }: SavedSearchListItemProps) {
-  const hasMatchingCounts =
-    myMatchingBuildingCount != null &&
-    platformMatchingBuildingCount != null
-
   return (
     <button
       type="button"
@@ -56,36 +52,11 @@ function SavedSearchListItemComponent({
         <span className="mt-0.5 block truncate text-xs leading-5 text-slate-500">
           {preview}
         </span>
-        {hasMatchingCounts ? (
-          <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold tabular-nums">
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-blue-700 ring-1 ring-inset ring-blue-100"
-              aria-label={`${myMatchingBuildingCount} matching buildings from your listings`}
-            >
-              <span className="font-medium text-blue-600">Yours</span>
-              {myMatchingBuildingCount}
-            </span>
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700 ring-1 ring-inset ring-slate-200"
-              aria-label={`${platformMatchingBuildingCount} matching buildings from platform listings`}
-            >
-              <span className="font-medium text-slate-500">Platform</span>
-              {platformMatchingBuildingCount}
-            </span>
-            {matchingBuildingCountCapped ? (
-              <span
-                className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 ring-1 ring-inset ring-amber-200"
-                aria-label="Matching-building counts are capped; at least 20 buildings match"
-                title="Counts show the first 20 matching buildings; more matches exist."
-              >
-                {formatCappedSavedSearchMatchingTotal(
-                  myMatchingBuildingCount,
-                  platformMatchingBuildingCount,
-                )}
-              </span>
-            ) : null}
-          </span>
-        ) : null}
+        <MatchingBuildingCountChips
+          myMatchingBuildingCount={myMatchingBuildingCount}
+          platformMatchingBuildingCount={platformMatchingBuildingCount}
+          matchingBuildingCountCapped={matchingBuildingCountCapped}
+        />
       </span>
 
       <span className="flex shrink-0 flex-col items-end gap-1 pt-0.5">

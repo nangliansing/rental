@@ -74,6 +74,8 @@ const roots = {
   adminUserDetails: key("admin-user"),
   geocode: key("geocode"),
   agentProfileSearch: key("agent-profile-search"),
+  agentDemandOpportunities: key("agent-demand-opportunities"),
+  agentDemandOpportunityDetails: key("agent-demand-opportunity"),
 } as const
 
 export const queryKeys = {
@@ -327,5 +329,22 @@ export const queryKeys = {
     lists: roots.agentProfileSearch,
     list: ({ query, limit }: { query: string; limit: number }) =>
       childKey(roots.agentProfileSearch, query, limit),
+  },
+  agentDemandOpportunities: {
+    all: roots.agentDemandOpportunities,
+    lists: roots.agentDemandOpportunities,
+    list: ({
+      area,
+      matchStatus,
+      limit,
+    }: {
+      area: unknown
+      matchStatus: string | null
+      limit: number
+    }) =>
+      childKey(roots.agentDemandOpportunities, area, matchStatus, limit),
+    details: roots.agentDemandOpportunityDetails,
+    detail: (opportunityId: string | undefined) =>
+      childKey(roots.agentDemandOpportunityDetails, opportunityId),
   },
 } as const
