@@ -97,6 +97,15 @@ const normalizeForCompare = (value) => {
   return value ?? null;
 };
 
+const withoutDerivedCoverage = (fieldName, value) => {
+  if (fieldName !== "geoSearch" || !value || typeof value !== "object") {
+    return value;
+  }
+
+  const { coverage: _coverage, ...sourceGeoSearch } = value;
+  return sourceGeoSearch;
+};
+
 export const buildOwnerUpdateSavedSearchRecord = ({
   body,
   savedSearch,
@@ -123,7 +132,7 @@ export const buildOwnerUpdateSavedSearchRecord = ({
     if (
       !isDeepStrictEqual(
         normalizeForCompare(nextValue),
-        normalizeForCompare(currentValue),
+        normalizeForCompare(withoutDerivedCoverage(fieldName, currentValue)),
       )
     ) {
       update[fieldName] = nextValue;

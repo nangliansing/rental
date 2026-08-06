@@ -207,17 +207,21 @@ describe("DELETE /api/v1/saved-searches/:savedSearchId", () => {
     assert.equal(response.body.data._id, created.body.data._id);
     assert.equal(response.body.data.createdBy, user._id.toString());
     assert.equal(response.body.data.isDeleted, true);
+    assert.equal(response.body.data.geoSearch.coverage, undefined);
     assert.equal(typeof response.body.data.deletedAt, "string");
 
     const deletedAtMs = new Date(response.body.data.deletedAt).getTime();
     assert.equal(deletedAtMs >= before - 1000, true);
     assert.equal(deletedAtMs <= after + 1000, true);
 
-    const saved = await SavedSearch.findById(created.body.data._id).lean();
+    const saved = await SavedSearch.findById(created.body.data._id)
+      .select("+geoSearch.coverage")
+      .lean();
     assert.equal(saved.isDeleted, true);
     assert.equal(saved.deletedAt instanceof Date, true);
     assert.equal(saved.name, "Sukhumvit 2BR");
     assert.equal(saved.status, SAVED_SEARCH_STATUSES.WAITING);
+    assert.equal(saved.geoSearch.coverage.type, "Polygon");
     assert.equal(await SavedSearch.countDocuments(), 1);
   });
 

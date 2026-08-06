@@ -196,6 +196,7 @@ describe("GET /api/v1/saved-searches/:savedSearchId", () => {
     assert.equal(response.body.data.name, "Sukhumvit 2BR");
     assert.equal(response.body.data.status, SAVED_SEARCH_STATUSES.WAITING);
     assert.equal(response.body.data.isDeleted, false);
+    assert.equal(response.body.data.geoSearch.coverage, undefined);
   });
 
   test("returns an owned Closed saved search", async () => {

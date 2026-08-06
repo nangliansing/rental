@@ -1,3 +1,4 @@
+export * from "./admin-search-active-saved-search-overlaps.service.js";
 export * from "./create-saved-search.service.js";
 export * from "./owner-update-saved-search.service.js";
 export * from "./owner-delete-saved-search.service.js";

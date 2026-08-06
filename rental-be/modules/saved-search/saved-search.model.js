@@ -58,7 +58,19 @@ const savedSearchSchema = new Schema(
       default: null,
     },
   },
-  { timestamps: true, versionKey: false },
+  {
+    timestamps: true,
+    versionKey: false,
+    toJSON: {
+      transform: (_document, response) => {
+        if (response.geoSearch) {
+          delete response.geoSearch.coverage;
+        }
+
+        return response;
+      },
+    },
+  },
 );
 
 // Owner list with status filter (default Waiting): availableBy sooner-first.
@@ -70,6 +82,19 @@ savedSearchSchema.index({
   createdAt: -1,
   _id: 1,
 });
+
+savedSearchSchema.index(
+  {
+    "geoSearch.coverage": "2dsphere",
+  },
+  {
+    name: "active_saved_search_coverage_2dsphere",
+    partialFilterExpression: {
+      status: SAVED_SEARCH_STATUSES.WAITING,
+      isDeleted: false,
+    },
+  },
+);
 
 const SavedSearch =
   mongoose.models[MODEL_NAMES.SavedSearch] ||

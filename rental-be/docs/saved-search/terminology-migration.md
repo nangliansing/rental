@@ -20,10 +20,12 @@ December 31, 2026, once access logs confirm that no supported client uses it.
 ## Deployment order
 
 1. Deploy the backend with both endpoint paths.
-2. Verify the canonical endpoint and legacy alias in production.
-3. Deploy the frontend, which uses only `/api/v1/saved-searches`.
-4. Monitor legacy-path traffic until the compatibility window ends.
-5. Remove the alias in a separately reviewed change after the sunset date.
+2. Run database migrations and the index creation/audit workflow. This includes
+   backfilling `geoSearch.coverage` and its partial `2dsphere` index.
+3. Verify the canonical endpoint and legacy alias in production.
+4. Deploy the frontend, which uses only `/api/v1/saved-searches`.
+5. Monitor legacy-path traffic until the compatibility window ends.
+6. Remove the alias in a separately reviewed change after the sunset date.
 
 Rollback is safe during the compatibility window because the MongoDB collection
 and stored document shape are unchanged.

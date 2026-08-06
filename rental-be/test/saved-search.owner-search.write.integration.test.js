@@ -85,6 +85,7 @@ const seedSavedSearch = async ({
   availableBy = undefined,
   isDeleted = false,
   createdAt = undefined,
+  bounds = validBounds,
 }) => {
   const filters = {
     minRent: 15_000,
@@ -101,7 +102,7 @@ const seedSavedSearch = async ({
     status,
     geoSearch: {
       mode: GEO_SEARCH_MODES.AREA,
-      bounds: validBounds,
+      bounds,
       placeName: null,
     },
     filters,
@@ -173,6 +174,80 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${httpServer.address().port}`;
 });
 
+describe("POST /api/v1/admin/saved-searches/overlaps", () => {
+  const overlapBody = {
+    geoSearch: {
+      mode: GEO_SEARCH_MODES.AREA,
+      bounds: validBounds,
+    },
+  };
+
+  test("returns only active, non-deleted searches whose coverage overlaps", async () => {
+    const admin = await createUser({ role: USER_ROLES.OWNER });
+    const searchOwner = await createUser();
+    await seedSavedSearch({ user: searchOwner.user, name: "Overlapping" });
+    await seedSavedSearch({
+      user: searchOwner.user,
+      name: "Closed",
+      status: SAVED_SEARCH_STATUSES.CLOSED,
+    });
+    await seedSavedSearch({
+      user: searchOwner.user,
+      name: "Deleted",
+      isDeleted: true,
+    });
+    await seedSavedSearch({
+      user: searchOwner.user,
+      name: "Far away",
+      bounds: {
+        northEast: { lat: 14.8, lng: 101.8 },
+        southWest: { lat: 14.7, lng: 101.7 },
+      },
+    });
+
+    const response = await request(
+      "/api/v1/admin/saved-searches/overlaps",
+      {
+        method: "POST",
+        headers: {
+          ...bearerHeaders(admin.token),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(overlapBody),
+      },
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body.data.map(({ name }) => name), [
+      "Overlapping",
+    ]);
+    assert.equal(response.body.data[0].geoSearch.coverage, undefined);
+    assert.deepEqual(response.body.pagination, {
+      page: 1,
+      limit: 20,
+      total: 1,
+    });
+  });
+
+  test("does not expose cross-user overlap search to ordinary users", async () => {
+    const { token } = await createUser();
+    const response = await request(
+      "/api/v1/admin/saved-searches/overlaps",
+      {
+        method: "POST",
+        headers: {
+          ...bearerHeaders(token),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(overlapBody),
+      },
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal(response.body.code, "FORBIDDEN");
+  });
+});
+
 afterEach(async () => {
   await Promise.all(
     Object.values(mongoose.connection.collections).map((collection) =>
@@ -234,6 +309,7 @@ describe("GET /api/v1/saved-searches", () => {
     assert.equal(response.body.data.length, 1);
     assert.equal(response.body.data[0].name, "Mine");
     assert.equal(response.body.data[0].createdBy, owner.user._id.toString());
+    assert.equal(response.body.data[0].geoSearch.coverage, undefined);
     assert.deepEqual(response.body.pagination, {
       page: 1,
       limit: 20,

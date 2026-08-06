@@ -11,6 +11,8 @@ import {
 import { lineGeometrySchema } from "./line-geometry.schema.js";
 import { mapBoundsSchema } from "./map-bounds.schema.js";
 import { mapPointSchema } from "./map-point.schema.js";
+import { coverageGeometrySchema } from "./coverage-geometry.schema.js";
+import { buildSavedSearchCoverage } from "../utils/build-saved-search-coverage.js";
 
 export const geoSearchSchemaDefinition = {
   mode: {
@@ -41,6 +43,12 @@ export const geoSearchSchemaDefinition = {
     type: Number,
     min: GEO_SEARCH_MIN_DISTANCE_METERS,
     max: GEO_SEARCH_MAX_DISTANCE_METERS,
+  },
+
+  coverage: {
+    type: coverageGeometrySchema,
+    required: true,
+    select: false,
   },
 
   placeName: {
@@ -84,5 +92,17 @@ geoSearchSchema.pre("validate", function () {
         "distanceMeters is required for line search",
       );
     }
+  }
+
+  if (
+    (this.mode === GEO_SEARCH_MODES.AREA && this.bounds) ||
+    (this.mode === GEO_SEARCH_MODES.NEARBY &&
+      this.position &&
+      this.radiusMeters != null) ||
+    (this.mode === GEO_SEARCH_MODES.LINE &&
+      this.geometry &&
+      this.distanceMeters != null)
+  ) {
+    this.coverage = buildSavedSearchCoverage(this);
   }
 });

@@ -223,13 +223,18 @@ describe("PATCH /api/v1/saved-searches/:savedSearchId", () => {
     assert.equal(data.geoSearch.mode, GEO_SEARCH_MODES.NEARBY);
     assert.deepEqual(data.geoSearch.position, validPosition);
     assert.equal(data.geoSearch.radiusMeters, 800);
+    assert.equal(data.geoSearch.coverage, undefined);
     assert.equal(data.filters.minRent, 18_000);
     assert.equal(data.filters.bedroomCount, 2);
     assert.equal(data.filters.maxRent, undefined);
 
-    const saved = await SavedSearch.findById(data._id).lean();
+    const saved = await SavedSearch.findById(data._id)
+      .select("+geoSearch.coverage")
+      .lean();
     assert.equal(saved.name, "Updated request");
     assert.equal(saved.geoSearch.mode, GEO_SEARCH_MODES.NEARBY);
+    assert.equal(saved.geoSearch.coverage.type, "Polygon");
+    assert.equal(saved.geoSearch.coverage.coordinates.length > 0, true);
     assert.equal(saved.filters.minRent, 18_000);
     assert.equal(saved.createdBy.toString(), user._id.toString());
   });

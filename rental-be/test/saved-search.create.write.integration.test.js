@@ -212,6 +212,7 @@ describe("POST /api/v1/saved-searches", () => {
     assert.equal(data.geoSearch.mode, GEO_SEARCH_MODES.AREA);
     assert.deepEqual(data.geoSearch.bounds, validBounds);
     assert.equal(data.geoSearch.placeName, "Phrom Phong");
+    assert.equal(data.geoSearch.coverage, undefined);
     assert.equal(data.filters.minRent, 15_000);
     assert.equal(data.filters.maxRent, 35_000);
     assert.equal(data.filters.bedroomCount, 2);
@@ -221,12 +222,16 @@ describe("POST /api/v1/saved-searches", () => {
     assert.equal(typeof data.createdAt, "string");
     assert.equal(typeof data.updatedAt, "string");
 
-    const saved = await SavedSearch.findById(data._id).lean();
+    const saved = await SavedSearch.findById(data._id)
+      .select("+geoSearch.coverage")
+      .lean();
     assert.ok(saved);
     assert.equal(saved.createdBy.toString(), user._id.toString());
     assert.equal(saved.name, "Client condo request");
     assert.equal(saved.status, SAVED_SEARCH_STATUSES.WAITING);
     assert.equal(saved.isDeleted, false);
+    assert.equal(saved.geoSearch.coverage.type, "Polygon");
+    assert.equal(saved.geoSearch.coverage.coordinates.length > 0, true);
     assert.equal(saved.filters.agentProfileIds[0].toString(), agentProfileId);
     assert.equal(await SavedSearch.countDocuments(), 1);
   });

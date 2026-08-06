@@ -221,6 +221,7 @@ describe("buildOwnerSearchSavedSearchesPipeline", () => {
     assert.deepEqual(dataStages[4], {
       $project: {
         _hasAvailableBy: 0,
+        "geoSearch.coverage": 0,
       },
     });
   });
