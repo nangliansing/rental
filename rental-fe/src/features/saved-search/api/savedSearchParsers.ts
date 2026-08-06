@@ -43,15 +43,15 @@ export type SavedSearch = {
   status: SavedSearchStatus
   geoSearch: SavedSearchGeoSearch
   filters: SavedSearchFilters
-  /**
-   * Buildings currently matching this saved search.
-   * Absent/null when the API has not computed a count yet.
-   */
-  matchingCount?: number | null
+  /** Present on owner Waiting-list rows; null on detail/Closed responses. */
+  myMatchingBuildingCount?: number | null
+  platformMatchingBuildingCount?: number | null
+  matchingBuildingCountCapped?: boolean
   isDeleted: boolean
   deletedAt: string | null
   createdAt: string
   updatedAt: string
+  lastConfirmedAt?: string | null
 }
 
 export type SearchOwnerSavedSearchesResponse = {
@@ -232,8 +232,8 @@ export const parseSavedSearchFilters = (
   return filters
 }
 
-/** Optional list-row match tally; invalid / missing values become `null`. */
-export const parseSavedSearchMatchingCount = (
+/** Optional non-negative API count; invalid or missing values become `null`. */
+export const parseSavedSearchMatchingBuildingCount = (
   value: unknown,
 ): number | null => {
   if (value == null) return null
@@ -266,11 +266,19 @@ export const parseSavedSearch = (value: unknown): SavedSearch => {
     status: parseSavedSearchStatus(savedSearch.status),
     geoSearch: parseSavedSearchGeoSearch(savedSearch.geoSearch),
     filters: parseSavedSearchFilters(savedSearch.filters),
-    matchingCount: parseSavedSearchMatchingCount(savedSearch.matchingCount),
+    myMatchingBuildingCount: parseSavedSearchMatchingBuildingCount(
+      savedSearch.myMatchingBuildingCount,
+    ),
+    platformMatchingBuildingCount: parseSavedSearchMatchingBuildingCount(
+      savedSearch.platformMatchingBuildingCount,
+    ),
+    matchingBuildingCountCapped:
+      readBoolean(savedSearch.matchingBuildingCountCapped),
     isDeleted: readBoolean(savedSearch.isDeleted),
     deletedAt: readNullableString(savedSearch.deletedAt),
     createdAt,
     updatedAt,
+    lastConfirmedAt: readNullableString(savedSearch.lastConfirmedAt),
   }
 }
 

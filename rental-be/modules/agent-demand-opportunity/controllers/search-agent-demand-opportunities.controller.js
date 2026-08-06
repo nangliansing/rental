@@ -8,6 +8,7 @@ export const searchAgentDemandOpportunitiesController = async (
   try {
     const result = await searchAgentDemandOpportunitiesService({
       body: req.body,
+      callerUserId: req.currentUser._id,
       session: req.dbSession ?? null,
     });
 

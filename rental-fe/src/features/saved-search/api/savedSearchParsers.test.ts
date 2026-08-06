@@ -248,24 +248,36 @@ describe("parseSavedSearch", () => {
     })
   })
 
-  it("parses an optional matchingCount when present", () => {
+  it("parses owner-list matching counts and confirmation time", () => {
     const parsed = parseSavedSearch({
       ...areaSavedSearch,
-      matchingCount: 9,
+      myMatchingBuildingCount: 2,
+      platformMatchingBuildingCount: 18,
+      matchingBuildingCountCapped: true,
+      lastConfirmedAt: "2026-08-05T00:00:00.000Z",
     })
 
-    expect(parsed.matchingCount).toBe(9)
+    expect(parsed).toMatchObject({
+      myMatchingBuildingCount: 2,
+      platformMatchingBuildingCount: 18,
+      matchingBuildingCountCapped: true,
+      lastConfirmedAt: "2026-08-05T00:00:00.000Z",
+    })
   })
 
   it.each([undefined, null, "nine", -2] as const)(
-    "normalizes invalid matchingCount values to null (%j)",
-    (matchingCount) => {
+    "normalizes invalid matching-building counts to null (%j)",
+    (count) => {
       const parsed = parseSavedSearch({
         ...areaSavedSearch,
-        matchingCount,
+        myMatchingBuildingCount: count,
+        platformMatchingBuildingCount: count,
+        matchingBuildingCountCapped: "yes",
       })
 
-      expect(parsed.matchingCount).toBeNull()
+      expect(parsed.myMatchingBuildingCount).toBeNull()
+      expect(parsed.platformMatchingBuildingCount).toBeNull()
+      expect(parsed.matchingBuildingCountCapped).toBe(false)
     },
   )
 

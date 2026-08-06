@@ -87,8 +87,14 @@ export function SavedSearchList({
             id={item._id}
             name={item.name}
             preview={formatSavedSearchListPreview(item)}
-            timestamp={formatSavedSearchListTimestamp(item.updatedAt)}
-            matchingCount={item.matchingCount}
+            timestamp={formatSavedSearchListTimestamp(
+              item.lastConfirmedAt ?? item.createdAt,
+            )}
+            myMatchingBuildingCount={item.myMatchingBuildingCount}
+            platformMatchingBuildingCount={
+              item.platformMatchingBuildingCount
+            }
+            matchingBuildingCountCapped={item.matchingBuildingCountCapped}
             selected={item._id === selectedId}
             onSelect={onSelect}
           />

@@ -118,6 +118,32 @@ describe("SavedSearchDrawerPanel", () => {
     expect(within(dialog).getByText("Saved search")).toBeInTheDocument()
   })
 
+  it("shows caller/platform counts and a truthful capped total", () => {
+    mockQuery({
+      data: {
+        pages: [
+          {
+            data: [
+              makeSavedSearch({
+                myMatchingBuildingCount: 4,
+                platformMatchingBuildingCount: 16,
+                matchingBuildingCountCapped: true,
+              }),
+            ],
+          },
+        ],
+      },
+    })
+
+    render(<SavedSearchDrawerPanel />)
+
+    expect(screen.getByLabelText(/4 matching buildings from your/i)).toBeVisible()
+    expect(
+      screen.getByLabelText(/16 matching buildings from platform/i),
+    ).toBeVisible()
+    expect(screen.getByText("20+ total")).toBeVisible()
+  })
+
   it("does not add page scroll padding in drawer layout", () => {
     mockQuery({ data: { pages: [{ data: [makeSavedSearch()] }] } })
     const scrollRootRef = createRef<HTMLDivElement>()

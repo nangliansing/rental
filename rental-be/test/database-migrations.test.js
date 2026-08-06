@@ -18,6 +18,8 @@ import {
   runMigrations,
 } from "../shared/database/migrations/index.js";
 import { up as addSavedSearchCoverage } from "../scripts/migrations/20260806T060000Z_add-saved-search-coverage.js";
+import { up as addSavedSearchLastConfirmedAt } from "../scripts/migrations/20260806T073000Z_add-saved-search-last-confirmed-at.js";
+import { up as addSavedSearchOwnerRecencyIndex } from "../scripts/migrations/20260806T090000Z_add-saved-search-owner-recency-index.js";
 
 const quietLogger = { info() {} };
 let mongoServer;
@@ -52,6 +54,56 @@ after(async () => {
 });
 
 describe("database migrations", () => {
+  test("replaces the obsolete owner-list index idempotently", async () => {
+    const collection = db.collection("client_requests");
+    await collection.createIndex({
+      createdBy: 1,
+      isDeleted: 1,
+      status: 1,
+      "filters.availableBy": 1,
+      createdAt: -1,
+      _id: 1,
+    });
+
+    await addSavedSearchOwnerRecencyIndex({ db });
+    await addSavedSearchOwnerRecencyIndex({ db });
+
+    const indexes = await collection.indexes();
+    assert.equal(
+      indexes.some(
+        ({ name }) => name === "owner_saved_search_confirmation_recency",
+      ),
+      true,
+    );
+    assert.equal(
+      indexes.some(({ key }) => Object.hasOwn(key, "filters.availableBy")),
+      false,
+    );
+  });
+
+  test("saved-search confirmation backfill copies createdAt and is idempotent", async () => {
+    const collection = db.collection("client_requests");
+    const createdAt = new Date("2026-07-01T12:00:00.000Z");
+    const existingConfirmation = new Date("2026-07-15T12:00:00.000Z");
+    await collection.insertMany([
+      { name: "Needs backfill", createdAt },
+      {
+        name: "Already confirmed",
+        createdAt,
+        lastConfirmedAt: existingConfirmation,
+      },
+      { name: "Malformed legacy row without createdAt" },
+    ]);
+
+    await addSavedSearchLastConfirmedAt({ db });
+    await addSavedSearchLastConfirmedAt({ db });
+    const records = await collection.find().sort({ name: 1 }).toArray();
+
+    assert.equal(records[0].lastConfirmedAt.getTime(), existingConfirmation.getTime());
+    assert.equal(records[1].lastConfirmedAt, undefined);
+    assert.equal(records[2].lastConfirmedAt.getTime(), createdAt.getTime());
+  });
+
   test("saved-search coverage backfill is complete and idempotent", async () => {
     const collection = db.collection("client_requests");
     await collection.insertMany([

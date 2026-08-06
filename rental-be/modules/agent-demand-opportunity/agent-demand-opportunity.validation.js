@@ -12,6 +12,7 @@ import {
 import {
   DEMAND_OPPORTUNITY_MAX_COVERAGE_METERS,
   DEMAND_OPPORTUNITY_MIN_COVERAGE_METERS,
+  DEMAND_OPPORTUNITY_MATCH_STATUSES,
 } from "./agent-demand-opportunity.constants.js";
 
 const rejectUnknownFields = (input, allowedFields, fieldName) => {
@@ -35,6 +36,18 @@ const validateCoverageMeters = (input) =>
     DEMAND_OPPORTUNITY_MIN_COVERAGE_METERS,
     DEMAND_OPPORTUNITY_MAX_COVERAGE_METERS,
   );
+
+const validateMatchStatus = (input) => {
+  if (input === undefined) return undefined;
+  if (!Object.values(DEMAND_OPPORTUNITY_MATCH_STATUSES).includes(input)) {
+    throw new AppError(
+      "matchStatus must be matched or unmatched",
+      422,
+      "VALIDATION_ERROR",
+    );
+  }
+  return input;
+};
 
 export const validateDemandOpportunityArea = (input) => {
   const area = validateObject(input, "area");
@@ -83,7 +96,7 @@ export const validateDemandOpportunityArea = (input) => {
 
 export const validateSearchAgentDemandOpportunitiesBody = (input) => {
   const body = validateObject(input, "body");
-  rejectUnknownFields(body, ["area", "pagination"], "body");
+  rejectUnknownFields(body, ["area", "pagination", "matchStatus"], "body");
 
   if (body.area == null) {
     throw new AppError("area is required", 422, "VALIDATION_ERROR");
@@ -104,9 +117,12 @@ export const validateSearchAgentDemandOpportunitiesBody = (input) => {
     );
   }
 
+  const matchStatus = validateMatchStatus(body.matchStatus);
+
   return {
     area: validateDemandOpportunityArea(body.area),
     page: validatePage(pagination.page),
     limit: validateLimit(pagination.limit),
+    ...(matchStatus === undefined ? {} : { matchStatus }),
   };
 };
