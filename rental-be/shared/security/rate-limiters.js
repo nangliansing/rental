@@ -17,7 +17,10 @@ const getAuthenticatedKey = (req) =>
 
 export const isSearchApiRequest = (req) => {
   const path = String(req?.originalUrl ?? req?.url ?? "").split("?")[0];
-  return /(?:^|\/)api\/v1\/search(?:\/|$)/.test(path);
+  return (
+    /(?:^|\/)api\/v1\/search(?:\/|$)/.test(path) ||
+    /(?:^|\/)api\/v1\/agent-demand-opportunities\/search\/?$/.test(path)
+  );
 };
 
 const composeSkip = (...predicates) => (req, res) =>

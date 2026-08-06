@@ -32,6 +32,7 @@ process.env.RATE_LIMIT_AUTH_MAX = "1000";
 process.env.RATE_LIMIT_MUTATION_MAX = "1000";
 
 let SavedSearch;
+let AgentProfile;
 let User;
 let baseUrl;
 let httpServer;
@@ -39,6 +40,7 @@ let replSet;
 let signAccessToken;
 
 const listPath = "/api/v1/saved-searches";
+const demandOpportunitiesPath = "/api/v1/agent-demand-opportunities/search";
 
 const validBounds = {
   northEast: { lat: 13.78, lng: 100.66 },
@@ -76,6 +78,16 @@ const createUser = async ({
     token: signAccessToken(user),
     user,
   };
+};
+
+const createAgent = async (options = {}) => {
+  const actor = await createUser(options);
+  await AgentProfile.create({
+    userId: actor.user._id,
+    displayName: "Demand Opportunity Agent",
+    supportLanguages: ["English"],
+  });
+  return actor;
 };
 
 const seedSavedSearch = async ({
@@ -153,17 +165,19 @@ before(async () => {
   configureCloudinary(config.cloudinary);
   await mongoose.connect(config.mongodbUri);
 
-  const [appModule, authModule, savedSearchModule, userModule] =
+  const [appModule, authModule, savedSearchModule, userModule, agentModule] =
     await Promise.all([
       import("../app.js"),
       import("../shared/auth/index.js"),
       import("../modules/saved-search/saved-search.model.js"),
       import("../modules/user/user.model.js"),
+      import("../modules/agent/agent-profile.model.js"),
     ]);
 
   signAccessToken = authModule.signAccessToken;
   SavedSearch = savedSearchModule.default;
   User = userModule.default;
+  AgentProfile = agentModule.default;
 
   httpServer = createServer(appModule.createApp({ config }));
   await new Promise((resolve, reject) => {
@@ -245,6 +259,126 @@ describe("POST /api/v1/admin/saved-searches/overlaps", () => {
 
     assert.equal(response.status, 403);
     assert.equal(response.body.code, "FORBIDDEN");
+  });
+});
+
+describe("POST /api/v1/agent-demand-opportunities/search", () => {
+  const searchBody = {
+    area: {
+      type: "Polygon",
+      coordinates: [[
+        [100.61, 13.74],
+        [100.67, 13.74],
+        [100.67, 13.79],
+        [100.61, 13.79],
+        [100.61, 13.74],
+      ]],
+    },
+    pagination: { page: 1, limit: 20 },
+  };
+
+  const searchOpportunities = (token, body = searchBody) =>
+    request(demandOpportunitiesPath, {
+      method: "POST",
+      headers: {
+        ...(token ? bearerHeaders(token) : {}),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+  test("returns only intersecting active non-deleted opportunities", async () => {
+    const agent = await createAgent();
+    const owner = await createUser();
+    await seedSavedSearch({ user: owner.user, name: "Opportunity" });
+    await seedSavedSearch({
+      user: owner.user,
+      name: "Closed",
+      status: SAVED_SEARCH_STATUSES.CLOSED,
+    });
+    await seedSavedSearch({
+      user: owner.user,
+      name: "Deleted",
+      isDeleted: true,
+    });
+    await seedSavedSearch({
+      user: owner.user,
+      name: "Far away",
+      bounds: {
+        northEast: { lat: 14.8, lng: 101.8 },
+        southWest: { lat: 14.7, lng: 101.7 },
+      },
+    });
+
+    const response = await searchOpportunities(agent.token);
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body.data.map(({ name }) => name), ["Opportunity"]);
+    assert.deepEqual(response.body.pagination, { page: 1, limit: 20, total: 1 });
+    assert.equal(response.body.data[0].createdBy, undefined);
+    assert.equal(response.body.data[0].isDeleted, undefined);
+    assert.equal(response.body.data[0].geoSearch.coverage, undefined);
+  });
+
+  test("supports buffered point searches and pagination", async () => {
+    const agent = await createAgent();
+    const owner = await createUser();
+    await seedSavedSearch({ user: owner.user, name: "First" });
+    await seedSavedSearch({ user: owner.user, name: "Second" });
+
+    const response = await searchOpportunities(agent.token, {
+      area: {
+        type: "Point",
+        coordinates: [100.64, 13.765],
+        coverageMeters: 5_000,
+      },
+      pagination: { page: 2, limit: 1 },
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.length, 1);
+    assert.deepEqual(response.body.pagination, { page: 2, limit: 1, total: 2 });
+  });
+
+  test("requires authentication, an active account, and an agent profile", async () => {
+    const unauthenticated = await searchOpportunities(null);
+    assert.equal(unauthenticated.status, 401);
+    assert.equal(unauthenticated.body.code, "ACCESS_TOKEN_REQUIRED");
+
+    const ordinaryUser = await createUser();
+    const missingProfile = await searchOpportunities(ordinaryUser.token);
+    assert.equal(missingProfile.status, 403);
+    assert.equal(missingProfile.body.code, "AGENT_PROFILE_REQUIRED");
+
+    const inactiveAgent = await createAgent({ status: USER_STATUSES.INACTIVE });
+    const inactive = await searchOpportunities(inactiveAgent.token);
+    assert.equal(inactive.status, 403);
+    assert.equal(inactive.body.code, "ACCOUNT_INACTIVE");
+  });
+
+  test("rejects malformed geometry, missing pagination, and future matchStatus", async () => {
+    const agent = await createAgent();
+
+    const openPolygon = await searchOpportunities(agent.token, {
+      ...searchBody,
+      area: {
+        type: "Polygon",
+        coordinates: [[[100, 13], [101, 13], [101, 14], [100, 14]]],
+      },
+    });
+    assert.equal(openPolygon.status, 422);
+    assert.equal(openPolygon.body.code, "VALIDATION_ERROR");
+
+    const missingPagination = await searchOpportunities(agent.token, {
+      area: searchBody.area,
+    });
+    assert.equal(missingPagination.status, 422);
+
+    const futureField = await searchOpportunities(agent.token, {
+      ...searchBody,
+      matchStatus: "unmatched",
+    });
+    assert.equal(futureField.status, 422);
   });
 });
 
