@@ -17,7 +17,7 @@ export const MODEL_NAMES = Object.freeze({
   AuthIdentity: "AuthIdentity",
   NeighbourhoodCache: "NeighbourhoodCache",
   GeocodeCache: "GeocodeCache",
-  ClientRequest: "ClientRequest",
+  SavedSearch: "SavedSearch",
 });
 
 export const COLLECTION_NAMES = Object.freeze({
@@ -38,5 +38,7 @@ export const COLLECTION_NAMES = Object.freeze({
   AuthIdentities: "auth_identities",
   NeighbourhoodCaches: "neighbourhood_caches",
   GeocodeCaches: "geocode_caches",
-  ClientRequests: "client_requests",
+  // Keep the physical collection stable so the terminology migration does not
+  // require moving production data or rebuilding indexes.
+  SavedSearches: "client_requests",
 });

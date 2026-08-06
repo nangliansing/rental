@@ -26,7 +26,7 @@ import {
   MAP_LISTING_MODE_ACTION,
   MAP_SAVE_SEARCH_ACTION,
 } from "./agentMapActionsCopy"
-import { ConfirmCreateClientRequestModal } from "./ConfirmCreateClientRequestModal"
+import { ConfirmCreateSavedSearchModal } from "./ConfirmCreateSavedSearchModal"
 
 const menuItemClassName = cn(
   DROPDOWN_MENU_ITEM_STACKED_CLASSNAME,
@@ -44,7 +44,7 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
     canSaveSearch,
     openSaveSearch,
     closeSaveSearch,
-    requestSnapshot,
+    savedSearchSnapshot,
     submittedFilters,
     isSaveSearchOpen,
   } = useSaveMapSearch()
@@ -163,9 +163,9 @@ export const AgentMapActionsMenu = memo(function AgentMapActionsMenu() {
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
-      <ConfirmCreateClientRequestModal
+      <ConfirmCreateSavedSearchModal
         isOpen={isSaveSearchOpen}
-        snapshot={requestSnapshot}
+        snapshot={savedSearchSnapshot}
         filters={submittedFilters}
         onClose={closeSaveSearch}
       />

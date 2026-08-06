@@ -11,9 +11,9 @@ import {
   useMapSearchControls,
 } from "../context/MapSearchSessionContext"
 import {
-  buildMapClientRequestGeoSnapshot,
-  type MapClientRequestGeoSnapshot,
-} from "../utils/client-request-geo-from-map"
+  buildMapSavedSearchGeoSnapshot,
+  type MapSavedSearchGeoSnapshot,
+} from "../utils/saved-search-geo-from-map"
 import type { SearchBounds } from "./useMapBounds"
 import { useMapBounds } from "./useMapBounds"
 
@@ -34,8 +34,8 @@ function useSaveMapSearchBase(
   const { searchedPlace } = useMapSearchCanvas()
   const { submittedFilters } = useMapSearchFilters()
 
-  const [requestSnapshot, setRequestSnapshot] =
-    useState<MapClientRequestGeoSnapshot | null>(null)
+  const [savedSearchSnapshot, setSavedSearchSnapshot] =
+    useState<MapSavedSearchGeoSnapshot | null>(null)
 
   const canSaveSearch = canUsePersonalActions({
     user,
@@ -46,7 +46,7 @@ function useSaveMapSearchBase(
   const openSaveSearch = () => {
     if (!canSaveSearch) return
 
-    const snapshot = buildMapClientRequestGeoSnapshot({
+    const snapshot = buildMapSavedSearchGeoSnapshot({
       mode,
       selectedPin,
       nearbyRadiusMeters,
@@ -64,18 +64,18 @@ function useSaveMapSearchBase(
       return
     }
 
-    setRequestSnapshot(snapshot)
+    setSavedSearchSnapshot(snapshot)
   }
 
-  const closeSaveSearch = () => setRequestSnapshot(null)
+  const closeSaveSearch = () => setSavedSearchSnapshot(null)
 
   return {
     canSaveSearch,
     openSaveSearch,
     closeSaveSearch,
-    requestSnapshot,
+    savedSearchSnapshot,
     submittedFilters,
-    isSaveSearchOpen: requestSnapshot !== null,
+    isSaveSearchOpen: savedSearchSnapshot !== null,
   }
 }
 

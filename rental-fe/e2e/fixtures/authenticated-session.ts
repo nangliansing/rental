@@ -542,7 +542,7 @@ export async function installAuthenticatedSessionMocks(
     await route.continue()
   })
 
-  await page.route("**/api/v1/client-requests**", async (route) => {
+  await page.route("**/api/v1/saved-searches**", async (route) => {
     if (!isAuthorized(route)) {
       await route.fulfill(jsonRoute({ success: false }, 401))
       return

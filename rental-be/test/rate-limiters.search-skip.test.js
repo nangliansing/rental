@@ -200,7 +200,7 @@ describe("isSearchApiRequest", () => {
       "/api/v1/searching",
       "/api/v1/searching/buildings",
       "/api/v2/search/buildings/map",
-      "/api/v1/client-requests/search",
+      "/api/v1/saved-searches/search",
       "/search/buildings/map",
       "/api/v1/users/me",
       "/health",

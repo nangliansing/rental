@@ -18,10 +18,10 @@ vi.mock("@/shared/components/ModalPortal", () => ({
 }))
 
 vi.mock(
-  "@/features/client-request/components/ClientRequestDrawerPanel",
+  "@/features/saved-search/components/SavedSearchDrawerPanel",
   () => ({
-    ClientRequestDrawerPanel: () => (
-      <div data-testid="client-request-drawer-panel">Saved search list</div>
+    SavedSearchDrawerPanel: () => (
+      <div data-testid="saved-search-drawer-panel">Saved search list</div>
     ),
   }),
 )
@@ -81,7 +81,7 @@ describe("SavedSearchesButton", () => {
     ).toBeInTheDocument()
     await waitFor(() => {
       expect(
-        screen.getByTestId("client-request-drawer-panel"),
+        screen.getByTestId("saved-search-drawer-panel"),
       ).toBeInTheDocument()
     })
   })

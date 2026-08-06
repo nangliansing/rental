@@ -8,12 +8,12 @@ import type { FloatingActionPanelVariant } from "@/shared/components/navigation/
 import { useFloatingActionPanel } from "@/shared/hooks/useFloatingActionPanel"
 import { cn } from "@/lib/utils"
 
-const ClientRequestDrawerPanel = lazy(async () => ({
-  default: (await import("@/features/client-request/components/ClientRequestDrawerPanel"))
-    .ClientRequestDrawerPanel,
+const SavedSearchDrawerPanel = lazy(async () => ({
+  default: (await import("@/features/saved-search/components/SavedSearchDrawerPanel"))
+    .SavedSearchDrawerPanel,
 }))
 
-function ClientRequestPanelFallback() {
+function SavedSearchPanelFallback() {
   return (
     <div
       className="flex min-h-40 items-center justify-center px-4 text-sm text-slate-500"
@@ -80,8 +80,8 @@ export function SavedSearchesButton({
           anchorRef={variant === "desktop" ? triggerRef : undefined}
           onClose={closePanel}
         >
-          <Suspense fallback={<ClientRequestPanelFallback />}>
-            <ClientRequestDrawerPanel
+          <Suspense fallback={<SavedSearchPanelFallback />}>
+            <SavedSearchDrawerPanel
               enabled={isOpen}
               scrollRootRef={scrollRef}
             />
