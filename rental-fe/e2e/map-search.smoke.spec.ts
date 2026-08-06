@@ -2,6 +2,7 @@ import { loadEnv } from "vite"
 import { expect, test } from "@playwright/test"
 
 import { skipIfCiPlaceholderMapsKey } from "./fixtures/ci-maps"
+import { installAuthenticatedSessionMocks } from "./fixtures/authenticated-session"
 import {
   activatePinOnIdleMap,
   clickMapControlButton,
@@ -208,6 +209,32 @@ test.describe("Map search smoke", () => {
     await waitForAreaSearchResults(page, smokeAreaBuilding.name)
 
     await expect(page).toHaveURL(/search=area/)
+  })
+
+  test("opens and closes the saved-search drawer while signed in", async ({
+    page,
+  }) => {
+    await installMapSearchApiMocks(page)
+    // Playwright applies matching routes in reverse registration order, so
+    // install auth last to override the map fixture's signed-out defaults.
+    await installAuthenticatedSessionMocks(page)
+    await page.goto(areaSearchUrl)
+
+    await waitForMapReady(page, { requireMap: false })
+
+    await page.getByRole("button", { name: "Saved searches" }).click()
+    await expect(
+      page.getByRole("heading", { name: "Saved searches" }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole("tablist", { name: "Saved search status" }),
+    ).toBeVisible()
+    await expect(page.getByText("No active searches")).toBeVisible()
+
+    await page.getByRole("button", { name: "Close saved searches" }).click()
+    await expect(
+      page.getByRole("heading", { name: "Saved searches" }),
+    ).toHaveCount(0)
   })
 
   test("hydrates a nearby search from the URL", async ({ page }) => {
