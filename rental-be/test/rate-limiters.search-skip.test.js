@@ -148,6 +148,8 @@ describe("isSearchApiRequest", () => {
       "/api/v1/search/agents",
       "/api/v1/search/agents/abc",
       "/api/v1/search/listings/xyz",
+      "/api/v1/agent-demand-opportunities/search",
+      "/api/v1/agent-demand-opportunities/search/",
     ]) {
       assert.equal(
         isSearchApiRequest({ originalUrl }),
@@ -201,6 +203,7 @@ describe("isSearchApiRequest", () => {
       "/api/v1/searching/buildings",
       "/api/v2/search/buildings/map",
       "/api/v1/saved-searches/search",
+      "/api/v1/agent-demand-opportunities/searching",
       "/search/buildings/map",
       "/api/v1/users/me",
       "/health",

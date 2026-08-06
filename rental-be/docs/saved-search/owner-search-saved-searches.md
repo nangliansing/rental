@@ -2,7 +2,7 @@
 
 List non-deleted saved searches owned by the authenticated user.
 
-Results are sorted by `filters.availableBy` sooner-first. Requests without `availableBy` are sorted last, with `createdAt` (newest first) as the fallback.
+Results are sorted by confirmation recency so recently reconfirmed demand appears first.
 
 ## Endpoint
 
@@ -69,20 +69,21 @@ When `status` is omitted, the match defaults to `Waiting`.
 Default sort (fixed; no client sort param):
 
 ```txt
-1. rows with filters.availableBy first
-2. sooner availableBy dates first
-3. rows without availableBy last
-4. createdAt newest first, then _id, as fallback
+1. `lastConfirmedAt` newest first
+2. `createdAt` newest first
+3. `_id` ascending as the deterministic pagination tie-breaker
 ```
 
-Mongo ascending nulls would otherwise put missing dates first, so the pipeline uses a temporary `_hasAvailableBy` flag for nulls-last ordering and strips it from the response.
+The confirmation migration backfills legacy rows from `createdAt`. A malformed
+legacy row without `lastConfirmedAt` sorts after confirmed rows, while the
+remaining keys preserve deterministic pagination.
 
 ## Indexes
 
 Compound index supporting this owner list:
 
 ```js
-{ createdBy: 1, isDeleted: 1, status: 1, "filters.availableBy": 1, createdAt: -1, _id: 1 }
+{ createdBy: 1, isDeleted: 1, status: 1, lastConfirmedAt: -1, createdAt: -1, _id: 1 }
 ```
 
 `SavedSearch` is registered in `scripts/database/index-models.js` so `npm run db:indexes:create` applies them.
@@ -123,7 +124,11 @@ Body:
       "isDeleted": false,
       "deletedAt": null,
       "createdAt": "2026-08-03T18:00:00.000Z",
-      "updatedAt": "2026-08-03T18:00:00.000Z"
+      "updatedAt": "2026-08-03T18:00:00.000Z",
+      "lastConfirmedAt": "2026-08-03T18:00:00.000Z",
+      "myMatchingBuildingCount": 4,
+      "platformMatchingBuildingCount": 16,
+      "matchingBuildingCountCapped": true
     }
   ],
   "pagination": {
@@ -133,6 +138,12 @@ Body:
   }
 }
 ```
+
+Matching-building fields are added only to `Waiting` list rows. Counting is
+limited to the returned page and to the first 20 classified Buildings per
+SavedSearch. When `matchingBuildingCountCapped` is `true`, the two counts are a
+20-Building sample rather than exact totals; clients should present the
+combined result as `20+`.
 
 An empty result set returns `data: []` with `pagination.total: 0`.
 

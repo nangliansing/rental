@@ -1,48 +1,27 @@
-/**
- * Owner list sort:
- * 1. rows with filters.availableBy first, sooner dates first
- * 2. rows without availableBy last
- * 3. createdAt / _id as stable fallback
- */
+/** Owner list sort: most recently confirmed first, then stable fallbacks. */
 export const buildOwnerSearchSavedSearchesPipeline = ({
   match,
   page,
   skip,
   limit,
+  includeCoverage = false,
 }) => [
   { $match: match },
   {
     $facet: {
       data: [
         {
-          $addFields: {
-            _hasAvailableBy: {
-              $cond: [
-                {
-                  $ne: [{ $ifNull: ["$filters.availableBy", null] }, null],
-                },
-                0,
-                1,
-              ],
-            },
-          },
-        },
-        {
           $sort: {
-            _hasAvailableBy: 1,
-            "filters.availableBy": 1,
+            lastConfirmedAt: -1,
             createdAt: -1,
             _id: 1,
           },
         },
         { $skip: skip },
         { $limit: limit },
-        {
-          $project: {
-            _hasAvailableBy: 0,
-            "geoSearch.coverage": 0,
-          },
-        },
+        ...(includeCoverage
+          ? []
+          : [{ $project: { "geoSearch.coverage": 0 } }]),
       ],
       pagination: [{ $count: "total" }],
     },

@@ -15,6 +15,7 @@ const mockState = {
   aggregateResult: null,
   aggregateError: null,
   aggregateCalls: [],
+  enrichmentCalls: [],
 };
 
 const createChain = (result) => {
@@ -46,6 +47,20 @@ mock.module("../modules/saved-search/saved-search.model.js", {
   },
 });
 
+mock.module("../modules/agent-demand-opportunity/services/enrich-opportunities-with-matching-building-counts.service.js", {
+  namedExports: {
+    enrichOpportunitiesWithMatchingBuildingCounts: async (options) => {
+      mockState.enrichmentCalls.push(options);
+      return options.opportunities.map((opportunity) => ({
+        ...opportunity,
+        myMatchingBuildingCount: 0,
+        platformMatchingBuildingCount: 0,
+        matchingBuildingCountCapped: false,
+      }));
+    },
+  },
+});
+
 const { ownerSearchSavedSearchesService } = await import(
   "../modules/saved-search/services/owner-search-saved-searches.service.js"
 );
@@ -61,6 +76,7 @@ const resetMockState = () => {
   mockState.aggregateResult = null;
   mockState.aggregateError = null;
   mockState.aggregateCalls = [];
+  mockState.enrichmentCalls = [];
 };
 
 const assertValidationError = (error, messageMatcher = null) => {
@@ -174,7 +190,7 @@ describe("buildOwnerSearchSavedSearchesPipeline", () => {
     assert.equal(pipeline[0].$match === match, true);
   });
 
-  test("sorts availableBy sooner-first with missing dates last", () => {
+  test("sorts by confirmation recency with deterministic fallbacks", () => {
     const pipeline = buildOwnerSearchSavedSearchesPipeline({
       match: { createdBy: actorId, isDeleted: false },
       page: 1,
@@ -182,25 +198,11 @@ describe("buildOwnerSearchSavedSearchesPipeline", () => {
       limit: 20,
     });
 
-    const [addFields, sort] = pipeline[1].$facet.data;
+    const [sort] = pipeline[1].$facet.data;
 
-    assert.deepEqual(addFields, {
-      $addFields: {
-        _hasAvailableBy: {
-          $cond: [
-            {
-              $ne: [{ $ifNull: ["$filters.availableBy", null] }, null],
-            },
-            0,
-            1,
-          ],
-        },
-      },
-    });
     assert.deepEqual(sort, {
       $sort: {
-        _hasAvailableBy: 1,
-        "filters.availableBy": 1,
+        lastConfirmedAt: -1,
         createdAt: -1,
         _id: 1,
       },
@@ -216,11 +218,10 @@ describe("buildOwnerSearchSavedSearchesPipeline", () => {
     });
 
     const dataStages = pipeline[1].$facet.data;
-    assert.deepEqual(dataStages[2], { $skip: 40 });
-    assert.deepEqual(dataStages[3], { $limit: 20 });
-    assert.deepEqual(dataStages[4], {
+    assert.deepEqual(dataStages[1], { $skip: 40 });
+    assert.deepEqual(dataStages[2], { $limit: 20 });
+    assert.deepEqual(dataStages[3], {
       $project: {
-        _hasAvailableBy: 0,
         "geoSearch.coverage": 0,
       },
     });
@@ -276,7 +277,20 @@ describe("ownerSearchSavedSearchesService", () => {
         status: SAVED_SEARCH_STATUSES.WAITING,
       });
       assert.equal(mockState.aggregateCalls[0].query.usedSession, undefined);
-      assert.deepEqual(result.savedSearches, rows);
+      assert.deepEqual(result.savedSearches, [
+        {
+          ...rows[0],
+          myMatchingBuildingCount: 0,
+          platformMatchingBuildingCount: 0,
+          matchingBuildingCountCapped: false,
+        },
+      ]);
+      assert.equal(mockState.enrichmentCalls.length, 1);
+      assert.deepEqual(mockState.enrichmentCalls[0], {
+        opportunities: rows,
+        callerUserId: actorId,
+        session: null,
+      });
       assert.deepEqual(result.pagination, {
         page: 1,
         limit: 20,
@@ -323,6 +337,7 @@ describe("ownerSearchSavedSearchesService", () => {
         actorId: actorId.toString(),
       });
       assert.equal(getMatch().status, SAVED_SEARCH_STATUSES.CLOSED);
+      assert.equal(mockState.enrichmentCalls.length, 0);
     });
 
     test("accepts ObjectId actorId inputs", async () => {
@@ -370,8 +385,8 @@ describe("ownerSearchSavedSearchesService", () => {
         actorId: actorId.toString(),
       });
 
-      assert.deepEqual(getFacetData()[2], { $skip: 0 });
-      assert.deepEqual(getFacetData()[3], { $limit: 20 });
+      assert.deepEqual(getFacetData()[1], { $skip: 0 });
+      assert.deepEqual(getFacetData()[2], { $limit: 20 });
     });
 
     test("wires page/limit into skip/limit for later pages", async () => {
@@ -392,8 +407,8 @@ describe("ownerSearchSavedSearchesService", () => {
       });
 
       assert.deepEqual(getMatch().status, SAVED_SEARCH_STATUSES.CLOSED);
-      assert.deepEqual(getFacetData()[2], { $skip: 10 });
-      assert.deepEqual(getFacetData()[3], { $limit: 5 });
+      assert.deepEqual(getFacetData()[1], { $skip: 10 });
+      assert.deepEqual(getFacetData()[2], { $limit: 5 });
       assert.deepEqual(result.pagination, {
         page: 3,
         limit: 5,
@@ -414,8 +429,8 @@ describe("ownerSearchSavedSearchesService", () => {
         actorId: actorId.toString(),
       });
 
-      assert.deepEqual(getFacetData()[2], { $skip: 10 });
-      assert.deepEqual(getFacetData()[3], { $limit: 10 });
+      assert.deepEqual(getFacetData()[1], { $skip: 10 });
+      assert.deepEqual(getFacetData()[2], { $limit: 10 });
     });
 
     test("defaults session to null when omitted and does not attach it", async () => {
@@ -452,9 +467,10 @@ describe("ownerSearchSavedSearchesService", () => {
       });
 
       assert.equal(mockState.aggregateCalls[0].query.usedSession, session);
+      assert.equal(mockState.enrichmentCalls[0].session, session);
     });
 
-    test("includes the availableBy nulls-last sort stages in the pipeline", async () => {
+    test("includes the confirmation-recency sort in the pipeline", async () => {
       mockState.aggregateResult = emptyAggregateResult;
 
       await ownerSearchSavedSearchesService({
@@ -462,10 +478,8 @@ describe("ownerSearchSavedSearchesService", () => {
         actorId: actorId.toString(),
       });
 
-      assert.equal(Object.hasOwn(getFacetData()[0], "$addFields"), true);
-      assert.deepEqual(getFacetData()[1].$sort, {
-        _hasAvailableBy: 1,
-        "filters.availableBy": 1,
+      assert.deepEqual(getFacetData()[0].$sort, {
+        lastConfirmedAt: -1,
         createdAt: -1,
         _id: 1,
       });
@@ -514,7 +528,14 @@ describe("ownerSearchSavedSearchesService", () => {
         actorId: actorId.toString(),
       });
 
-      assert.deepEqual(result.savedSearches, [{ name: "One" }]);
+      assert.deepEqual(result.savedSearches, [
+        {
+          name: "One",
+          myMatchingBuildingCount: 0,
+          platformMatchingBuildingCount: 0,
+          matchingBuildingCountCapped: false,
+        },
+      ]);
       assert.deepEqual(result.pagination, {
         page: 1,
         limit: 20,
@@ -676,8 +697,8 @@ describe("ownerSearchSavedSearchesService", () => {
         actorId: actorId.toString(),
       });
 
-      assert.deepEqual(getFacetData()[2], { $skip: 999_900 });
-      assert.deepEqual(getFacetData()[3], { $limit: 100 });
+      assert.deepEqual(getFacetData()[1], { $skip: 999_900 });
+      assert.deepEqual(getFacetData()[2], { $limit: 100 });
     });
   });
 
@@ -726,6 +747,32 @@ describe("ownerSearchSavedSearchesService", () => {
         "isDeleted",
         "status",
       ]);
+    });
+
+    test("retains internal coverage only for Waiting enrichment", async () => {
+      mockState.aggregateResult = emptyAggregateResult;
+
+      await ownerSearchSavedSearchesService({
+        queryInput: { status: SAVED_SEARCH_STATUSES.WAITING },
+        actorId: actorId.toString(),
+      });
+
+      assert.equal(getFacetData().length, 3);
+
+      resetMockState();
+      mockState.aggregateResult = emptyAggregateResult;
+
+      await ownerSearchSavedSearchesService({
+        queryInput: { status: SAVED_SEARCH_STATUSES.CLOSED },
+        actorId: actorId.toString(),
+      });
+
+      assert.deepEqual(getFacetData()[3], {
+        $project: {
+          "geoSearch.coverage": 0,
+        },
+      });
+      assert.equal(mockState.enrichmentCalls.length, 0);
     });
   });
 });

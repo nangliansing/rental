@@ -4,7 +4,7 @@ import {
   formatSavedSearchGeoPreview,
   formatSavedSearchListPreview,
   formatSavedSearchListTimestamp,
-  formatSavedSearchMatchingCount,
+  formatCappedSavedSearchMatchingTotal,
 } from "./formatSavedSearchListMeta"
 
 describe("formatSavedSearchGeoPreview", () => {
@@ -65,22 +65,12 @@ describe("formatSavedSearchListTimestamp", () => {
   })
 })
 
-describe("formatSavedSearchMatchingCount", () => {
-  it.each([undefined, null, 0, -1, Number.NaN] as const)(
-    "hides invalid or empty counts (%s)",
-    (value) => {
-      expect(formatSavedSearchMatchingCount(value)).toBeNull()
-    },
-  )
-
-  it("shows exact counts below the display cap", () => {
-    expect(formatSavedSearchMatchingCount(1)).toBe("1")
-    expect(formatSavedSearchMatchingCount(8)).toBe("8")
-    expect(formatSavedSearchMatchingCount(8.9)).toBe("8")
+describe("formatCappedSavedSearchMatchingTotal", () => {
+  it("shows the backend lower bound for a truncated sample", () => {
+    expect(formatCappedSavedSearchMatchingTotal(4, 16)).toBe("20+ total")
   })
 
-  it("caps at 9+", () => {
-    expect(formatSavedSearchMatchingCount(9)).toBe("9+")
-    expect(formatSavedSearchMatchingCount(42)).toBe("9+")
+  it("defensively preserves a larger sampled total", () => {
+    expect(formatCappedSavedSearchMatchingTotal(12, 14)).toBe("26+ total")
   })
 })

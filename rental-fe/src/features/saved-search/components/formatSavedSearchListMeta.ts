@@ -58,21 +58,14 @@ export function formatSavedSearchListTimestamp(
   }).format(date)
 }
 
-/** Cap shown on saved-search list rows (9 → `9+`, higher values stay capped). */
-export const SAVED_SEARCH_MATCHING_COUNT_DISPLAY_CAP = 9
+/** Backend classification limit for an owner SavedSearch list row. */
+export const SAVED_SEARCH_MATCHING_BUILDING_LIMIT = 20
 
-/**
- * Formats a matching-building count for list rows.
- * Returns `null` when the count should be hidden (missing / zero / invalid).
- */
-export function formatSavedSearchMatchingCount(
-  matchingCount: number | null | undefined,
-): string | null {
-  if (matchingCount == null || !Number.isFinite(matchingCount)) return null
-  const count = Math.floor(matchingCount)
-  if (count <= 0) return null
-  if (count >= SAVED_SEARCH_MATCHING_COUNT_DISPLAY_CAP) {
-    return `${SAVED_SEARCH_MATCHING_COUNT_DISPLAY_CAP}+`
-  }
-  return String(count)
+/** Formats the lower-bound total when the backend's sample was truncated. */
+export function formatCappedSavedSearchMatchingTotal(
+  myCount: number,
+  platformCount: number,
+): string {
+  const sampledTotal = Math.max(0, myCount) + Math.max(0, platformCount)
+  return `${Math.max(SAVED_SEARCH_MATCHING_BUILDING_LIMIT, sampledTotal)}+ total`
 }

@@ -3,15 +3,16 @@ import { Search } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-import { formatSavedSearchMatchingCount } from "./formatSavedSearchListMeta"
+import { formatCappedSavedSearchMatchingTotal } from "./formatSavedSearchListMeta"
 
 type SavedSearchListItemProps = {
   id: string
   name: string
   preview: string
   timestamp: string
-  /** Buildings matching this saved search; hidden when null / undefined / 0. */
-  matchingCount?: number | null
+  myMatchingBuildingCount?: number | null
+  platformMatchingBuildingCount?: number | null
+  matchingBuildingCountCapped?: boolean
   selected: boolean
   onSelect: (id: string) => void
 }
@@ -21,11 +22,15 @@ function SavedSearchListItemComponent({
   name,
   preview,
   timestamp,
-  matchingCount,
+  myMatchingBuildingCount,
+  platformMatchingBuildingCount,
+  matchingBuildingCountCapped = false,
   selected,
   onSelect,
 }: SavedSearchListItemProps) {
-  const matchingCountLabel = formatSavedSearchMatchingCount(matchingCount)
+  const hasMatchingCounts =
+    myMatchingBuildingCount != null &&
+    platformMatchingBuildingCount != null
 
   return (
     <button
@@ -51,20 +56,42 @@ function SavedSearchListItemComponent({
         <span className="mt-0.5 block truncate text-xs leading-5 text-slate-500">
           {preview}
         </span>
+        {hasMatchingCounts ? (
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold tabular-nums">
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-blue-700 ring-1 ring-inset ring-blue-100"
+              aria-label={`${myMatchingBuildingCount} matching buildings from your listings`}
+            >
+              <span className="font-medium text-blue-600">Yours</span>
+              {myMatchingBuildingCount}
+            </span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700 ring-1 ring-inset ring-slate-200"
+              aria-label={`${platformMatchingBuildingCount} matching buildings from platform listings`}
+            >
+              <span className="font-medium text-slate-500">Platform</span>
+              {platformMatchingBuildingCount}
+            </span>
+            {matchingBuildingCountCapped ? (
+              <span
+                className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 ring-1 ring-inset ring-amber-200"
+                aria-label="Matching-building counts are capped; at least 20 buildings match"
+                title="Counts show the first 20 matching buildings; more matches exist."
+              >
+                {formatCappedSavedSearchMatchingTotal(
+                  myMatchingBuildingCount,
+                  platformMatchingBuildingCount,
+                )}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
       </span>
 
       <span className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
         <span className="text-[11px] font-medium leading-none text-slate-500">
           {timestamp}
         </span>
-        {matchingCountLabel ? (
-          <span
-            className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-950 px-1.5 text-[10px] font-semibold tabular-nums tracking-tight text-white"
-            aria-label={`${matchingCountLabel} matching buildings`}
-          >
-            {matchingCountLabel}
-          </span>
-        ) : null}
       </span>
     </button>
   )

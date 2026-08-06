@@ -17,6 +17,7 @@ import listerReviewRoutes from "../modules/lister-review/lister-review.routes.js
 import reviewReportRoutes from "../modules/review-report/review-report.routes.js";
 import geocodeRoutes from "../modules/geocode/geocode.routes.js";
 import savedSearchRoutes from "../modules/saved-search/saved-search.routes.js";
+import agentDemandOpportunityRoutes from "../modules/agent-demand-opportunity/agent-demand-opportunity.routes.js";
 import adminRoutes from "./admin.routes.js";
 
 const router = Router();
@@ -46,6 +47,7 @@ router.use("/lister-reviews", listerReviewRoutes);
 router.use("/review-reports", reviewReportRoutes);
 router.use("/geocode", geocodeRoutes);
 router.use("/saved-searches", savedSearchRoutes);
+router.use("/agent-demand-opportunities", agentDemandOpportunityRoutes);
 // Temporary compatibility alias for clients deployed before the SavedSearch
 // terminology migration. Both paths use the same model and Mongo collection.
 router.use("/client-requests", legacySavedSearchRoute, savedSearchRoutes);

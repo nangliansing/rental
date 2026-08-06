@@ -48,6 +48,11 @@ const savedSearchSchema = new Schema(
       default: () => ({}),
     },
 
+    lastConfirmedAt: {
+      type: Date,
+      default: null,
+    },
+
     isDeleted: {
       type: Boolean,
       default: false,
@@ -73,15 +78,38 @@ const savedSearchSchema = new Schema(
   },
 );
 
-// Owner list with status filter (default Waiting): availableBy sooner-first.
-savedSearchSchema.index({
-  createdBy: 1,
-  isDeleted: 1,
-  status: 1,
-  "filters.availableBy": 1,
-  createdAt: -1,
-  _id: 1,
+savedSearchSchema.pre("validate", function setInitialConfirmationTime() {
+  if (!this.isNew || this.lastConfirmedAt != null) return;
+
+  const creationTime = this.createdAt ?? new Date();
+  this.createdAt = creationTime;
+  this.lastConfirmedAt = creationTime;
 });
+
+savedSearchSchema.pre("insertMany", function setBulkInitialConfirmationTime(documents) {
+  const bulkCreationTime = new Date();
+
+  for (const document of documents) {
+    if (document.lastConfirmedAt != null) continue;
+
+    const creationTime = document.createdAt ?? bulkCreationTime;
+    document.createdAt = creationTime;
+    document.lastConfirmedAt = creationTime;
+  }
+});
+
+// Owner list with status filter: confirmation recency with stable pagination.
+savedSearchSchema.index(
+  {
+    createdBy: 1,
+    isDeleted: 1,
+    status: 1,
+    lastConfirmedAt: -1,
+    createdAt: -1,
+    _id: 1,
+  },
+  { name: "owner_saved_search_confirmation_recency" },
+);
 
 savedSearchSchema.index(
   {

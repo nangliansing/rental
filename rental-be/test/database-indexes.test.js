@@ -120,6 +120,18 @@ describe("database index contracts", () => {
         },
       },
     );
+    assertSchemaIndex(
+      "SavedSearch",
+      {
+        createdBy: 1,
+        isDeleted: 1,
+        status: 1,
+        lastConfirmedAt: -1,
+        createdAt: -1,
+        _id: 1,
+      },
+      { name: "owner_saved_search_confirmation_recency" },
+    );
   });
 
   test("normalizes actual and expected index metadata consistently", () => {

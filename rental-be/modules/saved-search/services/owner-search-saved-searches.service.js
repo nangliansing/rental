@@ -1,4 +1,5 @@
 import { normalizePagination } from "../../../shared/utils/index.js";
+import { enrichOpportunitiesWithMatchingBuildingCounts } from "../../agent-demand-opportunity/services/enrich-opportunities-with-matching-building-counts.service.js";
 import {
   validateLimit,
   validateMongooseId,
@@ -41,6 +42,7 @@ export const ownerSearchSavedSearchesService = async ({
     page,
     skip,
     limit,
+    includeCoverage: status === SAVED_SEARCH_STATUSES.WAITING,
   });
 
   let savedSearchesQuery = SavedSearch.aggregate(pipeline);
@@ -50,9 +52,18 @@ export const ownerSearchSavedSearchesService = async ({
   }
 
   const [result] = await savedSearchesQuery;
+  const savedSearches = result?.data ?? [];
+  const enrichedSavedSearches =
+    status === SAVED_SEARCH_STATUSES.WAITING
+      ? await enrichOpportunitiesWithMatchingBuildingCounts({
+          opportunities: savedSearches,
+          callerUserId: createdBy,
+          session,
+        })
+      : savedSearches;
 
   return {
-    savedSearches: result?.data ?? [],
+    savedSearches: enrichedSavedSearches,
     pagination: normalizePagination(result?.pagination, page, limit),
   };
 };
